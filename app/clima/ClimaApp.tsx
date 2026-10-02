@@ -1,4 +1,5 @@
 "use client";
+import WeatherScene, { ContaNumero } from "./WeatherScene";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, LocateFixed, Search, MapPin, Clock, Droplets, Wind, Thermometer, Eye, CloudRain, Navigation } from "lucide-react";
 import SearchSheet from "../ui/SearchSheet";
@@ -157,11 +158,12 @@ function Tempo({ tempo, chuva, local, recarregar }: { tempo: J | null; chuva: J 
 
   return (
     <div className="appear" key={`${local.lat},${local.lng}`}>
+      <WeatherScene icone={a?.descricao?.icone} dia={a?.dia}>
       <section className="weather-hero" aria-label="Agora">
         <div className="row" style={{ alignItems: "flex-start", justifyContent: "space-between" }}>
           <div>
             <div className="t-display num" aria-label={`${a?.temperaturaC == null ? "sem dado" : Math.round(a.temperaturaC) + " graus"}`}>
-              {a?.temperaturaC == null ? "—" : `${Math.round(a.temperaturaC)}°`}
+              {a?.temperaturaC == null ? "—" : <ContaNumero valor={Math.round(a.temperaturaC)} sufixo="°" />}
             </div>
             <div className="cond">{a?.descricao?.texto ?? "Condição indisponível"}</div>
             <div className="t-cap" style={{ marginTop: 4 }}>
@@ -169,11 +171,12 @@ function Tempo({ tempo, chuva, local, recarregar }: { tempo: J | null; chuva: J 
               {dias[0] && <>Máx. {Math.round(dias[0].maxC)}° · Mín. {Math.round(dias[0].minC)}°</>}
             </div>
           </div>
-          <span style={{ color: "var(--text-2)", marginTop: 12 }}><IconeTempo icone={a?.descricao?.icone} dia={a?.dia} size={56} /></span>
+          <span className="wx-icon" style={{ marginTop: 12 }}><IconeTempo icone={a?.descricao?.icone} dia={a?.dia} size={56} /></span>
         </div>
       </section>
+      </WeatherScene>
 
-      <section className="section" aria-label="Condições">
+      <section className="section stag" style={{ ["--i" as string]: 1 }} aria-label="Condições">
         <span className="t-label">Condições</span>
         <div className="metrics">
           <Metrica Icone={Droplets} rotulo="Umidade" v={a?.umidadePct} u="%" />
@@ -184,7 +187,7 @@ function Tempo({ tempo, chuva, local, recarregar }: { tempo: J | null; chuva: J 
       </section>
 
       {estPerto && (
-        <section className="section" aria-label="Chuva medida">
+        <section className="section stag" style={{ ["--i" as string]: 2 }} aria-label="Chuva medida">
           <span className="t-label">Chuva medida agora</span>
           <div className="surface" style={{ padding: 16 }}>
             <div className="row">
@@ -200,11 +203,11 @@ function Tempo({ tempo, chuva, local, recarregar }: { tempo: J | null; chuva: J 
       )}
 
       {horas.length > 0 && (
-        <section className="section" aria-label="Próximas horas">
+        <section className="section stag" style={{ ["--i" as string]: 3 }} aria-label="Próximas horas">
           <span className="t-label">Próximas horas</span>
           <div className="surface hours" role="list">
             {horas.slice(0, 24).map((h, i) => (
-              <div className="hour" role="listitem" key={h.inicio} aria-label={`${i === 0 ? "Agora" : horaLocal(h.inicio)}: ${h.temperaturaC == null ? "sem dado" : Math.round(h.temperaturaC) + " graus"}, ${h.descricao?.texto ?? ""}, chance de chuva ${h.probabilidadeChuvaPct ?? "sem dado"}%`}>
+              <div className="hour" role="listitem" key={h.inicio} style={{ ["--i" as string]: Math.min(i, 10) }} aria-label={`${i === 0 ? "Agora" : horaLocal(h.inicio)}: ${h.temperaturaC == null ? "sem dado" : Math.round(h.temperaturaC) + " graus"}, ${h.descricao?.texto ?? ""}, chance de chuva ${h.probabilidadeChuvaPct ?? "sem dado"}%`}>
                 <span className="t-meta">{i === 0 ? "Agora" : horaLocal(h.inicio).slice(0, 2) + "h"}</span>
                 <IconeTempo icone={h.descricao?.icone} dia={h.dia} />
                 <span className="p num">{h.probabilidadeChuvaPct >= 20 ? `${h.probabilidadeChuvaPct}%` : ""}</span>
@@ -216,7 +219,7 @@ function Tempo({ tempo, chuva, local, recarregar }: { tempo: J | null; chuva: J 
       )}
 
       {dias.length > 0 && (
-        <section className="section" aria-label="Próximos dias">
+        <section className="section stag" style={{ ["--i" as string]: 4 }} aria-label="Próximos dias">
           <span className="t-label">Próximos dias</span>
           <div className="surface">
             {dias.map((d) => {
@@ -226,7 +229,7 @@ function Tempo({ tempo, chuva, local, recarregar }: { tempo: J | null; chuva: J 
                   <span className="t-head">{diaSemana(d.data)}</span>
                   <IconeTempo icone={d.descricao?.icone} />
                   <span className="t-cap num" style={{ color: "var(--info)", fontWeight: 600 }}>{d.probabilidadeChuvaPct >= 20 ? `${d.probabilidadeChuvaPct}%` : ""}</span>
-                  <span className="range" aria-hidden><i style={{ left: `${ini}%`, right: `${100 - fim}%` }} /></span>
+                  <span className="range" aria-hidden><i style={{ left: `${ini}%`, right: `${100 - fim}%`, ["--i" as string]: dias.indexOf(d) }} /></span>
                   <span className="t-head num" style={{ textAlign: "right" }}>{Math.round(d.maxC)}°<span className="t-cap"> {Math.round(d.minC)}°</span></span>
                 </div>
               );
