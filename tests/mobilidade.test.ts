@@ -134,3 +134,53 @@ describe("trajeto (encaixe no trajeto oficial)", () => {
     expect(l.map((t) => t.destino).sort()).toEqual(["Estação Santa Cruz", "Terminal Alvorada"]);
   });
 });
+
+import { estadoGeo, proximidade } from "../src/lib/estadoGeo";
+describe("estado geográfico do veículo", () => {
+  it("classifica por idade e distância ao trajeto", () => {
+    expect(estadoGeo(10, 5)).toBe("ON_ROUTE");
+    expect(estadoGeo(10, 60)).toBe("ON_ROUTE");
+    expect(estadoGeo(10, 120)).toBe("UNCERTAIN");
+    expect(estadoGeo(10, 2700)).toBe("OFF_ROUTE");
+    expect(estadoGeo(400, 5)).toBe("STALE");
+    expect(estadoGeo(10, null)).toBeNull();
+  });
+  it("corredor de impacto", () => {
+    expect(proximidade(40)).toBe("NO_TRAJETO");
+    expect(proximidade(640)).toBe("PROXIMA");
+    expect(proximidade(2000)).toBe("FORA_DO_IMPACTO");
+  });
+});
+
+import { retrato, ultimaPorVeiculo } from "../src/lib/monitor";
+describe("monitor (retrato da frota)", () => {
+  const agora = new Date("2026-10-02T19:00:00Z");
+  const L = (fonte: "brt" | "sppo", veiculo: string, linha: string, lat: number, lng: number, sAtras: number, vel = 30) =>
+    ({ fonte, veiculo, linha, sentido: null, lat, lng, velocidade: vel, ts: new Date(agora.getTime() - sAtras * 1000) });
+  const trajetos = { "10": [{ coords: [[-43.5, -23.0], [-43.4, -23.0]] as [number, number][] }] };
+  it("usa a última posição de cada veículo", () => {
+    expect(ultimaPorVeiculo([L("brt", "1", "10", -23, -43.45, 50), L("brt", "1", "10", -23, -43.44, 10)])[0].lng).toBe(-43.44);
+  });
+  it("conta veículos, linhas e estados reais (sem inventar)", () => {
+    const r = retrato([
+      L("brt", "1", "10", -23.0, -43.45, 10),        // no trajeto
+      L("brt", "2", "10", -22.999, -43.45, 10),      // ~110 m → UNCERTAIN
+      L("brt", "3", "10", -22.97, -43.45, 10, 0),    // ~3,3 km → OFF_ROUTE
+      L("brt", "4", "10", -23.0, -43.45, 400),       // antigo → STALE
+      L("sppo", "A", "474", -22.9, -43.2, 30),
+    ], agora, trajetos);
+    expect(r.total).toBe(5);
+    expect(r.brt.estados).toEqual({ ON_ROUTE: 1, UNCERTAIN: 1, OFF_ROUTE: 1, STALE: 1, SEM_TRAJETO: 0 });
+    expect(r.brt.linhas).toBe(1);
+    expect(r.onibus.estados).toBeNull();
+    expect(r.recentes).toBe(4);
+  });
+});
+
+import { mesmoDestino } from "../src/lib/trajeto";
+it("mesmoDestino: casa nomes do GPS com os do GTFS", () => {
+  expect(mesmoDestino("Terminal Alvorada", "Alvorada")).toBe(true);
+  expect(mesmoDestino("Estação Santa Cruz", "Santa Cruz")).toBe(true);
+  expect(mesmoDestino("Terminal Alvorada", "Santa Cruz")).toBe(false);
+  expect(mesmoDestino(null, "Alvorada")).toBe(false);
+});

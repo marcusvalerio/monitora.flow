@@ -1,20 +1,20 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { Search, LocateFixed, TrainFront, Warehouse, BusFront, MapPin, X, Clock, CloudRain, Gauge, ChevronRight, Info } from "lucide-react";
+import { TriangleAlert, Search, LocateFixed, TrainFront, Warehouse, BusFront, MapPin, X, Clock, CloudRain, Gauge, ChevronRight, Info } from "lucide-react";
 import BottomSheet from "./BottomSheet";
 import SearchSheet from "../ui/SearchSheet";
 import { EmptyState, ErrorState, LastUpdated, Skel } from "../ui/estados";
 import { J, distKm, fmtDist, get, gravar, ha, horaLocal, lembrar, ler, minhaPosicao } from "../ui/util";
 import type { Ponto, VeiculoMapa } from "./TransitMap";
-import type { Trajeto } from "../../src/lib/trajeto";
+import { mesmoDestino, type Trajeto } from "../../src/lib/trajeto";
 import estacoesJson from "../../src/data/estacoes-brt.json";
 
 const ESTACOES = estacoesJson.estacoes;
 
 const TransitMap = dynamic(() => import("./TransitMap"), { ssr: false, loading: () => <div className="map-fill skeleton" style={{ borderRadius: 0 }} /> });
 
-const K_PONTO = "monitora:mob:ponto", K_LINHA = "monitora:mob:linha", K_RECENTES = "monitora:mob:recentes";
+const K_PONTO = "monitora:mob:ponto", K_LINHA = "monitora:mob:linha", K_RECENTES = "monitora:mob:recentes", K_SENTIDO = "monitora:mob:sentido";
 
 const rotuloTipo = (p: Ponto & { status?: string }) => p.status === "planejada" ? "Planejada · ainda não opera" : (p.tipo === "terminal" ? `Terminal BRT${p.corredor ? ` · ${p.corredor}` : ""}` : p.tipo === "estacao" ? `BRT ${p.corredor ?? ""}`.trim() : [p.rua, p.bairro].filter(Boolean).join(" · ") || "Parada de ônibus");
 const IconePonto = ({ p }: { p: Pick<Ponto, "tipo"> }) => (p.tipo === "terminal" ? <Warehouse aria-hidden /> : p.tipo === "estacao" ? <TrainFront aria-hidden /> : <BusFront aria-hidden />);
@@ -35,13 +35,16 @@ export default function MobilidadeApp() {
   const [clima, setClima] = useState<J | null>(null);
   const [rua, setRua] = useState<J | null>(null);
   const [trajeto, setTrajeto] = useState<Trajeto[] | null>(null);
+  // sentido escolhido = destino do trajeto oficial (trip_headsign do GTFS); null = todos
+  const [sentido, setSentidoS] = useState<string | null>(null);
+  const setSentido = (s: string | null) => { setSentidoS(s); gravar(K_SENTIDO, s); setVeiculoSel(null); };
   const [, tique] = useState(0);
   const desktop = useRef(false);
   const linhaSemPonto = useRef(false);
 
   useEffect(() => {
     desktop.current = window.matchMedia("(min-width: 960px)").matches;
-    setPonto(ler<Ponto | null>(K_PONTO, null)); setLinha(ler<string | null>(K_LINHA, null));
+    setPonto(ler<Ponto | null>(K_PONTO, null)); setLinha(ler<string | null>(K_LINHA, null)); setSentidoS(ler<string | null>(K_SENTIDO, null));
     const t = setInterval(() => tique((x) => x + 1), 5000);
     return () => clearInterval(t);
   }, []);
@@ -54,10 +57,10 @@ export default function MobilidadeApp() {
     if (!manter) setVeiculos(null);
     gravar(K_PONTO, p); lembrar(K_RECENTES, p); setBuscando(false); setNivel(1);
   }, []);
-  const acompanhar = (l: string | null) => { setLinha(l); gravar(K_LINHA, l); setChegada(null); setVeiculos(null); setVeiculoSel(null); setNivel(l ? 0 : 1); };
+  const acompanhar = (l: string | null, destino?: string | null) => { setSentidoS(destino ?? null); gravar(K_SENTIDO, destino ?? null); setLinha(l); gravar(K_LINHA, l); setChegada(null); setVeiculos(null); setVeiculoSel(null); setNivel(l ? 0 : 1); };
   const escolherLinha = (l: string) => {
     setBuscando(false); setVeiculoSel(null); setChegada(null); setVeiculos(null);
-    setLinha(l); gravar(K_LINHA, l);
+    setLinha(l); gravar(K_LINHA, l); setSentido(null);
     if (!ponto) { linhaSemPonto.current = true; setNivel(1); } else setNivel(0);
   };
   const limpar = () => { linhaSemPonto.current = false; setPonto(null); setLinha(null); gravar(K_PONTO, null); gravar(K_LINHA, null); setInfo(null); setVeiculos(null); setChegada(null); setNivel(1); };
@@ -113,13 +116,21 @@ export default function MobilidadeApp() {
     setPerto({ estacoes: e.estacoes ?? [], paradas: pa.paradas ?? [] });
   };
 
-  const lista: J[] = veiculos?.observado ?? [];
+  // sentidos da linha: destinos distintos do trajeto oficial
+  const sentidos: string[] = useMemo(() => [...new Set((trajeto ?? []).map((t) => t.destino))], [trajeto]);
+  const sentidoValido = sentido ? sentidos.find((d) => d === sentido) ?? sentidos.find((d) => mesmoDestino(d, sentido)) ?? null : null;
+  const todos: J[] = veiculos?.observado ?? [];
+  const lista: J[] = sentidoValido ? todos.filter((v) => mesmoDestino(v.destino, sentidoValido)) : todos;
+  const trajetoVisivel = useMemo(() => (trajeto && sentidoValido ? trajeto.filter((t) => t.destino === sentidoValido) : trajeto), [trajeto, sentidoValido]);
   const veiculosMapa: VeiculoMapa[] = useMemo(() => lista.map((v) => ({
-    id: v.id, fonte: v.fonte, linha: v.linha, destino: v.destino, lat: v.lat, lng: v.lng, rumo: v.rumo, parado: v.parado, idadeS: v.idadeS,
-    rotulo: `Linha ${v.linha}, ${v.fonte === "brt" ? "BRT" : "ônibus"}${v.destino ? `, sentido ${v.destino}` : ""}, ${v.parado ? "parado" : `a ${v.velocidadeKmh} km/h`}, atualizado ${ha(v.em)}`,
-  })), [veiculos]); // eslint-disable-line react-hooks/exhaustive-deps
+    id: v.id, fonte: v.fonte, linha: v.linha, destino: v.destino, lat: v.lat, lng: v.lng, rumo: v.rumo, parado: v.parado, idadeS: v.idadeS, estado: v.estadoGeo ?? null,
+    rotulo: `${v.fonte === "brt" ? "BRT" : "Ônibus"} da linha ${v.linha}${v.destino ? `, sentido ${v.destino}` : ""}, ${v.parado ? "parado" : `a ${v.velocidadeKmh} km/h`}${v.estadoGeo === "OFF_ROUTE" ? ", fora do trajeto esperado" : v.estadoGeo === "UNCERTAIN" ? ", posição incerta" : ""}, atualizado ${ha(v.em)}`,
+  })), [veiculos, sentidoValido]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const prox: J | null = chegada?.calculado?.proxima ?? null;
+  // chegadas do sentido escolhido (a estimativa é por veículo; filtramos pelos veículos do sentido)
+  const idsSentido = new Set(lista.map((v) => v.id));
+  const chegadas: J[] = (chegada?.calculado?.chegadas ?? []).filter((c: J) => !sentidoValido || idsSentido.has(`${c.fonte}:${c.veiculo}`));
+  const prox: J | null = sentidoValido ? chegadas[0] ?? null : chegada?.calculado?.proxima ?? null;
   const ehBrt = ponto?.fonte === "brt" || lista.some((v) => v.fonte === "brt");
   const sel = lista.find((v) => v.id === veiculoSel) ?? null;
 
@@ -136,7 +147,7 @@ export default function MobilidadeApp() {
       <span className={`line-badge lg${ehBrt ? " brt" : ""}`}>{linha}</span>
       <div className="main">
         <div className="t-title">Linha {linha}</div>
-        <div className="t-cap">{!veiculos ? "Carregando veículos…" : `${lista.length} ${lista.length === 1 ? "veículo" : "veículos"} com GPS agora`}</div>
+        <div className="t-cap">{sentidoValido ? `→ ${sentidoValido} · ` : ""}{!veiculos ? "Carregando veículos…" : `${lista.length} ${lista.length === 1 ? "veículo" : "veículos"} com GPS agora`}</div>
       </div>
       <button className="btn btn-icon" onClick={limpar} aria-label="Fechar linha"><X /></button>
     </div>
@@ -152,7 +163,7 @@ export default function MobilidadeApp() {
           {!chegada ? <Skel h={48} w={140} /> : prox ? (
             <div className="eta appear" aria-live="polite"><span className="n num">{eta(prox.etaMin)}</span><span className="u">min</span></div>
           ) : <div className="t-title" aria-live="polite">Sem estimativa agora</div>}
-          <div className="t-cap" style={{ marginTop: 4 }}>{prox ? `Chegada estimada em ${ponto.nome}` : `Nenhum veículo da linha se aproximando de ${ponto.nome}`}</div>
+          <div className="t-cap" style={{ marginTop: 4 }}>{sentidoValido ? <b style={{ fontWeight: 600, color: "var(--text)" }}>→ {sentidoValido} · </b> : null}{prox ? `Chegada estimada em ${ponto.nome}` : `Nenhum veículo ${sentidoValido ? "neste sentido" : "da linha"} se aproximando de ${ponto.nome}`}</div>
         </div>
         <span className={`line-badge lg${ehBrt ? " brt" : ""}`} aria-label={`Linha ${linha}`}>{linha}</span>
       </div>
@@ -178,12 +189,12 @@ export default function MobilidadeApp() {
           if (e) escolherPonto({ id: e.id, nome: e.nome, tipo: e.tipo as "estacao" | "terminal", fonte: "brt", lat: e.lat, lng: e.lng, corredor: e.corredor });
         }}
         pad={{ bottom: desktop.current ? 0 : padB, left: desktop.current ? 416 : 0 }}
-        trajetos={trajeto}
+        trajetos={trajetoVisivel}
         enquadrarChave={`${ponto?.id ?? ""}|${linha ?? ""}`} />
 
       <div className="map-top">
-        <button className="map-search" onClick={() => setBuscando(true)} aria-label="Pesquisar estação ou parada">
-          <Search aria-hidden /><span>{ponto ? ponto.nome : "Pesquisar estação ou terminal"}</span>
+        <button className="map-search" onClick={() => setBuscando(true)} aria-label="Pesquisar estação, terminal ou linha">
+          <Search aria-hidden /><span>{ponto ? ponto.nome : "Estação, terminal ou linha"}</span>
         </button>
         <button className="map-fab" onClick={pertoDeMim} aria-label="Usar minha localização"><LocateFixed /></button>
       </div>
@@ -193,6 +204,7 @@ export default function MobilidadeApp() {
 
         {!ponto && linha && (
           <>
+            {sentidos.length > 1 && <SeletorSentido sentidos={sentidos} valor={sentidoValido} onChange={setSentido} />}
             <span className="t-label">Onde você vai embarcar?</span>
             <p className="t-cap" style={{ margin: "6px 0 12px" }}>Escolha a estação ou parada para ver a chegada estimada desta linha.</p>
             <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => setBuscando(true)}><Search aria-hidden /> Escolher estação ou parada</button>
@@ -232,9 +244,10 @@ export default function MobilidadeApp() {
 
         {ponto && linha && (
           <>
-            {chegada?.calculado?.chegadas?.length > 1 && (
+            {sentidos.length > 1 && <SeletorSentido sentidos={sentidos} valor={sentidoValido} onChange={setSentido} />}
+            {chegadas.length > 1 && (
               <div className="t-cap" style={{ marginBottom: 12 }}>
-                Depois: {chegada!.calculado.chegadas.slice(1, 3).map((c: J) => `~${eta(c.etaMin)} min`).join(" · ")}
+                Depois: {chegadas.slice(1, 3).map((c: J) => `~${eta(c.etaMin)} min`).join(" · ")}
               </div>
             )}
             {avisoChuva && (
@@ -271,6 +284,14 @@ export default function MobilidadeApp() {
               </p>
             )}
             <div className="section">
+              <span className="t-label">No caminho</span>
+              <div className="row" style={{ alignItems: "flex-start" }}>
+                <TriangleAlert size={20} aria-hidden style={{ color: "var(--text-3)", flex: "none", marginTop: 2 }} />
+                <div><div className="t-head">Ocorrências indisponíveis</div>
+                  <div className="t-cap">Acidentes e interdições dependem da fonte aberta do COR, que não está respondendo. Quando voltar, mostramos as que ficarem a até 800 m do trajeto.</div></div>
+              </div>
+            </div>
+            <div className="section">
               <span className="t-label">Na região</span>
               <Rua rua={rua} />
             </div>
@@ -290,7 +311,23 @@ export default function MobilidadeApp() {
   );
 }
 
-function Estacao({ ponto, info, onLinha }: { ponto: Ponto; info: J | null; onLinha: (l: string) => void }) {
+function SeletorSentido({ sentidos, valor, onChange }: { sentidos: string[]; valor: string | null; onChange: (s: string | null) => void }) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <span className="t-label">Sentido</span>
+      <div className="sentidos" role="radiogroup" aria-label="Sentido da linha">
+        {sentidos.map((d) => (
+          <button key={d} role="radio" aria-checked={valor === d} className={`sentido${valor === d ? " on" : ""}`} onClick={() => onChange(valor === d ? null : d)}>
+            <span aria-hidden>→</span> {d}
+          </button>
+        ))}
+      </div>
+      {!valor && <p className="t-meta" style={{ margin: "6px 2px 0" }}>Mostrando os dois sentidos. Toque para escolher.</p>}
+    </div>
+  );
+}
+
+function Estacao({ ponto, info, onLinha }: { ponto: Ponto; info: J | null; onLinha: (l: string, destino?: string | null) => void }) {
   const linhas: J[] = (ponto.fonte === "brt" ? info?.observado?.linhas : info?.observado) ?? [];
   const proximos: J[] = info?.calculado?.proximos ?? [];
   if (!info) return <div style={{ display: "grid", gap: 12 }} aria-busy="true"><Skel h={18} w={140} /><Skel h={60} /><Skel h={60} /></div>;
@@ -305,7 +342,7 @@ function Estacao({ ponto, info, onLinha }: { ponto: Ponto; info: J | null; onLin
           ) : (
             <ul className="list">
               {proximos.slice(0, 8).map((p) => (
-                <li key={p.fonte + p.linha}><button className="list-item" onClick={() => onLinha(p.linha)} aria-label={`Acompanhar linha ${p.linha}, chega em cerca de ${eta(p.etaMin)} minutos`}>
+                <li key={p.fonte + p.linha}><button className="list-item" onClick={() => onLinha(p.linha, p.destino ?? null)} aria-label={`Acompanhar linha ${p.linha}${p.destino ? `, sentido ${p.destino}` : ""}, chega em cerca de ${eta(p.etaMin)} minutos`}>
                   <span className={`line-badge${p.fonte === "brt" ? " brt" : ""}`}>{p.linha}</span>
                   <span className="main"><div className="t-head">{p.destino ? `→ ${p.destino}` : `Linha ${p.linha}`}</div><div className="t-cap">a {fmtDist(p.distanciaM / 1000)} · GPS {ha(p.ultimaLeitura)}</div></span>
                   <span className="t-head num">{eta(p.etaMin)} min</span>
@@ -321,7 +358,7 @@ function Estacao({ ponto, info, onLinha }: { ponto: Ponto; info: J | null; onLin
         {!linhas.length ? <p className="t-cap" style={{ margin: 0 }}>Nenhum veículo com GPS passou por aqui na última hora. Se souber a linha, pesquise pela estação de novo mais tarde.</p> : (
           <div className="chip-row">
             {linhas.map((l) => (
-              <button key={`${l.fonte}${l.linha}`} className="chip" onClick={() => onLinha(String(l.linha))} aria-label={`Acompanhar linha ${l.linha}`}>
+              <button key={`${l.fonte}${l.linha}`} className="chip" onClick={() => onLinha(String(l.linha), l.destinos?.[0] ?? null)} aria-label={`Acompanhar linha ${l.linha}${l.destinos?.[0] ? `, sentido ${l.destinos[0]}` : ""}`}>
                 <span className={`line-badge${l.fonte === "brt" ? " brt" : ""}`} style={{ height: 22, minWidth: 30, fontSize: 12 }}>{l.linha}</span>
                 {l.destinos?.[0] ? `→ ${l.destinos[0]}` : `${l.veiculos} veíc.`}
               </button>
@@ -354,6 +391,8 @@ function VeiculoCard({ v, ponto, chegada, onFechar }: { v: J; ponto: Ponto | nul
       </div>
       <div style={{ marginTop: 10 }}><LastUpdated em={v.em} fonte="GPS SMTR" velhoS={60} /></div>
       {v.rumo === null && <div className="t-meta" style={{ marginTop: 6 }}>Direção indisponível para este veículo.</div>}
+      {v.estadoGeo === "OFF_ROUTE" && <div className="notice" style={{ marginTop: 10, boxShadow: "none", background: "var(--surface-2)" }}><span className="t-cap">Fora do trajeto esperado: a {fmtDist(v.distanciaTrajetoM / 1000)} do trajeto oficial. Mostramos a posição do GPS como veio.</span></div>}
+      {v.estadoGeo === "UNCERTAIN" && <div className="t-meta" style={{ marginTop: 6 }}>Posição incerta: a {fmtDist(v.distanciaTrajetoM / 1000)} do trajeto oficial.</div>}
     </div>
   );
 }

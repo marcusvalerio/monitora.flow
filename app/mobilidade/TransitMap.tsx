@@ -7,7 +7,7 @@ import { deltaAngulo } from "../../src/lib/veiculo";
 import { acumulado, encaixar, pontoEm, type Trajeto } from "../../src/lib/trajeto";
 
 export interface Ponto { id: string; nome: string; tipo: "estacao" | "terminal" | "parada"; fonte: "brt" | "sppo"; lat: number; lng: number; corredor?: string | null; bairro?: string | null; rua?: string | null }
-export interface VeiculoMapa { id: string; fonte: "brt" | "sppo"; linha: string | null; lat: number; lng: number; rumo: number | null; parado: boolean; idadeS: number; rotulo: string; destino?: string | null }
+export interface VeiculoMapa { id: string; fonte: "brt" | "sppo"; linha: string | null; lat: number; lng: number; rumo: number | null; parado: boolean; idadeS: number; rotulo: string; destino?: string | null; estado?: "ON_ROUTE" | "UNCERTAIN" | "OFF_ROUTE" | "STALE" | null }
 
 const ESTACOES = estacoesJson.estacoes as { id: string; nome: string; tipo: string; lat: number; lng: number }[];
 const estiloMapa = () =>
@@ -194,7 +194,8 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
     // Exibição: posição encaixada no trajeto oficial quando o GPS está a até 60 m dele (src/lib/trajeto.ts).
     const vistos = new Set<string>();
     for (const v0 of vs) {
-      const enc = v0.fonte === "brt" ? encaixar(v0.lat, v0.lng, v0.destino ?? null, rota.current.t) : null;
+      // Só encaixa o que é compatível com o trajeto; UNCERTAIN/OFF_ROUTE ficam na posição GPS real.
+      const enc = v0.fonte === "brt" && (v0.estado == null || v0.estado === "ON_ROUTE") ? encaixar(v0.lat, v0.lng, v0.destino ?? null, rota.current.t) : null;
       const v = enc ? { ...v0, lat: enc.lat, lng: enc.lng } : v0;
       vistos.add(v.id);
       let it = frota.current.get(v.id);
@@ -213,7 +214,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
         animar(it, v.lat, v.lng, enc ? { trajeto: enc.trajeto, s: enc.s } : null);
       }
       girar(it, v.rumo);
-      it.el.className = `veh ${v.fonte}${v.parado ? " parado" : ""}${v.idadeS > 180 ? " velho" : ""}${v.id === sel ? " sel" : ""}`;
+      it.el.className = `veh ${v.fonte}${v.parado ? " parado" : ""}${v.idadeS > 180 || v.estado === "STALE" ? " velho" : ""}${v.estado === "OFF_ROUTE" ? " fora" : v.estado === "UNCERTAIN" ? " incerto" : ""}${v.id === sel ? " sel" : ""}`;
       (it.el.querySelector(".chip-v") as HTMLElement).textContent = v.linha ?? "";
       it.el.setAttribute("aria-label", v.rotulo);
       it.el.style.zIndex = v.id === sel ? "3" : "1";

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CloudSun, BusFront, ChevronRight, Radar } from "lucide-react";
+import { CloudSun, BusFront, ChevronRight, Radar, Activity } from "lucide-react";
 import { IconeTempo } from "./estados";
 import { J, get, ler } from "./util";
 
@@ -22,7 +22,7 @@ export default function Home() {
     <main className="page">
       <div className="row" style={{ gap: 8, color: "var(--text-2)" }}><Radar size={18} aria-hidden /><span className="t-head">Monitora</span></div>
       <h1 className="t-hero" style={{ margin: "28px 0 6px" }}>O que você quer fazer?</h1>
-      <p className="t-body muted" style={{ margin: 0 }}>Clima e transporte no Rio, com dados abertos e atualizados.</p>
+      <p className="t-body muted" style={{ margin: 0 }}>Clima, transporte e a operação da cidade agora, com dados abertos.</p>
 
       <div className="actions">
         <Link href="/clima" className="action appear">
@@ -33,6 +33,11 @@ export default function Home() {
         <Link href="/mobilidade" className="action appear">
           <span className="ico" style={{ background: "color-mix(in srgb, var(--brt) 14%, transparent)", color: "var(--brt)" }}><BusFront aria-hidden /></span>
           <span style={{ flex: 1 }}><div className="t-title">Acompanhar transporte</div><div className="t-cap">BRT e ônibus ao vivo, chegada estimada</div></span>
+          <ChevronRight aria-hidden style={{ color: "var(--text-3)" }} />
+        </Link>
+        <Link href="/monitor" className="action appear">
+          <span className="ico" style={{ background: "color-mix(in srgb, var(--accent) 14%, transparent)", color: "var(--accent)" }}><Activity aria-hidden /></span>
+          <span style={{ flex: 1 }}><div className="t-title">Ver a operação agora</div><div className="t-cap">Frota observada, qualidade dos dados e chuva</div></span>
           <ChevronRight aria-hidden style={{ color: "var(--text-3)" }} />
         </Link>
       </div>
