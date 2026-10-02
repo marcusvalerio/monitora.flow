@@ -44,6 +44,10 @@ export const PARAMETROS = {
   CHEGADA_DIST_MAX_M: 15000,
   /** EXPERIMENTAL / ESCOLHA DO SISTEMA — distância para associar uma coordenada a um ponto configurado (m). */
   PONTO_ASSOCIAR_MAX_M: 150,
+  /** EXPERIMENTAL / ESCOLHA DO SISTEMA — raio para "linhas vistas perto da parada" (m). */
+  PARADA_LINHAS_RAIO_M: 100,
+  /** EXPERIMENTAL / ESCOLHA DO SISTEMA — janela para "linhas vistas perto da parada" (min). */
+  PARADA_LINHAS_JANELA_MIN: 60,
   /** Fuso usado para dia da semana / hora. Rio não tem horário de verão desde 2019. */
   FUSO: "America/Sao_Paulo",
 } as const;

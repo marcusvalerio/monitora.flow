@@ -25,6 +25,8 @@ export const OPENAPI = {
     "/tempo": { get: { summary: "Previsão (Open-Meteo, FONTE EXTERNA)", parameters: [lat, lng], responses: resp("Agora + próximas 6 h") } },
     "/ocorrencias": { get: { summary: "Ocorrências do COR — ainda sem fonte aberta", responses: resp("disponivel=false") } },
     "/geocodificar": { get: { summary: "Endereço → coordenada (geocodificador oficial IPP)", parameters: [q("q", "Endereço", true)], responses: resp("Candidatos com nota") } },
+    "/paradas": { get: { summary: "Busca de paradas e estações de ônibus/BRT (camada aberta da Prefeitura)", parameters: [q("q", "Nome (sem acento/caixa)"), q("lat", "Latitude", false, num), q("lng", "Longitude", false, num), q("raio", "Raio em m sem 'q' (padrão 500)", false, num), q("limite", "Máx. de resultados (padrão 20)", false, { type: "integer" })], responses: resp("Paradas, ordenadas por relevância ou distância") } },
+    "/paradas/{id}/linhas": { get: { summary: "Linhas com GPS perto da parada na última hora (EXPERIMENTAL)", parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }], responses: resp("Linhas e nº de veículos") } },
     "/pontos": { get: { summary: "Pontos configurados e parâmetros", responses: resp("Lista") } },
   },
 };

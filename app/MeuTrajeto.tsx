@@ -167,23 +167,42 @@ export default function MeuTrajeto() {
 }
 
 function NovoFavorito({ onSalvar }: { onSalvar: (f: Favorito) => void }) {
+  const [modo, setModo] = useState<"parada" | "endereco">("parada");
   const [q, setQ] = useState("");
   const [cands, setCands] = useState<J[] | null>(null);
   const [esc, setEsc] = useState<J | null>(null);
   const [nome, setNome] = useState("");
   const [linha, setLinha] = useState("");
+  const [linhasPerto, setLinhasPerto] = useState<J[] | null>(null);
   const [msg, setMsg] = useState("");
+
+  function escolher(c: J) {
+    setEsc(c); setNome(c.nome ?? c.endereco); setCands(null); setLinhasPerto(null);
+    if (c.paradaId) get(`/paradas/${encodeURIComponent(c.paradaId)}/linhas`).then((r) => setLinhasPerto(r?.observado ?? []));
+  }
 
   async function buscar(e: React.FormEvent) {
     e.preventDefault(); setMsg("buscando…");
-    const r = await get(`/geocodificar?q=${encodeURIComponent(q)}`);
+    const r = modo === "parada" ? await get(`/paradas?q=${encodeURIComponent(q)}`) : await get(`/geocodificar?q=${encodeURIComponent(q)}`);
     if (!r || r.erro) { setMsg(r?.erro ?? "erro"); return; }
-    setCands(r.candidatos); setMsg(r.candidatos.length ? "" : "nenhum endereço encontrado");
+    const lista = modo === "parada"
+      ? r.paradas.map((p: J) => ({ nome: p.nome, endereco: p.nome, lat: p.lat, lng: p.lng, paradaId: p.id }))
+      : r.candidatos.map((c: J) => ({ ...c, nota: c.nota }));
+    setCands(lista); setMsg(lista.length ? "" : "nada encontrado");
   }
-  function usarLocal() {
+
+  function pertoDeMim() {
+    setMsg("pegando sua localização…");
     navigator.geolocation?.getCurrentPosition(
-      (p) => { setEsc({ endereco: "Minha localização", lat: p.coords.latitude, lng: p.coords.longitude }); setCands(null); },
-      () => setMsg("não foi possível obter a localização"),
+      async (p) => {
+        const { latitude: lat, longitude: lng } = p.coords;
+        if (modo === "endereco") { escolher({ endereco: "Minha localização", lat, lng }); setMsg(""); return; }
+        const r = await get(`/paradas?lat=${lat}&lng=${lng}&raio=800&limite=15`);
+        const lista = (r?.paradas ?? []).map((x: J) => ({ nome: x.nome, endereco: x.nome, lat: x.lat, lng: x.lng, paradaId: x.id, distanciaM: x.distanciaM }));
+        setCands(lista); setMsg(lista.length ? "" : "nenhuma parada a até 800 m");
+      },
+      () => setMsg("não foi possível obter a localização (permita o acesso no navegador)"),
+      { enableHighAccuracy: true, timeout: 15_000 },
     );
   }
 
@@ -191,21 +210,49 @@ function NovoFavorito({ onSalvar }: { onSalvar: (f: Favorito) => void }) {
     <section className="card">
       {!esc ? (
         <>
+          <div className="chips" style={{ marginBottom: 8 }}>
+            <button className={modo === "parada" ? "ativo" : ""} onClick={() => { setModo("parada"); setCands(null); setMsg(""); }}>🚏 Estação ou parada</button>
+            <button className={modo === "endereco" ? "ativo" : ""} onClick={() => { setModo("endereco"); setCands(null); setMsg(""); }}>📍 Endereço</button>
+          </div>
           <form onSubmit={buscar} className="linha">
-            <input placeholder="Endereço no Rio (ex.: Rua Jardim Botânico 746)" value={q} onChange={(e) => setQ(e.target.value)} />
+            <input placeholder={modo === "parada" ? "Nome da estação/parada (ex.: Alvorada, Jardim Oceânico)" : "Endereço no Rio (ex.: Rua Jardim Botânico 746)"} value={q} onChange={(e) => setQ(e.target.value)} />
             <button className="prim" type="submit">Buscar</button>
-            <button type="button" onClick={usarLocal}>📍 Usar minha localização</button>
+            <button type="button" onClick={pertoDeMim}>{modo === "parada" ? "📍 Paradas perto de mim" : "📍 Usar minha localização"}</button>
           </form>
           {msg && <p className="sub">{msg}</p>}
           {cands?.map((c) => (
-            <div key={`${c.lat},${c.lng},${c.endereco}`}><a href="#" onClick={(e) => { e.preventDefault(); setEsc(c); setNome(c.endereco); }}>{c.endereco}</a> <span className="sub">nota {c.nota}</span></div>
+            <div key={`${c.paradaId ?? ""}${c.lat},${c.lng},${c.endereco}`} style={{ padding: "4px 0" }}>
+              <a href="#" onClick={(e) => { e.preventDefault(); escolher(c); }}>{c.nome ?? c.endereco}</a>{" "}
+              <span className="sub">{c.distanciaM != null ? `${c.distanciaM} m` : c.nota != null ? `nota ${c.nota}` : ""}</span>
+            </div>
           ))}
-          <p className="sub">Geocodificador oficial da Prefeitura (IPP).</p>
+          <p className="sub">{modo === "parada" ? "Paradas e estações de ônibus e BRT: camada aberta da Prefeitura." : "Geocodificador oficial da Prefeitura (IPP)."}</p>
         </>
       ) : (
         <form className="grade" onSubmit={(e) => { e.preventDefault(); onSalvar({ id: String(Date.now()), nome: nome || esc.endereco, endereco: esc.endereco, lat: esc.lat, lng: esc.lng, linha: linha.trim().toUpperCase() || undefined }); }}>
           <label>Nome<input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Ponto do trabalho" /></label>
           <label>Linha (opcional)<input value={linha} onChange={(e) => setLinha(e.target.value)} placeholder="Ex.: 22 ou 917" /></label>
+          {esc.paradaId && (
+            <div style={{ gridColumn: "1/-1" }}>
+              {linhasPerto === null ? <p className="sub">procurando linhas que passaram aqui…</p> : linhasPerto.length ? (
+                <>
+                  <p className="sub" style={{ margin: "4px 0" }}>Linhas com GPS perto desta parada na última hora (toque para escolher):</p>
+                  <div className="chips">
+                    {linhasPerto.map((l) => (
+                      <button type="button" key={`${l.fonte}${l.linha}`} className={linha.toUpperCase() === String(l.linha).toUpperCase() ? "ativo" : ""} onClick={() => setLinha(String(l.linha))}>
+                        {l.fonte === "brt" ? "BRT " : ""}{l.linha}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="sub">Experimental: não é a lista oficial da parada.</p>
+                </>
+              ) : <p className="sub">Nenhum ônibus com GPS perto desta parada na última hora. Digite a linha, se souber.</p>}
+            </div>
+          )}
+          <div style={{ gridColumn: "1/-1" }}>
+            <p className="sub" style={{ margin: "4px 0" }}>Confira no mapa se é o lugar certo (há paradas com o mesmo nome em bairros diferentes):</p>
+            <Mapa destino={{ lat: esc.lat, lng: esc.lng }} veiculos={[]} chuva={[]} />
+          </div>
           <p className="sub" style={{ gridColumn: "1/-1" }}>{esc.endereco} ({esc.lat.toFixed(5)}, {esc.lng.toFixed(5)}) · salvo só neste aparelho</p>
           <div className="linha"><button className="prim" type="submit">Salvar</button><button type="button" onClick={() => setEsc(null)}>Voltar</button></div>
         </form>

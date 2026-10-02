@@ -1,6 +1,6 @@
 import { ok, tratar, ErroParametro } from "../../src/lib/api";
 
-export const revalidate = 86400;
+export const dynamic = "force-dynamic";
 const URL_GEO = "https://pgeo3.rio.rj.gov.br/arcgis/rest/services/Geocode/Geocode_Logradouros_WGS84/GeocodeServer/findAddressCandidates";
 
 /** GET /geocodificar?q=Avenida das Américas 2000 — geocodificador oficial da Prefeitura (IPP), aberto. */

@@ -77,9 +77,15 @@ Ainda **não** integrado a este projeto.
 Exigem autenticação. Ficam de fora até haver autorização formal (pedido via LAI em andamento). O desenho já separa fontes por `fonte`
 (`brt`, `sppo`); uma fonte `radar` pode entrar como nova tabela de leituras + os mesmos agregados por ponto.
 
-## 10. Trajetos e paradas (GTFS) — NÃO INTEGRADO AINDA
-- Camadas abertas verificadas: `https://raw.githubusercontent.com/prefeitura-rio/storage/master/layers/paradas_onibus.geojson` (HTTP 200, versão 2024-09-29).
-- Próximo passo: usar trajetos (`itinerario.geojson` / GTFS) para a chegada seguir a rua e filtrar por sentido.
+## 10. Paradas e estações — camada aberta da Prefeitura (USADO)
+- `https://raw.githubusercontent.com/prefeitura-rio/storage/master/layers/paradas_onibus.geojson` (HTTP 200 em 02/10/2026, `data_versao` 2024-09-29).
+- 7.739 pontos (`id_parada`, `nome_parada`, coordenadas), incluindo estações e plataformas do BRT (ex.: "Terminal Alvorada :: Plataforma A12").
+- Cópia compacta em `src/data/paradas.json` (atualizar com `npm run paradas:atualizar`). Usada em `/paradas` e na tela "Estação ou parada" do app.
+- Limitações: nomes repetidos em bairros diferentes (o app mostra o mapa antes de salvar); não traz as linhas de cada parada.
+
+## 11. Trajetos (GTFS / itinerários) — NÃO INTEGRADO AINDA
+- `.../layers/itinerario.geojson` respondeu HTTP 200 (8 MB). Próximo passo: usar trajetos para a chegada seguir a rua, filtrar por sentido
+  e listar as linhas oficiais de cada parada.
 
 ## Fixtures de teste
 `tests/fixtures/brt.json` e `sppo.json` são recortes de respostas reais de 02/10/2026 03:19 UTC, com as placas trocadas por `TST0000…`.

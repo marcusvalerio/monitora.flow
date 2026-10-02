@@ -1,7 +1,7 @@
 import { buscarChuvas, estacoesProximas } from "../../src/lib/chuva";
 import { ok, numero, tratar } from "../../src/lib/api";
 
-export const revalidate = 120;
+export const dynamic = "force-dynamic";
 
 /** GET /chuva?lat=&lng= — pluviômetros do Alerta Rio mais próximos (ou todos, sem coordenada). */
 export function GET(req: Request) {
