@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { Orbita } from "../ui/Geometria";
 import { TriangleAlert, Search, LocateFixed, TrainFront, Warehouse, BusFront, MapPin, X, Clock, CloudRain, Gauge, ChevronRight, Info } from "lucide-react";
 import BottomSheet from "./BottomSheet";
 import SearchSheet from "../ui/SearchSheet";
@@ -8,11 +9,12 @@ import { EmptyState, ErrorState, LastUpdated, Skel } from "../ui/estados";
 import { J, distKm, fmtDist, get, gravar, ha, horaLocal, lembrar, ler, minhaPosicao } from "../ui/util";
 import type { Ponto, VeiculoMapa } from "./TransitMap";
 import { mesmoDestino, type Trajeto } from "../../src/lib/trajeto";
+import { ContaNumero } from "../clima/WeatherHero";
 import estacoesJson from "../../src/data/estacoes-brt.json";
 
 const ESTACOES = estacoesJson.estacoes;
 
-const TransitMap = dynamic(() => import("./TransitMap"), { ssr: false, loading: () => <div className="map-fill skeleton" style={{ borderRadius: 0 }} /> });
+const TransitMap = dynamic(() => import("./TransitMap"), { ssr: false, loading: () => <div className="map-carregando"><Orbita rotulo="Carregando o mapa" /></div> });
 
 const K_PONTO = "monitora:mob:ponto", K_LINHA = "monitora:mob:linha", K_RECENTES = "monitora:mob:recentes", K_SENTIDO = "monitora:mob:sentido";
 
@@ -42,6 +44,9 @@ export default function MobilidadeApp() {
   const setSentido = (s: string | null) => { setSentidoS(s); gravar(K_SENTIDO, s); setVeiculoSel(null); };
   const [, tique] = useState(0);
   const desktop = useRef(false);
+  // Diagnóstico: ?debug=1 (qualquer ambiente) ou desenvolvimento local
+  const [debug, setDebug] = useState(false);
+  useEffect(() => { setDebug(process.env.NODE_ENV !== "production" || new URLSearchParams(location.search).get("debug") === "1"); }, []);
   const linhaSemPonto = useRef(false);
 
   useEffect(() => {
@@ -88,9 +93,9 @@ export default function MobilidadeApp() {
     setTrajeto(null);
     if (!linha) return;
     let vivo = true;
-    get(`/linhas/${encodeURIComponent(linha)}/trajeto`).then((r) => { if (vivo && r.trajetos?.length) setTrajeto(r.trajetos); });
+    get(`/linhas/${encodeURIComponent(linha)}/trajeto${modoLinha ? `?modo=${modoLinha}` : ""}`).then((r) => { if (vivo && r.trajetos?.length) setTrajeto(r.trajetos); });
     return () => { vivo = false; };
-  }, [linha]);
+  }, [linha, modoLinha]);
 
   // acompanhamento de linha: veículos + chegada (10 s)
   useEffect(() => {
@@ -164,7 +169,7 @@ export default function MobilidadeApp() {
       <div className="row" style={{ alignItems: "flex-end" }}>
         <div style={{ minWidth: 0, flex: 1 }}>
           {!chegada ? <Skel h={48} w={140} /> : prox ? (
-            <div className="eta appear" aria-live="polite"><span className="n num">{eta(prox.etaMin)}</span><span className="u">min</span></div>
+            <div className="eta appear" aria-live="polite"><span className="n num"><ContaNumero valor={eta(prox.etaMin)} /></span><span className="u">min</span></div>
           ) : <div className="t-title" aria-live="polite">Sem estimativa agora</div>}
           <div className="t-cap" style={{ marginTop: 4 }}>{sentidoValido ? <b style={{ fontWeight: 600, color: "var(--text)" }}>→ {sentidoValido} · </b> : null}{prox ? `Chegada estimada em ${ponto.nome}` : `Nenhum veículo ${sentidoValido ? "neste sentido" : "da linha"} se aproximando de ${ponto.nome}`}</div>
         </div>
@@ -193,17 +198,19 @@ export default function MobilidadeApp() {
         }}
         pad={{ bottom: desktop.current ? 0 : padB, left: desktop.current ? 416 : 0 }}
         trajetos={trajetoVisivel}
+        debug={debug && sel ? { gps: [sel.lng, sel.lat], proj: sel.projecao ?? null, shapeId: sel.shapeId ?? null } : null}
         enquadrarChave={`${ponto?.id ?? ""}|${linha ?? ""}`} />
 
       <div className="map-top">
         <button className="map-search" onClick={() => setBuscando(true)} aria-label="Pesquisar estação, terminal ou linha">
           <Search aria-hidden /><span>{ponto ? ponto.nome : "Estação, terminal ou linha"}</span>
         </button>
-        <button className="map-fab" onClick={pertoDeMim} aria-label="Usar minha localização"><LocateFixed /></button>
+        <button className={`map-fab${perto?.carregando ? " buscando" : ""}`} onClick={pertoDeMim} aria-label="Usar minha localização" aria-busy={!!perto?.carregando}><LocateFixed /></button>
       </div>
 
       <BottomSheet resumo={ponto && linha ? 190 : 150} nivel={nivel} setNivel={setNivel} onAltura={setPadB} cabecalho={cabecalho}>
         {sel && <VeiculoCard v={sel} ponto={ponto} chegada={chegada} onFechar={() => setVeiculoSel(null)} />}
+        {sel && debug && <PainelDebug v={sel} />}
 
         {!ponto && linha && (
           <>
@@ -395,6 +402,25 @@ function Estacao({ ponto, info, onLinha }: { ponto: Ponto; info: J | null; onLin
       </div>
       <div style={{ marginTop: 14 }}><LastUpdated em={info.em} fonte={brt ? "GTFS + GPS SMTR" : "GPS SMTR"} velhoS={60} /></div>
     </div>
+  );
+}
+
+/** Diagnóstico do veículo selecionado (modo debug): tudo que explica por que ele está onde está. */
+function PainelDebug({ v }: { v: J }) {
+  const linhas: [string, unknown][] = [
+    ["vehicle_id", v.veiculo], ["mode", v.modo], ["route", v.linha], ["route_id", v.routeId], ["trip_id", v.tripId], ["shape_id (GPS)", v.shapeIdGps],
+    ["associação", v.associacao], ["shape usado", v.shapeId], ["destino", v.destino], ["sentido", v.sentido],
+    ["lat, lng", `${v.lat}, ${v.lng}`], ["velocidade", `${v.velocidadeKmh} km/h`], ["rumo GPS", v.rumo == null ? "—" : `${v.rumo}° (${v.rumoOrigem})`],
+    ["rumo do trecho", v.rumoTrecho == null ? "—" : `${v.rumoTrecho}° (trecho ${v.trecho})`], ["Δ rumo", v.headingDeltaDeg == null ? "—" : `${v.headingDeltaDeg}°`],
+    ["distância ao shape", v.distanciaTrajetoM == null ? "—" : `${v.distanciaTrajetoM} m`], ["estado", `${v.routeState} (${v.confidence})`], ["motivo", v.motivo],
+    ["GPS em", new Date(v.em).toLocaleTimeString("pt-BR")], ["idade", `${v.idadeS} s`], ["ignição desligada", v.ignicaoDesligada == null ? "—" : String(v.ignicaoDesligada)],
+  ];
+  return (
+    <details className="debug" open>
+      <summary className="t-label">Diagnóstico</summary>
+      <dl>{linhas.map(([k, val]) => <div key={k}><dt>{k}</dt><dd>{val == null || val === "" ? "—" : String(val)}</dd></div>)}</dl>
+      <p className="t-meta">Mapa: ponto vermelho = GPS real; ponto teal = projeção no shape; tracejado = distância; amarelo = shape usado.</p>
+    </details>
   );
 }
 

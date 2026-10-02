@@ -7,13 +7,14 @@
  */
 import { useMemo } from "react";
 
-export type Atmosfera = "clear" | "cloudy" | "rain" | "storm" | "night" | "neutral";
+export type Atmosfera = "clear" | "cloudy" | "rain" | "drizzle" | "storm" | "night" | "neutral";
 type Icone = "sol" | "parcial" | "nublado" | "neblina" | "garoa" | "chuva" | "tempestade" | "neve";
 
 export function atmosferaDe(icone: Icone | null | undefined, dia: boolean | null | undefined): Atmosfera {
   if (!icone) return "neutral";
   if (icone === "tempestade") return "storm";
-  if (icone === "chuva" || icone === "garoa") return "rain";
+  if (icone === "chuva") return "rain";
+  if (icone === "garoa") return "drizzle";
   if (dia === false) return "night";
   if (icone === "sol" || icone === "parcial") return icone === "parcial" ? "cloudy" : "clear";
   return "cloudy"; // nublado, neblina, neve
@@ -43,6 +44,7 @@ function Rain({ n, fina }: { n: number; fina?: boolean }) {
     </div>
   );
 }
+function DrizzleAtmosphere() { return <><Glow className="g-mass m1 dim" /><Glow className="g-mass m3 dim" /><Rain n={14} fina /></>; }
 function RainAtmosphere() { return <><Glow className="g-mass m1 dim" /><Glow className="g-mass m2 dim" /><Rain n={22} /></>; }
 function StormAtmosphere() { return <><Glow className="g-mass m1 dim" /><Glow className="g-mass m3 dim" /><Rain n={18} /><i className="atm-flash" /></>; }
 function NightAtmosphere() {
@@ -61,6 +63,7 @@ export default function WeatherAtmosphere({ tipo }: { tipo: Atmosfera }) {
       {tipo === "clear" && <ClearAtmosphere />}
       {tipo === "cloudy" && <CloudyAtmosphere />}
       {tipo === "rain" && <RainAtmosphere />}
+      {tipo === "drizzle" && <DrizzleAtmosphere />}
       {tipo === "storm" && <StormAtmosphere />}
       {tipo === "night" && <NightAtmosphere />}
       <i className="atm-grain" />

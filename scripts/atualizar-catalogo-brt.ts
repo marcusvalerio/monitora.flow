@@ -112,6 +112,39 @@ for (const e of estacoes) {
   if (set.size) linhasPorEstacao[e.id] = [...set].sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true }));
 }
 
+// ---------- ônibus (tudo que não é 702): catálogo próprio, usado só no servidor ----------
+// O GPS dos ônibus traz shape_id/trip_id da viagem: com isso cada veículo é comparado ao shape EXATO da sua viagem.
+const SIMPLIFICA_ONIBUS_M = 8; // EXPERIMENTAL / ESCOLHA DO SISTEMA (catálogo ~2 MB)
+const rotasOnibus = new Map(todasRotas.filter((r) => r.route_type !== "702").map((r) => [r.route_id, r]));
+const usosOnibus = new Map<string, { linha: string; sentido: number; destino: string; viagens: number }>();
+for (const t of csv("trips.txt")) {
+  const r = rotasOnibus.get(t.route_id);
+  if (!r || !t.shape_id) continue;
+  const u = usosOnibus.get(t.shape_id) ?? { linha: r.route_short_name.toUpperCase(), sentido: Number(t.direction_id), destino: t.trip_headsign, viagens: 0 };
+  u.viagens++; usosOnibus.set(t.shape_id, u);
+}
+const ptsOnibus = new Map<string, [number, number, number][]>();
+for (const s of csv("shapes.txt")) {
+  if (!usosOnibus.has(s.shape_id)) continue;
+  (ptsOnibus.get(s.shape_id) ?? ptsOnibus.set(s.shape_id, []).get(s.shape_id)!).push([Number(s.shape_pt_sequence), Number(s.shape_pt_lon), Number(s.shape_pt_lat)]);
+}
+const r5 = (x: number) => Math.round(x * 1e5) / 1e5;
+const linhasOnibus: Record<string, { routeId: string; nome: string; trajetos: { shapeId: string; sentido: number; destino: string; viagens: number }[] }> = {};
+for (const r of rotasOnibus.values()) linhasOnibus[r.route_short_name.toUpperCase()] = { routeId: r.route_id, nome: r.route_long_name, trajetos: [] };
+const shapesOnibus: Record<string, [number, number][]> = {};
+for (const [id, u] of usosOnibus) {
+  const p = (ptsOnibus.get(id) ?? []).sort((a, b) => a[0] - b[0]).map(([, lng, lat]) => [lng, lat] as [number, number]);
+  if (p.length < 2) continue;
+  shapesOnibus[id] = simplifica(p, SIMPLIFICA_ONIBUS_M).map(([a, b]) => [r5(a), r5(b)]);
+  linhasOnibus[u.linha].trajetos.push({ shapeId: id, sentido: u.sentido, destino: u.destino, viagens: u.viagens });
+}
+const feed0 = csv("feed_info.txt")[0] ?? {};
+writeFileSync("src/data/onibus-catalogo.json", JSON.stringify({
+  fonte: URL_GTFS, criterio: "routes.route_type != 702", versaoGtfs: feed0.feed_version ?? null, validoAte: feed0.feed_end_date ?? null,
+  baixadoEm: new Date().toISOString().slice(0, 10), linhas: linhasOnibus, shapes: shapesOnibus,
+}));
+console.log(`${Object.keys(linhasOnibus).length} linhas de ônibus, ${Object.keys(shapesOnibus).length} shapes`);
+
 const feed = csv("feed_info.txt")[0] ?? {};
 writeFileSync("src/data/brt-catalogo.json", JSON.stringify({
   fonte: URL_GTFS, criterio: "routes.route_type = 702 (BRT)", versaoGtfs: feed.feed_version ?? null, validoDe: feed.feed_start_date ?? null, validoAte: feed.feed_end_date ?? null,

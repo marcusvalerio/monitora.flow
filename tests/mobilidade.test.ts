@@ -172,7 +172,7 @@ describe("monitor (retrato da frota)", () => {
     expect(r.total).toBe(5);
     expect(r.brt.estados).toEqual({ ON_ROUTE: 1, UNCERTAIN: 1, OFF_ROUTE: 1, STALE: 1 });
     expect(r.brt.linhas).toBe(1);
-    expect(r.onibus.estados).toBeNull();
+    expect(r.onibus.estados).toEqual({ ON_ROUTE: 0, UNCERTAIN: 0, OFF_ROUTE: 0, STALE: 0 }); // linha sem trajeto: não conta
     expect(r.recentes).toBe(4);
   });
 });

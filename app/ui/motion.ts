@@ -27,8 +27,10 @@ export const camera = (duracao: number = DUR.espacial) => ({ duration: reduzMovi
  * (o veículo "anda" durante quase todo o intervalo, sem ficar parado e depois saltar), mas sempre CHEGA ao dado real
  * antes da próxima leitura. Saltos grandes (> 800 m) não são suavizados: provável erro de GPS, mostramos rápido.
  */
-export function duracaoVeiculo(intervaloMs: number, distM: number) {
-  if (reduzMovimento()) return 0;
+export function duracaoVeiculo(intervaloMs: number, distM: number, stale = false) {
+  if (reduzMovimento() || stale) return 0;
+  // intervalo incoerente (aba em segundo plano, fonte travou): animar inventaria um percurso → posiciona direto
+  if (intervaloMs > 60_000) return 0;
   if (distM > 800) return DUR.interacao;
   return Math.max(DUR.espacial, Math.min(9000, intervaloMs * 0.85));
 }

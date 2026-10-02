@@ -16,7 +16,7 @@
   /* texto */
   --text: var(--deep);
   --text-2: #3E4A5E;
-  --text-3: #6E7A8C;
+  --text-3: #5C6879;
   /* marca e estados */
   /* interativo = Atlantic; ativo/sinal = Lime sobre Deep (lime nunca é texto sobre claro) */
   --accent: var(--atlantic);
@@ -520,3 +520,60 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 @media (prefers-reduced-motion: reduce) {
   .sheet.anim, .nav a::after, .veh .chip-v, .map-search, .map-fab, .seg, .sentido, .chip, .btn, .action, .list-item { transition: none !important; }
 }
+.debug { margin: -4px 0 16px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); font-size: 12px; }
+.debug summary { cursor: pointer; }
+.debug dl { margin: 8px 0 6px; display: grid; gap: 3px; }
+.debug dl div { display: grid; grid-template-columns: 120px 1fr; gap: 8px; }
+.debug dt { color: var(--text-3); }
+.debug dd { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+
+/* ---------- marcador de veículo (Phase 2): cápsula + silhueta + nariz de direção ---------- */
+.veh { --veh-bg: var(--bus); --veh-fg: #fff; --veh-glyph: #fff; --veh-nose: var(--bus); --veh-edge: #fff; width: 48px; height: 48px; }
+.veh.brt { --veh-bg: var(--deep); --veh-fg: #fff; --veh-glyph: var(--lime); --veh-nose: var(--deep); }
+@media (prefers-color-scheme: dark) { .veh.brt { --veh-bg: #0B1236; --veh-nose: var(--lime); --veh-edge: var(--deep); } }
+.veh .chip-v { display: inline-flex !important; align-items: center; gap: 3px; height: 24px; min-width: 0; padding: 0 7px 0 5px; border-radius: 8px;
+  background: var(--veh-bg) !important; color: var(--veh-fg) !important; border: 1.5px solid rgba(255, 255, 255, .9);
+  font: 650 12px/1 var(--font-ui); letter-spacing: -.01em; box-shadow: 0 2px 6px rgba(0, 0, 34, .3), 0 0 0 .5px rgba(0, 0, 34, .25); }
+.veh .chip-v .glyph { width: 12px; height: 12px; color: var(--veh-glyph); flex: none; }
+.veh .chip-v b { font-weight: 650; }
+.veh.fora .chip-v { background: var(--surface) !important; color: var(--text-2) !important; --veh-glyph: var(--text-3); }
+.veh.fora { --veh-nose: var(--text-3); }
+/* microinterações com função */
+.live-dot.pulso { animation: pulso-dado var(--dur-space) var(--ease-out) 1; }
+@keyframes pulso-dado { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 55%, transparent); } 100% { box-shadow: 0 0 0 7px transparent; } }
+.map-fab.buscando svg { animation: localizando 1.2s var(--ease-in-out) infinite; color: var(--accent); }
+@keyframes localizando { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.82); opacity: .6; } }
+@media (prefers-reduced-motion: reduce) { .live-dot.pulso, .map-fab.buscando svg { animation: none; } }
+.on-drizzle { --atm-a: #94A9BF; --atm-b: #5A6E8C; --atm-c: #2E3D5C; }
+.atm-rain.fina span { width: .8px; animation-duration: 2.8s !important; }
+.atm-rain.fina span.perto { opacity: .18 !important; }
+
+/* ---------- navegação flutuante (Phase 4) ---------- */
+@media (max-width: 959px) {
+  :root { --nav-h: 62px; }
+  .shell { padding-bottom: calc(var(--nav-h) + var(--safe-b) + 20px); }
+  .nav {
+    left: 12px; right: 12px; bottom: calc(var(--safe-b) + 10px); height: var(--nav-h); padding-bottom: 0;
+    border-radius: 24px; border: 1px solid var(--glass-border); border-top-color: var(--glass-border);
+    background: var(--glass-bg); box-shadow: var(--glass-shadow), 0 12px 32px -12px rgba(0, 0, 34, .35);
+  }
+  .mob { bottom: calc(var(--nav-h) + var(--safe-b) + 20px); }
+}
+/* aba ativa: Deep + Lime no claro; Lime + Deep no escuro */
+.nav a::after { background: var(--deep); }
+.nav a[aria-current="page"] svg { color: var(--lime); }
+@media (prefers-color-scheme: dark) {
+  .nav a::after { background: var(--lime); }
+  .nav a[aria-current="page"] svg { color: var(--deep); }
+}
+/* geometria */
+.orbita { display: inline-grid; place-items: center; color: var(--text); }
+.orbita svg { width: 100%; height: 100%; }
+.orbita .o1 { transform-origin: 24px 24px; animation: orbita 2.4s var(--ease-in-out) infinite; }
+.orbita .o2 { transform-origin: 24px 24px; animation: orbita 3.6s var(--ease-in-out) infinite reverse; }
+@keyframes orbita { to { transform: rotate(360deg); } }
+.map-carregando { position: absolute; inset: 0; display: grid; place-items: center; background: var(--bg); }
+.empty .ico-wrap { position: relative; display: inline-grid; place-items: center; }
+.empty .arcos { position: absolute; width: 120px; height: 120px; color: var(--text); pointer-events: none; z-index: -1; }
+.empty .ico-wrap { isolation: isolate; }
+@media (prefers-reduced-motion: reduce) { .orbita .o1, .orbita .o2 { animation: none; } }

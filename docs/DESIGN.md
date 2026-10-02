@@ -42,3 +42,18 @@ desatualizado (esmaecido).
 ## Material (vidro)
 Só nas camadas funcionais sobre o conteúdo: busca, botões flutuantes, painel inferior, navegação, filtros e a faixa de dados do clima. Sem vidro sobre vidro.
 Resposta: luz especular segue o ponteiro (`--mx/--my`, uma escrita por frame), cede na pressão (mola) e ganha anel de sinal no foco.
+
+## Navegação
+Barra inferior flutuante (vidro, 12 px das bordas, acima da área segura); aba ativa = cápsula Deep com ícone Lime (escuro: Lime com Deep), troca na mola.
+
+## Linguagem geométrica (`app/ui/Geometria.tsx`)
+Círculos, arcos e interseções em módulos. **Marca**: dois círculos que se cruzam (lugar + movimento), um arco de trajeto e o ponto Lime do "agora".
+**Órbita**: arcos concêntricos girando devagar para carregamento (mapa, painéis). **Arcos**: ornamento discreto dos estados vazios.
+
+## Tipografia — escolha
+Comparadas Bricolage Grotesque, Host Grotesk, Schibsted Grotesk e Spline Sans para display. Bricolage (600) ficou: tem personalidade nos números
+(ETA, temperatura, totais) sem virar painel financeiro, e contrasta bem com Instrument Sans (UI/dados, 500–650), mais neutra e legível em 11–15 px.
+
+## Contraste (WCAG)
+Texto principal 18:1; secundário 7,9:1; terciário 5,0:1 (era 3,9:1 — escurecido); Lime sobre Deep 19:1; branco sobre Atlantic 10,5:1.
+Branco sobre Teal (3,6:1) só aparece em traço de mapa, nunca em texto.

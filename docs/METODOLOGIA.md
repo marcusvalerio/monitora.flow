@@ -171,6 +171,12 @@ OFF_ROUTE: > 300 m. STALE: posição > 180 s. `confidence` (escala ordinal): 0,9
 **Nada é colado na via fora do ON_ROUTE**: a API devolve sempre o GPS; o mapa só desenha sobre a via quem é ON_ROUTE, no shape validado.
 Diagnóstico: `/linhas/{linha}/veiculos?diag=1` e logs `[matching]` em desenvolvimento.
 
+**Ônibus (SPPO).** O GPS dos ônibus traz `route_id`, `trip_id` e `shape_id` da viagem: cada ônibus é comparado ao shape EXATO da viagem
+(`associacao = "viagem"`; catálogo `src/data/onibus-catalogo.json`, shapes simplificados a 8 m). Linha sem shape no GTFS → `SEM_TRAJETO`
+(fora das contas de estado). Achado em 02/10/2026: ~17% dos ônibus andam no sentido oposto (Δ rumo ≥ 160°) ao da viagem informada pelo próprio GPS,
+e casam perfeitamente com o shape do sentido contrário — o `trip_id`/`shape_id` do feed fica para trás após a volta no terminal. Não corrigimos
+a fonte: o veículo fica UNCERTAIN, com o motivo e `shapeCompativel` informados.
+
 **Causa dos veículos da linha 10 fora do corredor (02/10/2026).** Veículos parados, a maioria com `ignicao = 0`, num mesmo ponto a ~2,8–3 km
 do trajeto (garagem), ainda transmitindo a linha 10; e veículos a 15 m do trajeto com rumo 179° oposto ao sentido do rótulo (rótulo desatualizado).
 Agora: os primeiros são OFF_ROUTE na posição real; os segundos UNCERTAIN.

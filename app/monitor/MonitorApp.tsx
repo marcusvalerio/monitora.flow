@@ -1,13 +1,14 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { Orbita } from "../ui/Geometria";
 import { CloudRain, TriangleAlert } from "lucide-react";
 import { ErrorState, LastUpdated, Skel } from "../ui/estados";
 import { J, dec, get } from "../ui/util";
 import type { PontoFrota } from "./MonitorMap";
 import { COR_ESTADO } from "./MonitorMap";
 
-const MonitorMap = dynamic(() => import("./MonitorMap"), { ssr: false, loading: () => <div className="map-fill skeleton" style={{ borderRadius: 0 }} /> });
+const MonitorMap = dynamic(() => import("./MonitorMap"), { ssr: false, loading: () => <div className="map-carregando"><Orbita rotulo="Carregando o mapa" /></div> });
 
 const n = (v: number | null | undefined) => (v == null ? "—" : v.toLocaleString("pt-BR"));
 const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : null);
@@ -69,25 +70,13 @@ export default function MonitorApp() {
               <div className="m-row">
                 <M v={n(brt?.veiculos)} r="veículos" grande /><M v={n(brt?.linhas)} r="linhas" grande />
               </div>
-              {est && (
-                <>
-                  <div className="m-bar" role="img" aria-label={Object.entries(ROTULO).map(([k, r]) => `${r}: ${est[k]}`).join(", ")}>
-                    {Object.keys(ROTULO).map((k) => est[k] > 0 && <i key={k} style={{ flex: est[k], background: COR_ESTADO[k] }} />)}
-                  </div>
-                  <ul className="m-legend">
-                    {Object.entries(ROTULO).map(([k, r]) => (
-                      <li key={k}><i style={{ background: COR_ESTADO[k] }} /><span>{r}</span><b className="num">{n(est[k])}</b></li>
-                    ))}
-                  </ul>
-                  <p className="t-meta">Comparado ao trajeto oficial (GTFS): no trajeto até 60 m, incerta até 300 m, fora acima disso; sem atualização: mais de 3 min.</p>
-                </>
-              )}
+              {est && <Estados est={est} />}
             </section>
 
             <section className="m-sec stag" style={{ ["--i" as string]: 3 }} aria-label="Ônibus">
               <div className="t-label">Ônibus municipais</div>
               <div className="m-row"><M v={n(bus?.veiculos)} r="veículos" grande /><M v={n(bus?.linhas)} r="linhas" grande /></div>
-              <p className="t-meta">Inclui os alimentadores do BRT (no GTFS são ônibus). Trajeto dos ônibus ainda não validado: sem classificação de rota.</p>
+              {bus?.estados && <Estados est={bus.estados} nota="Cada ônibus comparado ao shape da própria viagem (shape_id informado pelo GPS). Inclui os alimentadores do BRT, que no GTFS são ônibus." />}
               {o.outros?.veiculos > 0 && <p className="t-meta">{n(o.outros.veiculos)} veículos do GPS do BRT com código de linha que o GTFS não reconhece ficam fora das contas de BRT e ônibus.</p>}
             </section>
 
@@ -121,6 +110,22 @@ export default function MonitorApp() {
         </div>
       </section>
     </div>
+  );
+}
+
+function Estados({ est, nota }: { est: Record<string, number>; nota?: string }) {
+  return (
+    <>
+      <div className="m-bar" role="img" aria-label={Object.entries(ROTULO).map(([k, r]) => `${r}: ${est[k]}`).join(", ")}>
+        {Object.keys(ROTULO).map((k) => est[k] > 0 && <i key={k} style={{ flex: est[k], background: COR_ESTADO[k] }} />)}
+      </div>
+      <ul className="m-legend">
+        {Object.entries(ROTULO).map(([k, r]) => (
+          <li key={k}><i style={{ background: COR_ESTADO[k] }} /><span>{r}</span><b className="num">{n(est[k])}</b></li>
+        ))}
+      </ul>
+      <p className="t-meta">{nota ?? "Comparado ao trajeto oficial (GTFS): no trajeto até 60 m e rumo compatível, incerta até 300 m, fora acima disso; sem atualização: mais de 3 min."}</p>
+    </>
   );
 }
 
