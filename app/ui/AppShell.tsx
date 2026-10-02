@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { CloudSun, BusFront, Ellipsis, Radar, Activity } from "lucide-react";
+import { CloudSun, BusFront, Ellipsis, Activity } from "lucide-react";
+import { MarcaMonitora } from "./Geometria";
 
 const ITENS = [
   { href: "/clima", rotulo: "Clima", Icone: CloudSun },
@@ -34,7 +35,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="shell">
       <header className="topnav" aria-label="Navegação principal">
-        <Link href="/" className="marca"><Radar size={20} aria-hidden /> Monitora</Link>
+        <Link href="/" className="marca"><MarcaMonitora size={22} /> Monitora</Link>
         {ITENS.map(({ href, rotulo }) => (
           <Link key={href} href={href} className="item" aria-current={ativo(href) ? "page" : undefined}>{rotulo}</Link>
         ))}

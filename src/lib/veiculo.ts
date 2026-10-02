@@ -26,6 +26,8 @@ export interface VeiculoNormalizado {
   idadeS: number;
   /** BRT: ignição desligada informada pela fonte (true), ligada (false) ou desconhecida (null). */
   ignicaoDesligada: boolean | null;
+  /** Ônibus: associação oficial informada pelo próprio GPS (GTFS). null no BRT (o feed não traz). */
+  routeId: string | null; tripId: string | null; shapeIdGps: string | null;
 }
 
 /** EXPERIMENTAL / ESCOLHA DO SISTEMA — abaixo disso o veículo é tratado como parado (km/h). */
@@ -89,6 +91,7 @@ export function normalizarVeiculo(atual: Leitura, historico: Leitura[], agora: D
     velocidadeKmh: Math.round(atual.velocidade), parado, em: atual.ts,
     idadeS: Math.max(0, Math.round((agora.getTime() - atual.ts.getTime()) / 1000)),
     ignicaoDesligada: atual.ignicao == null ? null : !atual.ignicao,
+    routeId: atual.routeId ?? null, tripId: atual.tripId ?? null, shapeIdGps: atual.shapeId ?? null,
   };
 }
 
@@ -104,3 +107,15 @@ export function normalizarFrota(ls: Leitura[], agora: Date): VeiculoNormalizado[
 
 /** Menor diferença angular com sinal, em graus: 359 → 1 = +2 (nunca +358 ou −358). */
 export const deltaAngulo = (de: number, para: number) => ((((para - de) % 360) + 540) % 360) - 180;
+
+/**
+ * Rotação do marcador: o desenho aponta para o norte em 0° e o CSS gira no sentido horário — a mesma convenção do campo
+ * `direcao` (0 = norte, horário). Logo rotação = rumo, SEM deslocamento (nenhum +180°). O mapa não gira (rotação desabilitada),
+ * então não há bearing de câmera a descontar. Acumula pelo menor caminho (359° → 1° gira +2°, não −358°) e ignora tremidas.
+ */
+export function proximaRotacao(acumulada: number | null, rumo: number | null, ignorarAbaixoGraus = 4): number | null {
+  if (rumo === null) return acumulada;
+  if (acumulada === null) return rumo;
+  const d = deltaAngulo(((acumulada % 360) + 360) % 360, rumo);
+  return Math.abs(d) < ignorarAbaixoGraus ? acumulada : acumulada + d;
+}

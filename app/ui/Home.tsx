@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CloudSun, BusFront, ChevronRight, Radar, Activity } from "lucide-react";
+import { CloudSun, BusFront, ChevronRight, Activity } from "lucide-react";
+import { MarcaMonitora } from "./Geometria";
 import { IconeTempo } from "./estados";
 import { J, get, ler } from "./util";
 
@@ -20,7 +21,7 @@ export default function Home() {
 
   return (
     <main className="page">
-      <div className="row" style={{ gap: 8, color: "var(--text-2)" }}><Radar size={18} aria-hidden /><span className="t-head">Monitora</span></div>
+      <div className="row" style={{ gap: 8, color: "var(--text)" }}><MarcaMonitora size={24} /><span className="t-head">Monitora</span></div>
       <h1 className="t-hero" style={{ margin: "28px 0 6px" }}>O que você quer fazer?</h1>
       <p className="t-body muted" style={{ margin: 0 }}>Clima, transporte e a operação da cidade agora, com dados abertos.</p>
 

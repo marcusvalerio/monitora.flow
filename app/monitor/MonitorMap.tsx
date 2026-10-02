@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react";
 import type { GeoJSONSource, Map as MLMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { aguaViva } from "../ui/motion";
+import { criarMapa, token } from "../map/engine";
 
 /** Mapa operacional: um ponto por veículo (camada única de círculos, atualização incremental via setData). */
 export type PontoFrota = [number, number, string, string]; // lng, lat, fonte, estado
@@ -24,15 +24,10 @@ export default function MonitorMap({ pontos }: { pontos: PontoFrota[] }) {
 
   useEffect(() => {
     let vivo = true;
-    let parar = () => {};
-    import("maplibre-gl").then((m) => {
-      if (!vivo || !div.current) return;
-      const escuro = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-      const map = new m.Map({
-        container: div.current, style: escuro ? "https://tiles.openfreemap.org/styles/dark" : "https://tiles.openfreemap.org/styles/positron",
-        center: [-43.42, -22.93], zoom: 9.6, attributionControl: { compact: true }, dragRotate: false, pitchWithRotate: false, touchPitch: false,
-      });
-      map.touchZoomRotate.disableRotation();
+    let destruir = () => {};
+    criarMapa(div.current!, { zoom: 9.6 }).then(({ map, destruir: d }) => {
+      destruir = d;
+      if (!vivo) { d(); return; }
       mapa.current = map;
       map.on("load", () => {
         map.addSource("frota", { type: "geojson", data: geo(ultimos.current) });
@@ -41,15 +36,14 @@ export default function MonitorMap({ pontos }: { pontos: PontoFrota[] }) {
           paint: {
             "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, ["match", ["get", "modo"], "BRT", 2.6, 1.6], 14, ["match", ["get", "modo"], "BRT", 6, 4]],
             "circle-color": ["match", ["get", "estado"], "ON_ROUTE", COR_ESTADO.ON_ROUTE, "UNCERTAIN", COR_ESTADO.UNCERTAIN, "OFF_ROUTE", COR_ESTADO.OFF_ROUTE, "STALE", COR_ESTADO.STALE, COR_ESTADO.SEM_TRAJETO],
-            "circle-opacity": ["match", ["get", "modo"], "BRT", 0.95, 0.55],
-            "circle-stroke-width": ["match", ["get", "modo"], "BRT", 1, 0], "circle-stroke-color": escuro ? "#000022" : "#FDFDFE",
+            "circle-opacity": ["match", ["get", "modo"], "BRT", 0.95, 0.6],
+            "circle-stroke-width": ["match", ["get", "modo"], "BRT", 1, 0], "circle-stroke-color": token("--bg", "#EEF2F3"),
           },
         });
         pronto.current = true;
-        parar = aguaViva(map, getComputedStyle(document.documentElement).getPropertyValue("--map-water-tint").trim() || "#9fd6d7");
       });
     });
-    return () => { vivo = false; parar(); mapa.current?.remove(); mapa.current = null; };
+    return () => { vivo = false; destruir(); mapa.current = null; };
   }, []);
 
   useEffect(() => {

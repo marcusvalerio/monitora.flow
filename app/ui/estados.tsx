@@ -1,11 +1,12 @@
 "use client";
 import { CloudOff, SearchX, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudLightning, Snowflake, Moon, CloudMoon } from "lucide-react";
+import { Arcos } from "./Geometria";
 import { ha } from "./util";
 
 export function EmptyState({ titulo, texto, icone: Icone = SearchX, acao }: { titulo: string; texto?: string; icone?: React.ElementType; acao?: React.ReactNode }) {
   return (
-    <div className="state appear" role="status">
-      <Icone aria-hidden />
+    <div className="state empty appear" role="status">
+      <span className="ico-wrap"><Arcos /><Icone aria-hidden /></span>
       <div className="t-head">{titulo}</div>
       {texto && <div className="t-cap" style={{ marginTop: 4 }}>{texto}</div>}
       {acao && <div style={{ marginTop: 14 }}>{acao}</div>}
@@ -27,7 +28,8 @@ export function LastUpdated({ em, fonte, velhoS = 90 }: { em?: string | number |
   const idade = em ? (Date.now() - new Date(em).getTime()) / 1000 : Infinity;
   return (
     <span className="t-meta row" style={{ gap: 6, display: "inline-flex" }} aria-live="polite">
-      <span className={`live-dot${idade > velhoS ? " stale" : ""}`} aria-hidden />
+      {/* key = instante do dado: a cada atualização real o ponto "pulsa" uma vez (nunca sem dado novo) */}
+      <span key={em ? String(em) : "x"} className={`live-dot${idade > velhoS ? " stale" : " pulso"}`} aria-hidden />
       {em ? `Atualizado ${ha(em)}` : "Atualizando…"}{fonte ? ` · ${fonte}` : ""}
     </span>
   );
