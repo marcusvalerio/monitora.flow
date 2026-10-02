@@ -17,4 +17,11 @@ jobs:
           COLETOR_URL: ${{ secrets.COLETOR_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl -fsS --max-time 90 -X POST -H "Authorization: Bearer $CRON_SECRET" "$COLETOR_URL/api/coletar"
+          # Aceita o secret com ou sem "https://" e com ou sem "/" no final.
+          base="${COLETOR_URL%/}"
+          case "$base" in http://*|https://*) ;; *) base="https://$base" ;; esac
+          resp=$(curl -fsSL --post301 --post302 --post303 --max-time 90 -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" "$base/api/coletar")
+          echo "$resp" | head -c 600; echo
+          # Só conta como sucesso se a API devolveu o resumo da coleta.
+          echo "$resp" | grep -q '"inicio"' 
