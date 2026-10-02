@@ -20,6 +20,11 @@ function ha(iso?: string | null, agora = Date.now()) {
   const s = Math.max(0, Math.round((agora - Date.parse(iso)) / 1000));
   return s < 60 ? `há ${s} s` : s < 3600 ? `há ${Math.round(s / 60)} min` : `há ${Math.round(s / 3600)} h`;
 }
+function distKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const r = (x: number) => (x * Math.PI) / 180, R = 6371.0088;
+  const h = Math.sin(r(b.lat - a.lat) / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(r(b.lng - a.lng) / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
 const fmt = (v: number | null | undefined, u = "") => (v === null || v === undefined ? "sem dado" : `${v}${u}`);
 
 async function get(url: string): Promise<J | null> {
@@ -53,7 +58,7 @@ export default function MeuTrajeto() {
     setDados({ agora, chuva, tempo, chegada, veiculos, carregadoEm: Date.now() });
   }, [sel]);
 
-  useEffect(() => { setDados({}); carregar(); const t = setInterval(carregar, 30_000); return () => clearInterval(t); }, [carregar]);
+  useEffect(() => { setDados({}); carregar(); const t = setInterval(carregar, 20_000); return () => clearInterval(t); }, [carregar]);
 
   const salvar = (f: Favorito) => { const n = [...favs.filter((x) => x.id !== f.id), f]; setFavs(n); gravarFavs(n); setSelId(f.id); setEditando(false); };
   const remover = (id: string) => { const n = favs.filter((x) => x.id !== id); setFavs(n); gravarFavs(n); setSelId(n[0]?.id ?? "ex"); };
@@ -95,8 +100,19 @@ export default function MeuTrajeto() {
               </div>
             </>
           ) : (
-            <p>sem dado <span className="sub">— nenhum veículo da linha vindo em sua direção nos últimos 10 min ({chegada.observado?.veiculosNaLinha ?? 0} veículos da linha com GPS)</span></p>
+            <p>sem estimativa <span className="sub">— nenhum veículo da linha se aproximando agora</span></p>
           )}
+          {(() => {
+            const vs: J[] = veiculos?.observado ?? [];
+            if (!veiculos) return null;
+            if (!vs.length) return <p className="sub">Nenhum veículo desta linha com GPS nos últimos 10 min.</p>;
+            const perto: J = vs.map((v: J) => ({ ...v, km: distKm(sel, { lat: v.lat, lng: v.lng }) })).sort((a, b) => a.km - b.km)[0];
+            return (
+              <p className="sub">
+                {vs.length} veículo{vs.length > 1 ? "s" : ""} com GPS agora · o mais próximo ({perto.fonte === "brt" ? "BRT" : "ônibus"} {perto.veiculo}) está a {perto.km.toFixed(1)} km em linha reta, {perto.velocidadeKmh} km/h, GPS {ha(perto.em)}
+              </p>
+            );
+          })()}
           <p className="aviso">Estimativa experimental nossa (linha reta + velocidade de aproximação observada). Não é horário oficial. Fonte: GPS SMTR.</p>
         </section>
       )}
@@ -158,7 +174,7 @@ export default function MeuTrajeto() {
 
       <Mapa
         destino={{ lat: sel.lat, lng: sel.lng }}
-        veiculos={(veiculos?.observado ?? []).map((v: J) => ({ id: `${v.fonte}${v.veiculo}`, lat: v.lat, lng: v.lng, rotulo: `${sel.linha} · ${v.velocidadeKmh} km/h · GPS ${ha(v.em)}` }))}
+        veiculos={(veiculos?.observado ?? []).map((v: J) => ({ id: `${v.fonte}${v.veiculo}`, lat: v.lat, lng: v.lng, rotulo: `${v.fonte === "brt" ? "BRT " : ""}${sel.linha} · ${v.velocidadeKmh} km/h · GPS ${ha(v.em)}` }))}
         chuva={(chuva?.observado ?? []).map((e: J) => ({ id: e.id, lat: e.lat, lng: e.lng, mm: e.mm.h01, nome: e.nome }))}
       />
       <p className="sub">Mapa © OpenStreetMap (OpenFreeMap). Dados: SMTR, Alerta Rio, IPP/Prefeitura do Rio, Open-Meteo.</p>
@@ -186,7 +202,7 @@ function NovoFavorito({ onSalvar }: { onSalvar: (f: Favorito) => void }) {
     const r = modo === "parada" ? await get(`/paradas?q=${encodeURIComponent(q)}`) : await get(`/geocodificar?q=${encodeURIComponent(q)}`);
     if (!r || r.erro) { setMsg(r?.erro ?? "erro"); return; }
     const lista = modo === "parada"
-      ? r.paradas.map((p: J) => ({ nome: p.nome, endereco: p.nome, lat: p.lat, lng: p.lng, paradaId: p.id }))
+      ? r.paradas.map((p: J) => ({ nome: p.nome, endereco: [p.nome, p.rua, p.bairro].filter(Boolean).join(" · "), bairro: p.bairro, rua: p.rua, lat: p.lat, lng: p.lng, paradaId: p.id }))
       : r.candidatos.map((c: J) => ({ ...c, nota: c.nota }));
     setCands(lista); setMsg(lista.length ? "" : "nada encontrado");
   }
@@ -198,7 +214,7 @@ function NovoFavorito({ onSalvar }: { onSalvar: (f: Favorito) => void }) {
         const { latitude: lat, longitude: lng } = p.coords;
         if (modo === "endereco") { escolher({ endereco: "Minha localização", lat, lng }); setMsg(""); return; }
         const r = await get(`/paradas?lat=${lat}&lng=${lng}&raio=800&limite=15`);
-        const lista = (r?.paradas ?? []).map((x: J) => ({ nome: x.nome, endereco: x.nome, lat: x.lat, lng: x.lng, paradaId: x.id, distanciaM: x.distanciaM }));
+        const lista = (r?.paradas ?? []).map((x: J) => ({ nome: x.nome, endereco: [x.nome, x.rua, x.bairro].filter(Boolean).join(" · "), bairro: x.bairro, rua: x.rua, lat: x.lat, lng: x.lng, paradaId: x.id, distanciaM: x.distanciaM }));
         setCands(lista); setMsg(lista.length ? "" : "nenhuma parada a até 800 m");
       },
       () => setMsg("não foi possível obter a localização (permita o acesso no navegador)"),
@@ -221,10 +237,12 @@ function NovoFavorito({ onSalvar }: { onSalvar: (f: Favorito) => void }) {
           </form>
           {msg && <p className="sub">{msg}</p>}
           {cands?.map((c) => (
-            <div key={`${c.paradaId ?? ""}${c.lat},${c.lng},${c.endereco}`} style={{ padding: "4px 0" }}>
-              <a href="#" onClick={(e) => { e.preventDefault(); escolher(c); }}>{c.nome ?? c.endereco}</a>{" "}
-              <span className="sub">{c.distanciaM != null ? `${c.distanciaM} m` : c.nota != null ? `nota ${c.nota}` : ""}</span>
-            </div>
+            <button type="button" className="lista-item" key={`${c.paradaId ?? ""}${c.lat},${c.lng},${c.endereco}`} onClick={() => escolher(c)}>
+              <b>{c.nome ?? c.endereco}</b>
+              <div className="sub">
+                {[c.bairro, c.rua, c.distanciaM != null ? `${c.distanciaM} m de você` : null, c.nota != null && !c.paradaId ? `nota ${c.nota}` : null].filter(Boolean).join(" · ")}
+              </div>
+            </button>
           ))}
           <p className="sub">{modo === "parada" ? "Paradas e estações de ônibus e BRT: camada aberta da Prefeitura." : "Geocodificador oficial da Prefeitura (IPP)."}</p>
         </>
@@ -251,9 +269,9 @@ function NovoFavorito({ onSalvar }: { onSalvar: (f: Favorito) => void }) {
           )}
           <div style={{ gridColumn: "1/-1" }}>
             <p className="sub" style={{ margin: "4px 0" }}>Confira no mapa se é o lugar certo (há paradas com o mesmo nome em bairros diferentes):</p>
-            <Mapa destino={{ lat: esc.lat, lng: esc.lng }} veiculos={[]} chuva={[]} />
+            <Mapa destino={{ lat: esc.lat, lng: esc.lng }} veiculos={[]} chuva={[]} altura={170} zoom={15} />
           </div>
-          <p className="sub" style={{ gridColumn: "1/-1" }}>{esc.endereco} ({esc.lat.toFixed(5)}, {esc.lng.toFixed(5)}) · salvo só neste aparelho</p>
+          <p className="sub" style={{ gridColumn: "1/-1" }}>{esc.endereco} · salvo só neste aparelho</p>
           <div className="linha"><button className="prim" type="submit">Salvar</button><button type="button" onClick={() => setEsc(null)}>Voltar</button></div>
         </form>
       )}

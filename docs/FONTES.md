@@ -80,6 +80,11 @@ Exigem autenticação. Ficam de fora até haver autorização formal (pedido via
 ## 10. Paradas e estações — camada aberta da Prefeitura (USADO)
 - `https://raw.githubusercontent.com/prefeitura-rio/storage/master/layers/paradas_onibus.geojson` (HTTP 200 em 02/10/2026, `data_versao` 2024-09-29).
 - 7.739 pontos (`id_parada`, `nome_parada`, coordenadas), incluindo estações e plataformas do BRT (ex.: "Terminal Alvorada :: Plataforma A12").
+- A camada repete a mesma parada (um ponto por lado da rua). Agrupamos pontos com o mesmo nome, no mesmo bairro e a até 400 m
+  (EXPERIMENTAL / ESCOLHA DO SISTEMA): 7.739 → 5.777 paradas.
+- Bairro de cada parada: ponto-no-polígono com a camada aberta "Limite de Bairros" do IPP
+  (`https://pgeo3.rio.rj.gov.br/arcgis/rest/services/Cartografia/Limites_administrativos/MapServer/4`).
+- Quando o nome ainda se repete no mesmo bairro, guardamos o logradouro mais próximo (geocodificador reverso do IPP).
 - Cópia compacta em `src/data/paradas.json` (atualizar com `npm run paradas:atualizar`). Usada em `/paradas` e na tela "Estação ou parada" do app.
 - Limitações: nomes repetidos em bairros diferentes (o app mostra o mapa antes de salvar); não traz as linhas de cada parada.
 
