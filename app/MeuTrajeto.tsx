@@ -67,6 +67,17 @@ export default function MeuTrajeto() {
   const tot = agora?.calculado?.total;
   const interp = agora?.interpretado;
 
+  const mapa = (
+    <Mapa
+      destino={{ lat: sel.lat, lng: sel.lng }}
+      veiculos={(veiculos?.observado ?? []).map((v: J) => ({
+        id: `${v.fonte}${v.veiculo}`, lat: v.lat, lng: v.lng, brt: v.fonte === "brt", idadeS: v.idadeS, texto: String(sel.linha ?? ""),
+        rotulo: `${v.fonte === "brt" ? "BRT" : "Ônibus"} ${sel.linha} (veículo ${v.veiculo}) · ${v.velocidadeKmh} km/h · GPS ${ha(v.em)}`,
+      }))}
+      chuva={(chuva?.observado ?? []).map((e: J) => ({ id: e.id, lat: e.lat, lng: e.lng, mm: e.mm.h01, nome: e.nome }))}
+    />
+  );
+
   return (
     <main>
       <div className="linha" style={{ justifyContent: "space-between" }}>
@@ -116,6 +127,7 @@ export default function MeuTrajeto() {
           <p className="aviso">Estimativa experimental nossa (linha reta + velocidade de aproximação observada). Não é horário oficial. Fonte: GPS SMTR.</p>
         </section>
       )}
+      {sel.linha && mapa}
 
       <section className="card">
         <h2>🚗 Como está a rua (pelo GPS dos ônibus)</h2>
@@ -172,11 +184,7 @@ export default function MeuTrajeto() {
         <p className="sub">Ainda sem fonte aberta ao vivo do COR (a API pública está fora do ar). Nada é exibido para não inventar dado.</p>
       </section>
 
-      <Mapa
-        destino={{ lat: sel.lat, lng: sel.lng }}
-        veiculos={(veiculos?.observado ?? []).map((v: J) => ({ id: `${v.fonte}${v.veiculo}`, lat: v.lat, lng: v.lng, rotulo: `${v.fonte === "brt" ? "BRT " : ""}${sel.linha} · ${v.velocidadeKmh} km/h · GPS ${ha(v.em)}` }))}
-        chuva={(chuva?.observado ?? []).map((e: J) => ({ id: e.id, lat: e.lat, lng: e.lng, mm: e.mm.h01, nome: e.nome }))}
-      />
+      {!sel.linha && mapa}
       <p className="sub">Mapa © OpenStreetMap (OpenFreeMap). Dados: SMTR, Alerta Rio, IPP/Prefeitura do Rio, Open-Meteo.</p>
     </main>
   );

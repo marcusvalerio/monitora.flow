@@ -3,15 +3,29 @@ import { useEffect, useRef } from "react";
 import type { Map as MLMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
-export interface MarcadorVeiculo { id: string; lat: number; lng: number; rotulo: string }
+export interface MarcadorVeiculo { id: string; lat: number; lng: number; rotulo: string; texto: string; brt: boolean; idadeS: number }
 export interface MarcadorChuva { id: string; lat: number; lng: number; mm: number | null; nome: string }
 
-/** Mapa MapLibre com fundo OpenStreetMap via OpenFreeMap (sem chave). */
+const R = 6371.0088;
+const km = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
+  const r = (x: number) => (x * Math.PI) / 180;
+  const h = Math.sin(r(b.lat - a.lat) / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(r(b.lng - a.lng) / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+};
+
+/**
+ * Mapa MapLibre com fundo OpenStreetMap via OpenFreeMap (sem chave).
+ * Ao trocar de destino (ou quando os veículos chegam pela primeira vez), enquadra o destino e os
+ * veículos mais próximos; depois não mexe mais na câmera, para não atrapalhar quem está arrastando o mapa.
+ */
 export default function Mapa({ destino, veiculos, chuva, altura, zoom = 14 }: { destino: { lat: number; lng: number }; veiculos: MarcadorVeiculo[]; chuva: MarcadorChuva[]; altura?: number; zoom?: number }) {
   const div = useRef<HTMLDivElement>(null);
   const mapa = useRef<MLMap | null>(null);
   const marcas = useRef<Marker[]>([]);
   const ml = useRef<typeof import("maplibre-gl") | null>(null);
+  const enquadrado = useRef<string>("");
+  const ultimos = useRef({ destino, veiculos, chuva });
+  ultimos.current = { destino, veiculos, chuva };
 
   useEffect(() => {
     let vivo = true;
@@ -31,25 +45,60 @@ export default function Mapa({ destino, veiculos, chuva, altura, zoom = 14 }: { 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { mapa.current?.easeTo({ center: [destino.lng, destino.lat] }); }, [destino.lat, destino.lng]);
   useEffect(() => { desenhar(); }); // redesenha marcadores a cada atualização
+
+  /** Destino + até 3 veículos mais próximos (até 25 km), com margem. */
+  function enquadrar(forcar = false) {
+    const m = ml.current, map = mapa.current;
+    if (!m || !map) return;
+    const { destino: d, veiculos: vs } = ultimos.current;
+    const chave = `${d.lat},${d.lng}|${vs.length > 0}`;
+    if (!forcar && enquadrado.current === chave) return;
+    enquadrado.current = chave;
+    const perto = vs.map((v) => ({ v, k: km(d, v) })).filter((x) => x.k <= 25).sort((a, b) => a.k - b.k).slice(0, 3);
+    if (!perto.length) { map.easeTo({ center: [d.lng, d.lat], zoom }); return; }
+    const b = new m.LngLatBounds([d.lng, d.lat], [d.lng, d.lat]);
+    for (const { v } of perto) b.extend([v.lng, v.lat]);
+    map.fitBounds(b, { padding: 50, maxZoom: 15, duration: 600 });
+  }
 
   function desenhar() {
     const m = ml.current, map = mapa.current;
     if (!m || !map) return;
+    const { destino: d, veiculos: vs, chuva: cs } = ultimos.current;
     marcas.current.forEach((x) => x.remove());
-    const el = (html: string, estilo: string) => { const d = document.createElement("div"); d.innerHTML = html; d.style.cssText = estilo; return d; };
-    const novas: Marker[] = [new m.Marker({ color: "#0b6bcb" }).setLngLat([destino.lng, destino.lat]).addTo(map)];
-    for (const c of chuva) {
+    const el = (html: string, estilo: string, titulo?: string) => {
+      const e = document.createElement("div");
+      e.innerHTML = html; e.style.cssText = estilo;
+      if (titulo) e.setAttribute("aria-label", titulo);
+      return e;
+    };
+    const novas: Marker[] = [new m.Marker({ color: "#0b6bcb" }).setLngLat([d.lng, d.lat]).addTo(map)];
+    for (const c of cs) {
       novas.push(new m.Marker({ element: el(`🌧 ${c.mm ?? "–"}`, "font:600 11px system-ui;background:#fff;color:#0b4a8a;border:1px solid #9cc3ee;border-radius:8px;padding:1px 5px") })
         .setLngLat([c.lng, c.lat]).setPopup(new m.Popup({ offset: 12 }).setText(`${c.nome}: ${c.mm ?? "sem dado"} mm na última hora`)).addTo(map));
     }
-    for (const v of veiculos) {
-      novas.push(new m.Marker({ element: el("🚌", "font-size:20px;filter:drop-shadow(0 1px 1px #0006)") })
-        .setLngLat([v.lng, v.lat]).setPopup(new m.Popup({ offset: 12 }).setText(v.rotulo)).addTo(map));
+    for (const v of vs) {
+      // GPS com mais de 3 min fica semitransparente.
+      const cor = v.brt ? "#d9480f" : "#1971c2";
+      const estilo = `display:flex;align-items:center;gap:3px;font:700 12px system-ui;color:#fff;background:${cor};` +
+        `border:2px solid #fff;border-radius:12px;padding:2px 7px 2px 5px;box-shadow:0 1px 4px #0006;white-space:nowrap;` +
+        `opacity:${v.idadeS > 180 ? 0.55 : 1};cursor:pointer`;
+      novas.push(new m.Marker({ element: el(`<span style="font-size:14px">${v.brt ? "🚍" : "🚌"}</span>${v.texto}`, estilo, v.rotulo) })
+        .setLngLat([v.lng, v.lat]).setPopup(new m.Popup({ offset: 14 }).setText(v.rotulo)).addTo(map));
     }
     marcas.current = novas;
+    enquadrar();
   }
 
-  return <div ref={div} className="mapa" style={altura ? { height: altura } : undefined} role="region" aria-label="Mapa" />;
+  return (
+    <div style={{ position: "relative" }}>
+      <div ref={div} className="mapa" style={altura ? { height: altura } : undefined} role="region" aria-label="Mapa" />
+      {veiculos.length > 0 && (
+        <button type="button" onClick={() => enquadrar(true)} style={{ position: "absolute", left: 10, top: 10, fontSize: 13, padding: "4px 10px" }}>
+          🚌 Ver ônibus
+        </button>
+      )}
+    </div>
+  );
 }
