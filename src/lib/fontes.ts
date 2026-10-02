@@ -13,6 +13,23 @@ export interface Leitura {
   lng: number;
   velocidade: number; // km/h
   ts: Date; // instante da posição (GPS)
+  /**
+   * Rumo informado pelo GPS, em graus: 0 = norte, crescendo no sentido horário (validado em 02/10/2026
+   * contra o deslocamento real: mediana de 5–6° de diferença). null quando a fonte não informa.
+   * Só existe na leitura ao vivo — não é gravado no banco.
+   */
+  direcao?: number | null;
+  /** Trajeto informado pelo BRT (ex.: "22 - ALVORADA X JARDIM OCEANICO (PARADOR) [IDA]"). Só ao vivo. */
+  trajeto?: string | null;
+}
+
+/** Converte o campo `direcao` das fontes em graus [0, 360) ou null (vazio, " ", fora do intervalo). */
+export function lerDirecao(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  const n = Number(s.replace(",", "."));
+  return Number.isFinite(n) && n >= 0 && n <= 360 ? n % 360 : null;
 }
 
 export const URL_BRT = "https://dados.mobilidade.rio/gps/brt";
@@ -36,6 +53,8 @@ const brtItem = z.object({
   dataHora: num,
   velocidade: num,
   sentido: z.string().nullish(),
+  direcao: z.unknown().optional(),
+  trajeto: z.string().nullish(),
 });
 const brtResposta = z.object({ veiculos: z.array(z.unknown()) });
 
@@ -47,6 +66,7 @@ const sppoItem = z.object({
   longitude: num,
   velocidade: num,
   datetime: z.string(),
+  direcao: z.unknown().optional(),
 });
 
 export interface ResultadoParse {
@@ -85,6 +105,7 @@ export function parseBrt(json: unknown, agora: Date): ResultadoParse {
     const l: Leitura = {
       fonte: "brt", veiculo: it.codigo, linha: it.linha ?? null, sentido: it.sentido ?? null,
       lat: it.latitude, lng: it.longitude, velocidade: it.velocidade, ts,
+      direcao: lerDirecao(it.direcao), trajeto: it.trajeto?.trim() || null,
     };
     if (validaComum(l, descartadas)) leituras.push(l);
   }
@@ -104,6 +125,7 @@ export function parseSppo(json: unknown): ResultadoParse {
     const l: Leitura = {
       fonte: "sppo", veiculo: it.id_veiculo, linha: it.servico ?? null, sentido: it.sentido ?? null,
       lat: it.latitude, lng: it.longitude, velocidade: it.velocidade, ts,
+      direcao: lerDirecao(it.direcao),
     };
     if (validaComum(l, descartadas)) leituras.push(l);
   }

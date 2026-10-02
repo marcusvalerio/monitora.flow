@@ -111,12 +111,28 @@ Sem veículo vindo → `proxima: null` (sem dado).
 Linhas com pelo menos uma posição de GPS a até **100 m** da parada nos últimos **60 min** (haversine), com nº de veículos distintos.
 Não é a lista oficial de linhas da parada: pode incluir linhas que só passam pela rua sem parar e omitir linhas sem veículo na última hora.
 
+## Direção do veículo no mapa — EXPERIMENTAL / ESCOLHA DO SISTEMA
+Campo `direcao` do GPS da SMTR (graus, 0 = norte, sentido horário). A convenção foi **validada** comparando com o rumo
+calculado entre leituras consecutivas: diferença mediana ~5–6° (SPPO e BRT). No BRT o campo às vezes vem vazio.
+Ordem de escolha do `rumo` (`src/lib/veiculo.ts`):
+1. `gps`: veículo em movimento (≥ **3 km/h**) com `direcao` válida;
+2. `deslocamento`: rumo entre a leitura mais antiga dos últimos **5 min** e a atual, se andou ≥ **30 m**;
+3. `anterior`: parado — mantém o último rumo em movimento (não gira parado);
+4. sem nada disso → `rumo: null` e o marcador fica sem seta (não inventamos direção).
+A animação gira pelo menor ângulo (359° → 1° gira 2°, não 358°). Parâmetros 3 km/h, 30 m e 5 min: EXPERIMENTAL / ESCOLHA DO SISTEMA.
+
+## Estações e terminais de BRT (`/estacoes`)
+Catálogo **oficial** (Data.Rio, camada "Estações BRT"), salvo em `src/data/estacoes-brt.json` por `npm run estacoes:atualizar`.
+A busca de BRT procura só nesse catálogo (nunca endereços). Itens com prefixo "FUTURO" viram `status: "planejada"`.
+Abreviações do nome ("Jd.", "Sta.") são expandidas só para exibição e busca.
+`/estacoes/{id}`: linhas vistas a até **300 m** nos últimos **60 min** (EXPERIMENTAL / ESCOLHA DO SISTEMA) e próximos veículos pela mesma estimativa de `/chegada`.
+
 ## Chuva (`/chuva`)
 Valores **medidos** pelos pluviômetros do Alerta Rio, repassados como vieram (mm acumulados em 5, 10, 15 min e 1, 4, 24, 96 h).
 Escolhemos as `k` estações mais próximas (haversine, padrão 3). Não há interpolação para o seu ponto nem classificação de intensidade.
 
 ## Previsão (`/tempo`)
-FONTE EXTERNA: Open-Meteo (modelo numérico). Repassamos temperatura, probabilidade e volume de precipitação das próximas 6 h.
+FONTE EXTERNA: Open-Meteo (modelo numérico). Repassamos condição atual (temperatura, sensação, umidade, vento), 24 h e 7 dias. Busca de locais do Clima: geocodificação Open-Meteo e endereços do IPP (`/locais`, `/local-reverso`).
 
 ## Limitações
 - Velocidade de ônibus ≠ velocidade do tráfego geral; faixa exclusiva pode deixar o ônibus rápido com a via parada (e vice-versa).
