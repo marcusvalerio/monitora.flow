@@ -4,7 +4,7 @@ export const metadata = { title: "API — monitora.flow" };
 
 export default function Docs() {
   return (
-    <main>
+    <main style={{ maxWidth: 720, margin: "0 auto", padding: "16px 16px 40px" }}>
       <h1>monitora.flow</h1>
       <p>Coletor + API do GPS dos BRTs e ônibus municipais do Rio (SMTR), para consumo pelo MOVA.</p>
       <p><strong>Aviso:</strong> {AVISO}</p>
