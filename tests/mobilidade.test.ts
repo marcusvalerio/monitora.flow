@@ -94,3 +94,37 @@ it("destino a partir do trajeto do BRT", () => {
   expect(destinoDoTrajeto("22 - ALVORADA X JARDIM OCEANICO", null)).toBeNull();
   expect(destinoDoTrajeto(null, "ida")).toBeNull();
 });
+
+import { acumulado, encaixar, pontoEm, projetar, ENCAIXE_MAX_M } from "../src/lib/trajeto";
+import trajetosJson from "../src/data/trajetos-brt.json";
+
+describe("trajeto (encaixe no trajeto oficial)", () => {
+  const reta: [number, number][] = [[-43.5, -23.0], [-43.49, -23.0], [-43.48, -23.0]];
+  it("projeta ponto ao lado da via sobre ela, com s crescente", () => {
+    const e = projetar(-22.9997, -43.495, reta)!;
+    expect(e.lat).toBeCloseTo(-23.0, 6);
+    expect(e.distM).toBeGreaterThan(25);
+    expect(e.distM).toBeLessThan(40);
+    const e2 = projetar(-23.0, -43.485, reta)!;
+    expect(e2.s).toBeGreaterThan(e.s);
+  });
+  it("pontoEm volta o ponto de s", () => {
+    const acc = acumulado(reta);
+    const p = pontoEm(reta, acc[1], acc);
+    expect(p.lng).toBeCloseTo(-43.49, 6);
+  });
+  it("não encaixa longe demais (mostra GPS cru)", () => {
+    expect(encaixar(-22.99, -43.49, null, [{ sentido: 0, destino: "X", coords: reta }])).toBeNull();
+    expect(ENCAIXE_MAX_M).toBe(60);
+  });
+  it("prefere o trajeto do destino do veículo", () => {
+    const ida = { sentido: 0, destino: "Terminal Alvorada", coords: reta };
+    const volta = { sentido: 1, destino: "Estação Santa Cruz", coords: reta.map(([a, b]) => [a, b + 0.0001] as [number, number]) };
+    expect(encaixar(-23.00005, -43.495, "Santa Cruz", [ida, volta])!.trajeto).toBe(1);
+    expect(encaixar(-23.00005, -43.495, "Alvorada", [ida, volta])!.trajeto).toBe(0);
+  });
+  it("catálogo GTFS: linha 10 tem os dois sentidos", () => {
+    const l = (trajetosJson as { linhas: Record<string, { destino: string }[]> }).linhas["10"];
+    expect(l.map((t) => t.destino).sort()).toEqual(["Estação Santa Cruz", "Terminal Alvorada"]);
+  });
+});

@@ -127,6 +127,16 @@ A busca de BRT procura só nesse catálogo (nunca endereços). Itens com prefixo
 Abreviações do nome ("Jd.", "Sta.") são expandidas só para exibição e busca.
 `/estacoes/{id}`: linhas vistas a até **300 m** nos últimos **60 min** (EXPERIMENTAL / ESCOLHA DO SISTEMA) e próximos veículos pela mesma estimativa de `/chegada`.
 
+## Trajeto da linha no mapa (`/linhas/{linha}/trajeto`) — só BRT
+Trajetos **planejados** do GTFS oficial da SMTR (`https://dados.mobilidade.rio/gtfs/schedule`, BRT = `route_type 702`),
+salvos em `src/data/trajetos-brt.json` por `npm run trajetos:atualizar` (pontos simplificados com tolerância de **4 m** — EXPERIMENTAL / ESCOLHA DO SISTEMA).
+No mapa, o marcador do BRT é **encaixado** no trajeto quando o GPS está a até **60 m** dele (EXPERIMENTAL / ESCOLHA DO SISTEMA), e a animação
+entre duas leituras anda pela via. Isso é só exibição: a posição observada (`lat`, `lng` da API) continua a do GPS. Longe do trajeto → mostra o GPS cru.
+O destino do veículo escolhe o sentido (trip_headsign); sem destino, usa o trajeto mais próximo.
+
+## Linhas de uma estação de BRT (`/estacoes/{id}`)
+BRT com GPS a até **300 m** e ônibus (SPPO) a até **150 m** da estação nos últimos 60 min (EXPERIMENTAL / ESCOLHA DO SISTEMA). Não é a lista oficial.
+
 ## Chuva (`/chuva`)
 Valores **medidos** pelos pluviômetros do Alerta Rio, repassados como vieram (mm acumulados em 5, 10, 15 min e 1, 4, 24, 96 h).
 Escolhemos as `k` estações mais próximas (haversine, padrão 3). Não há interpolação para o seu ponto nem classificação de intensidade.
