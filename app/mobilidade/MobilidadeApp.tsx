@@ -7,6 +7,7 @@ import SearchSheet from "../ui/SearchSheet";
 import { EmptyState, ErrorState, LastUpdated, Skel } from "../ui/estados";
 import { J, distKm, fmtDist, get, gravar, ha, horaLocal, lembrar, ler, minhaPosicao } from "../ui/util";
 import type { Ponto, VeiculoMapa } from "./TransitMap";
+import type { Trajeto } from "../../src/lib/trajeto";
 import estacoesJson from "../../src/data/estacoes-brt.json";
 
 const ESTACOES = estacoesJson.estacoes;
@@ -33,6 +34,7 @@ export default function MobilidadeApp() {
   const [veiculoSel, setVeiculoSel] = useState<string | null>(null);
   const [clima, setClima] = useState<J | null>(null);
   const [rua, setRua] = useState<J | null>(null);
+  const [trajeto, setTrajeto] = useState<Trajeto[] | null>(null);
   const [, tique] = useState(0);
   const desktop = useRef(false);
   const linhaSemPonto = useRef(false);
@@ -75,6 +77,15 @@ export default function MobilidadeApp() {
     return () => { vivo = false; clearInterval(t); };
   }, [ponto, linha]);
 
+  // trajeto oficial da linha (GTFS; hoje só BRT)
+  useEffect(() => {
+    setTrajeto(null);
+    if (!linha) return;
+    let vivo = true;
+    get(`/linhas/${encodeURIComponent(linha)}/trajeto`).then((r) => { if (vivo && r.trajetos?.length) setTrajeto(r.trajetos); });
+    return () => { vivo = false; };
+  }, [linha]);
+
   // acompanhamento de linha: veículos + chegada (10 s)
   useEffect(() => {
     if (!linha) return;
@@ -104,7 +115,7 @@ export default function MobilidadeApp() {
 
   const lista: J[] = veiculos?.observado ?? [];
   const veiculosMapa: VeiculoMapa[] = useMemo(() => lista.map((v) => ({
-    id: v.id, fonte: v.fonte, linha: v.linha, lat: v.lat, lng: v.lng, rumo: v.rumo, parado: v.parado, idadeS: v.idadeS,
+    id: v.id, fonte: v.fonte, linha: v.linha, destino: v.destino, lat: v.lat, lng: v.lng, rumo: v.rumo, parado: v.parado, idadeS: v.idadeS,
     rotulo: `Linha ${v.linha}, ${v.fonte === "brt" ? "BRT" : "ônibus"}${v.destino ? `, sentido ${v.destino}` : ""}, ${v.parado ? "parado" : `a ${v.velocidadeKmh} km/h`}, atualizado ${ha(v.em)}`,
   })), [veiculos]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -167,6 +178,7 @@ export default function MobilidadeApp() {
           if (e) escolherPonto({ id: e.id, nome: e.nome, tipo: e.tipo as "estacao" | "terminal", fonte: "brt", lat: e.lat, lng: e.lng, corredor: e.corredor });
         }}
         pad={{ bottom: desktop.current ? 0 : padB, left: desktop.current ? 416 : 0 }}
+        trajetos={trajeto}
         enquadrarChave={`${ponto?.id ?? ""}|${linha ?? ""}`} />
 
       <div className="map-top">
@@ -282,14 +294,14 @@ function Estacao({ ponto, info, onLinha }: { ponto: Ponto; info: J | null; onLin
     <div className="appear">
       {ponto.fonte === "brt" && (
         <>
-          <span className="t-label">Próximos veículos</span>
+          <span className="t-label">Próximos BRTs e ônibus</span>
           {!proximos.length ? (
             <p className="t-cap" style={{ margin: "8px 0 0" }}>Nenhum veículo se aproximando desta estação agora.</p>
           ) : (
             <ul className="list">
-              {proximos.map((p) => (
-                <li key={p.linha}><button className="list-item" onClick={() => onLinha(p.linha)} aria-label={`Acompanhar linha ${p.linha}, chega em cerca de ${eta(p.etaMin)} minutos`}>
-                  <span className="line-badge brt">{p.linha}</span>
+              {proximos.slice(0, 8).map((p) => (
+                <li key={p.fonte + p.linha}><button className="list-item" onClick={() => onLinha(p.linha)} aria-label={`Acompanhar linha ${p.linha}, chega em cerca de ${eta(p.etaMin)} minutos`}>
+                  <span className={`line-badge${p.fonte === "brt" ? " brt" : ""}`}>{p.linha}</span>
                   <span className="main"><div className="t-head">{p.destino ? `→ ${p.destino}` : `Linha ${p.linha}`}</div><div className="t-cap">a {fmtDist(p.distanciaM / 1000)} · GPS {ha(p.ultimaLeitura)}</div></span>
                   <span className="t-head num">{eta(p.etaMin)} min</span>
                   <ChevronRight size={18} aria-hidden style={{ color: "var(--text-3)" }} />

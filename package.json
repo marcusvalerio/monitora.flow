@@ -12,7 +12,8 @@
     "coletar": "tsx scripts/coletar.ts",
     "fixtures:capturar": "tsx scripts/capturar-fixtures.ts",
     "paradas:atualizar": "tsx scripts/atualizar-paradas.ts",
-    "estacoes:atualizar": "tsx scripts/atualizar-estacoes-brt.ts"
+    "estacoes:atualizar": "tsx scripts/atualizar-estacoes-brt.ts",
+    "trajetos:atualizar": "tsx scripts/atualizar-trajetos-brt.ts"
   },
   "repository": {
     "type": "git",

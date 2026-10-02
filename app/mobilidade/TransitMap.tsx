@@ -4,9 +4,10 @@ import type { GeoJSONSource, Map as MLMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import estacoesJson from "../../src/data/estacoes-brt.json";
 import { deltaAngulo } from "../../src/lib/veiculo";
+import { acumulado, encaixar, pontoEm, type Trajeto } from "../../src/lib/trajeto";
 
 export interface Ponto { id: string; nome: string; tipo: "estacao" | "terminal" | "parada"; fonte: "brt" | "sppo"; lat: number; lng: number; corredor?: string | null; bairro?: string | null; rua?: string | null }
-export interface VeiculoMapa { id: string; fonte: "brt" | "sppo"; linha: string | null; lat: number; lng: number; rumo: number | null; parado: boolean; idadeS: number; rotulo: string }
+export interface VeiculoMapa { id: string; fonte: "brt" | "sppo"; linha: string | null; lat: number; lng: number; rumo: number | null; parado: boolean; idadeS: number; rotulo: string; destino?: string | null }
 
 const ESTACOES = estacoesJson.estacoes as { id: string; nome: string; tipo: string; lat: number; lng: number }[];
 const estiloMapa = () =>
@@ -14,10 +15,11 @@ const estiloMapa = () =>
 const escuro = () => window.matchMedia?.("(prefers-color-scheme: dark)").matches;
 
 
-type ItemVeiculo = { marker: Marker; el: HTMLDivElement; anel: SVGSVGElement; lat: number; lng: number; angulo: number | null; anim?: number };
+type ItemVeiculo = { marker: Marker; el: HTMLDivElement; anel: SVGSVGElement; lat: number; lng: number; angulo: number | null; anim?: number; enc?: { trajeto: number; s: number } | null };
+type TrajetoAcc = Trajeto & { acc: number[] };
 
-export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onEstacao, eu, pad, enquadrarChave }: {
-  ponto: Ponto | null; veiculos: VeiculoMapa[]; veiculoSel: string | null;
+export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onEstacao, eu, pad, enquadrarChave, trajetos }: {
+  ponto: Ponto | null; veiculos: VeiculoMapa[]; veiculoSel: string | null; trajetos?: Trajeto[] | null;
   onVeiculo: (id: string | null) => void; onEstacao: (id: string) => void;
   eu: { lat: number; lng: number } | null; pad: { bottom: number; left: number }; enquadrarChave: string;
 }) {
@@ -31,6 +33,13 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
   const ultimos = useRef({ ponto, veiculos, veiculoSel, eu, pad, onVeiculo, onEstacao });
   ultimos.current = { ponto, veiculos, veiculoSel, eu, pad, onVeiculo, onEstacao };
   const enquadrado = useRef("");
+  // trajeto oficial (GTFS) da linha acompanhada, com comprimentos acumulados para encaixe/animação
+  const rota = useRef<{ chave: string; t: TrajetoAcc[] }>({ chave: "", t: [] });
+  const chaveRota = trajetos?.map((t) => `${t.destino}${t.coords.length}`).join("|") ?? "";
+  if (rota.current.chave !== chaveRota) {
+    rota.current = { chave: chaveRota, t: (trajetos ?? []).map((t) => ({ ...t, acc: acumulado(t.coords) })) };
+    frota.current.forEach((i) => { i.enc = null; });
+  }
 
   // --- criação do mapa (uma vez) ---
   useEffect(() => {
@@ -46,6 +55,12 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
       map.addControl(new m.NavigationControl({ showCompass: false }), "bottom-right");
       mapa.current = map;
       map.on("load", () => {
+        // Trajeto oficial da linha acompanhada (abaixo das estações)
+        map.addSource("rota", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({ id: "rota-borda", type: "line", source: "rota", layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": escuro() ? "#14171c" : "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 4, 15, 9], "line-opacity": 0.9 } });
+        map.addLayer({ id: "rota", type: "line", source: "rota", layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": "#e8590c", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 2, 15, 5], "line-opacity": 0.75 } });
         // Camada de estações/terminais do BRT: discreta; terminal um pouco maior.
         map.addSource("estacoes", {
           type: "geojson",
@@ -111,14 +126,20 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
     map.fitBounds(b, { maxZoom: 15.5, duration: 800, padding: 60 });
   }
 
-  function animar(item: ItemVeiculo, lat: number, lng: number) {
+  /** Anima até (lat, lng). Se o antes e o depois estão encaixados no mesmo trajeto e o veículo avançou, anda pela via. */
+  function animar(item: ItemVeiculo, lat: number, lng: number, enc: { trajeto: number; s: number } | null) {
     if (item.anim) cancelAnimationFrame(item.anim);
     const de = { lat: item.lat, lng: item.lng }, t0 = performance.now(), D = 1600;
-    item.lat = lat; item.lng = lng;
+    const antes = item.enc;
+    item.lat = lat; item.lng = lng; item.enc = enc;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) { item.marker.setLngLat([lng, lat]); return; }
+    const tr = antes && enc && antes.trajeto === enc.trajeto ? rota.current.t[enc.trajeto] : null;
+    const ds = tr ? enc!.s - antes!.s : 0;
+    const pelaVia = tr && ds > 0 && ds < 5000;
     const passo = (t: number) => {
       const p = Math.min(1, (t - t0) / D), e = 1 - (1 - p) ** 3;
-      item.marker.setLngLat([de.lng + (lng - de.lng) * e, de.lat + (lat - de.lat) * e]);
+      if (pelaVia) { const q = pontoEm(tr!.coords, antes!.s + ds * e, tr!.acc); item.marker.setLngLat([q.lng, q.lat]); }
+      else item.marker.setLngLat([de.lng + (lng - de.lng) * e, de.lat + (lat - de.lat) * e]);
       item.anim = p < 1 ? requestAnimationFrame(passo) : undefined;
     };
     item.anim = requestAnimationFrame(passo);
@@ -162,9 +183,19 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
       else marcaEu.current.setLngLat([e.lng, e.lat]);
     }
 
-    // veículos: um marcador por veículo, reaproveitado entre atualizações
+    // trajeto da linha
+    const src = map.getSource("rota") as GeoJSONSource | undefined;
+    if (src && (src as unknown as { _k?: string })._k !== rota.current.chave) {
+      src.setData({ type: "FeatureCollection", features: rota.current.t.map((t) => ({ type: "Feature", properties: { destino: t.destino }, geometry: { type: "LineString", coordinates: t.coords } })) });
+      (src as unknown as { _k?: string })._k = rota.current.chave;
+    }
+
+    // veículos: um marcador por veículo, reaproveitado entre atualizações.
+    // Exibição: posição encaixada no trajeto oficial quando o GPS está a até 60 m dele (src/lib/trajeto.ts).
     const vistos = new Set<string>();
-    for (const v of vs) {
+    for (const v0 of vs) {
+      const enc = v0.fonte === "brt" ? encaixar(v0.lat, v0.lng, v0.destino ?? null, rota.current.t) : null;
+      const v = enc ? { ...v0, lat: enc.lat, lng: enc.lng } : v0;
       vistos.add(v.id);
       let it = frota.current.get(v.id);
       if (!it) {
@@ -176,10 +207,10 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
         el.addEventListener("click", (ev) => { ev.stopPropagation(); ultimos.current.onVeiculo(v.id); });
         el.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); ultimos.current.onVeiculo(v.id); } });
         const marker = new m.Marker({ element: el }).setLngLat([v.lng, v.lat]).addTo(map);
-        it = { marker, el, anel: el.querySelector("svg") as SVGSVGElement, lat: v.lat, lng: v.lng, angulo: null };
+        it = { marker, el, anel: el.querySelector("svg") as SVGSVGElement, lat: v.lat, lng: v.lng, angulo: null, enc: enc ? { trajeto: enc.trajeto, s: enc.s } : null };
         frota.current.set(v.id, it);
       } else if (Math.abs(it.lat - v.lat) > 1e-6 || Math.abs(it.lng - v.lng) > 1e-6) {
-        animar(it, v.lat, v.lng);
+        animar(it, v.lat, v.lng, enc ? { trajeto: enc.trajeto, s: enc.s } : null);
       }
       girar(it, v.rumo);
       it.el.className = `veh ${v.fonte}${v.parado ? " parado" : ""}${v.idadeS > 180 ? " velho" : ""}${v.id === sel ? " sel" : ""}`;
