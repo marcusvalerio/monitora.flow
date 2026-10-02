@@ -15,7 +15,7 @@ const ROTULO: Record<string, string> = { ON_ROUTE: "No trajeto", UNCERTAIN: "Pos
 
 export default function MonitorApp() {
   const [d, setD] = useState<J | null>(null);
-  const [filtro, setFiltro] = useState<"todos" | "brt" | "sppo">("todos");
+  const [filtro, setFiltro] = useState<"todos" | "BRT" | "BUS">("todos");
   const [agora, setAgora] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -87,7 +87,8 @@ export default function MonitorApp() {
             <section className="m-sec stag" style={{ ["--i" as string]: 3 }} aria-label="Ônibus">
               <div className="t-label">Ônibus municipais</div>
               <div className="m-row"><M v={n(bus?.veiculos)} r="veículos" grande /><M v={n(bus?.linhas)} r="linhas" grande /></div>
-              <p className="t-meta">Trajeto dos ônibus ainda não carregado: sem classificação de rota.</p>
+              <p className="t-meta">Inclui os alimentadores do BRT (no GTFS são ônibus). Trajeto dos ônibus ainda não validado: sem classificação de rota.</p>
+              {o.outros?.veiculos > 0 && <p className="t-meta">{n(o.outros.veiculos)} veículos do GPS do BRT com código de linha que o GTFS não reconhece ficam fora das contas de BRT e ônibus.</p>}
             </section>
 
             <section className="m-sec stag" style={{ ["--i" as string]: 4 }} aria-label="Impactos">
@@ -113,7 +114,7 @@ export default function MonitorApp() {
       <section className="monitor-map" aria-label="Mapa operacional">
         <MonitorMap pontos={pontos} />
         <div className="glass m-filtros" role="tablist" aria-label="Filtrar veículos">
-          {([["todos", "Todos"], ["brt", "BRT"], ["sppo", "Ônibus"]] as const).map(([k, r]) => (
+          {([["todos", "Todos"], ["BRT", "BRT"], ["BUS", "Ônibus"]] as const).map(([k, r]) => (
             <button key={k} role="tab" aria-selected={filtro === k} className={`seg${filtro === k ? " on" : ""}`} onClick={() => setFiltro(k)}>{r}</button>
           ))}
           <span className="t-meta num" style={{ padding: "0 8px" }}>{n(pontos.length)}</span>

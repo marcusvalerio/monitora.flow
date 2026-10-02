@@ -13,7 +13,7 @@
     "fixtures:capturar": "tsx scripts/capturar-fixtures.ts",
     "paradas:atualizar": "tsx scripts/atualizar-paradas.ts",
     "estacoes:atualizar": "tsx scripts/atualizar-estacoes-brt.ts",
-    "trajetos:atualizar": "tsx scripts/atualizar-trajetos-brt.ts"
+    "brt:atualizar": "tsx scripts/atualizar-catalogo-brt.ts"
   },
   "repository": {
     "type": "git",

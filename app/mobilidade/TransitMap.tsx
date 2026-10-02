@@ -7,12 +7,14 @@ import { deltaAngulo } from "../../src/lib/veiculo";
 import { acumulado, encaixar, pontoEm, type Trajeto } from "../../src/lib/trajeto";
 
 export interface Ponto { id: string; nome: string; tipo: "estacao" | "terminal" | "parada"; fonte: "brt" | "sppo"; lat: number; lng: number; corredor?: string | null; bairro?: string | null; rua?: string | null }
-export interface VeiculoMapa { id: string; fonte: "brt" | "sppo"; linha: string | null; lat: number; lng: number; rumo: number | null; parado: boolean; idadeS: number; rotulo: string; destino?: string | null; estado?: "ON_ROUTE" | "UNCERTAIN" | "OFF_ROUTE" | "STALE" | null }
+export interface VeiculoMapa { id: string; fonte: "brt" | "sppo"; linha: string | null; lat: number; lng: number; rumo: number | null; parado: boolean; idadeS: number; rotulo: string; destino?: string | null; estado?: "ON_ROUTE" | "UNCERTAIN" | "OFF_ROUTE" | "STALE" | null; shapeId?: string | null }
 
 const ESTACOES = estacoesJson.estacoes as { id: string; nome: string; tipo: string; lat: number; lng: number }[];
 const estiloMapa = () =>
   window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "https://tiles.openfreemap.org/styles/dark" : "https://tiles.openfreemap.org/styles/positron";
 const escuro = () => window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+/** Cores do mapa vêm dos tokens CSS (paleta), não de valores soltos. */
+const token = (nome: string, padrao: string) => (getComputedStyle(document.documentElement).getPropertyValue(nome).trim() || padrao);
 
 
 type ItemVeiculo = { marker: Marker; el: HTMLDivElement; anel: SVGSVGElement; lat: number; lng: number; angulo: number | null; anim?: number; enc?: { trajeto: number; s: number } | null };
@@ -60,19 +62,19 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
         map.addLayer({ id: "rota-borda", type: "line", source: "rota", layout: { "line-join": "round", "line-cap": "round" },
           paint: { "line-color": escuro() ? "#14171c" : "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 4, 15, 9], "line-opacity": 0.9 } });
         map.addLayer({ id: "rota", type: "line", source: "rota", layout: { "line-join": "round", "line-cap": "round" },
-          paint: { "line-color": "#e8590c", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 2, 15, 5], "line-opacity": 0.75 } });
+          paint: { "line-color": token("--map-route", "#0247FE"), "line-width": ["interpolate", ["linear"], ["zoom"], 10, 2, 15, 5], "line-opacity": 0.75 } });
         // Camada de estações/terminais do BRT: discreta; terminal um pouco maior.
         map.addSource("estacoes", {
           type: "geojson",
           data: { type: "FeatureCollection", features: ESTACOES.map((e) => ({ type: "Feature", id: e.id, properties: { id: e.id, nome: e.nome, tipo: e.tipo }, geometry: { type: "Point", coordinates: [e.lng, e.lat] } })) },
         });
-        const fundo = escuro() ? "#14171c" : "#ffffff";
+        const fundo = token("--surface", "#ffffff");
         map.addLayer({
           id: "estacoes-pt", type: "circle", source: "estacoes",
           paint: {
             "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, ["match", ["get", "tipo"], "terminal", 3.5, 2], 15, ["match", ["get", "tipo"], "terminal", 7, 4.5]],
-            "circle-color": ["match", ["get", "tipo"], "terminal", "#e8590c", fundo],
-            "circle-stroke-color": "#e8590c", "circle-stroke-width": ["match", ["get", "tipo"], "terminal", 2, 1.5],
+            "circle-color": ["match", ["get", "tipo"], "terminal", token("--map-station", "#0C121B"), fundo],
+            "circle-stroke-color": token("--map-station", "#0C121B"), "circle-stroke-width": ["match", ["get", "tipo"], "terminal", 2, 1.5],
             "circle-opacity": 0.95,
           },
         });
@@ -127,6 +129,14 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
   }
 
   /** Anima até (lat, lng). Se o antes e o depois estão encaixados no mesmo trajeto e o veículo avançou, anda pela via. */
+  function encaixarNoShape(v: VeiculoMapa) {
+    const t = rota.current.t;
+    const i = v.shapeId ? t.findIndex((x) => x.shapeId === v.shapeId) : -1;
+    if (i < 0) return null; // shape do veículo não está desenhado (ex.: outro sentido filtrado) → GPS cru
+    const e = encaixar(v.lat, v.lng, null, [t[i]]);
+    return e ? { ...e, trajeto: i } : null;
+  }
+
   function animar(item: ItemVeiculo, lat: number, lng: number, enc: { trajeto: number; s: number } | null) {
     if (item.anim) cancelAnimationFrame(item.anim);
     const de = { lat: item.lat, lng: item.lng }, t0 = performance.now(), D = 1600;
@@ -195,7 +205,8 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
     const vistos = new Set<string>();
     for (const v0 of vs) {
       // Só encaixa o que é compatível com o trajeto; UNCERTAIN/OFF_ROUTE ficam na posição GPS real.
-      const enc = v0.fonte === "brt" && (v0.estado == null || v0.estado === "ON_ROUTE") ? encaixar(v0.lat, v0.lng, v0.destino ?? null, rota.current.t) : null;
+      // Só ON_ROUTE é desenhado sobre a via, e só no shape que o servidor validou (shapeId).
+      const enc = v0.estado === "ON_ROUTE" ? encaixarNoShape(v0) : null;
       const v = enc ? { ...v0, lat: enc.lat, lng: enc.lng } : v0;
       vistos.add(v.id);
       let it = frota.current.get(v.id);

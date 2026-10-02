@@ -1,17 +1,19 @@
 /**
  * Retrato operacional da frota (só dados observados + cálculos documentados).
- * Base: leitura ao vivo da SMTR (BRT: retrato; ônibus: últimos 3 min) + histórico em memória de 10 min,
- * última posição de cada veículo. Estados geográficos só para BRT (único com trajeto oficial carregado).
+ * Base: leitura ao vivo da SMTR (BRT: retrato; ônibus: últimos 3 min) + histórico em memória de 10 min, última posição de cada veículo.
+ * Modo de cada veículo pelo catálogo oficial (src/lib/brt.ts); estado geográfico só para BRT (único com trajeto carregado).
  */
 import type { Leitura } from "./fontes";
-import { distanciaAoTrajeto, type Coords } from "./trajeto";
-import { estadoGeo, VELHO_S, type EstadoGeo } from "./estadoGeo";
+import { normalizarFrota } from "./veiculo";
+import { linhaBrt, modoDaLinha, type TransportMode } from "./brt";
+import { casarVeiculo, STALE_AFTER_S, type RouteState } from "./matching";
+import { acumulado, type Coords } from "./trajeto";
 
 export const RECENTE_S = 120; // "posição recente" = até 2 min (EXPERIMENTAL / ESCOLHA DO SISTEMA)
 
 export interface ResumoFrota {
   veiculos: number; linhas: number; recentes: number; velhos: number; parados: number;
-  estados: Record<EstadoGeo | "SEM_TRAJETO", number> | null;
+  estados: Record<RouteState, number> | null;
 }
 
 export function ultimaPorVeiculo(ls: Leitura[]): Leitura[] {
@@ -24,29 +26,28 @@ export function ultimaPorVeiculo(ls: Leitura[]): Leitura[] {
   return [...m.values()];
 }
 
-export function retrato(ls: Leitura[], agora: Date, trajetos: Record<string, { coords: Coords }[]>) {
-  const ult = ultimaPorVeiculo(ls).filter((l) => l.linha);
-  const pontos: [number, number, string, string][] = []; // [lng, lat, fonte, estado]
-  const resumo = (fonte: "brt" | "sppo"): ResumoFrota => {
-    const vs = ult.filter((l) => l.fonte === fonte);
-    const estados = fonte === "brt" ? { ON_ROUTE: 0, UNCERTAIN: 0, OFF_ROUTE: 0, STALE: 0, SEM_TRAJETO: 0 } : null;
-    let recentes = 0, velhos = 0, parados = 0;
-    for (const l of vs) {
-      const idade = (agora.getTime() - l.ts.getTime()) / 1000;
-      if (idade <= RECENTE_S) recentes++;
-      if (idade > VELHO_S) velhos++;
-      if (l.velocidade < 3) parados++;
-      let e: string = idade > VELHO_S ? "STALE" : "SEM_TRAJETO";
-      if (estados) {
-        const tr = trajetos[(l.linha ?? "").toUpperCase()] ?? [];
-        const d = tr.length ? distanciaAoTrajeto(l.lat, l.lng, tr) : null;
-        e = estadoGeo(idade, d) ?? "SEM_TRAJETO";
-        estados[e as keyof typeof estados]++;
-      }
-      pontos.push([Math.round(l.lng * 1e5) / 1e5, Math.round(l.lat * 1e5) / 1e5, fonte, e]);
-    }
-    return { veiculos: vs.length, linhas: new Set(vs.map((l) => l.linha)).size, recentes, velhos, parados, estados };
-  };
-  const brt = resumo("brt"), onibus = resumo("sppo");
-  return { brt, onibus, total: brt.veiculos + onibus.veiculos, recentes: brt.recentes + onibus.recentes, pontos };
+/** `trajetosDe` permite injetar trajetos nos testes; padrão = catálogo oficial do BRT. */
+export function retrato(ls: Leitura[], agora: Date, trajetosDe: (linha: string) => { shapeId: string; destino: string; coords: Coords }[] = (l) => linhaBrt(l)?.trajetos ?? []) {
+  const cache = new Map<string, { shapeId: string; destino: string; coords: Coords; acc: number[] }[]>();
+  const trs = (l: string) => cache.get(l) ?? cache.set(l, trajetosDe(l).map((t) => ({ ...t, acc: acumulado(t.coords) }))).get(l)!;
+  const frota = normalizarFrota(ls.filter((l) => l.linha), agora);
+  const pontos: [number, number, string, string][] = []; // [lng, lat, modo, estado]
+  const porModo: Record<TransportMode, ResumoFrota> = {} as Record<TransportMode, ResumoFrota>;
+  const linhas: Record<TransportMode, Set<string>> = { BRT: new Set(), BUS: new Set(), OUTROS: new Set() };
+  for (const m of ["BRT", "BUS", "OUTROS"] as TransportMode[])
+    porModo[m] = { veiculos: 0, linhas: 0, recentes: 0, velhos: 0, parados: 0, estados: m === "BRT" ? { ON_ROUTE: 0, UNCERTAIN: 0, OFF_ROUTE: 0, STALE: 0 } : null };
+  for (const v of frota) {
+    const modo = modoDaLinha(v.linha, v.fonte);
+    const r = porModo[modo];
+    r.veiculos++; linhas[modo].add(v.linha!.toUpperCase());
+    if (v.idadeS <= RECENTE_S) r.recentes++;
+    if (v.idadeS > STALE_AFTER_S) r.velhos++;
+    if (v.parado) r.parados++;
+    let estado = v.idadeS > STALE_AFTER_S ? "STALE" : "SEM_TRAJETO";
+    if (modo === "BRT") { estado = casarVeiculo(v, trs(v.linha!.toUpperCase())).routeState; r.estados![estado as RouteState]++; }
+    pontos.push([Math.round(v.lng * 1e5) / 1e5, Math.round(v.lat * 1e5) / 1e5, modo, estado]);
+  }
+  for (const m of Object.keys(porModo) as TransportMode[]) porModo[m].linhas = linhas[m].size;
+  const total = frota.length;
+  return { brt: porModo.BRT, onibus: porModo.BUS, outros: porModo.OUTROS, total, recentes: frota.filter((v) => v.idadeS <= RECENTE_S).length, pontos };
 }

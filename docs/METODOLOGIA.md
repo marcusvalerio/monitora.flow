@@ -133,8 +133,7 @@ salvos em `src/data/trajetos-brt.json` por `npm run trajetos:atualizar` (pontos 
 No mapa, o marcador do BRT é **encaixado** no trajeto quando o GPS está a até **60 m** dele (EXPERIMENTAL / ESCOLHA DO SISTEMA), e a animação
 entre duas leituras anda pela via. Isso é só exibição: a posição observada (`lat`, `lng` da API) continua a do GPS. Longe do trajeto → mostra o GPS cru.
 O destino do veículo escolhe o sentido (trip_headsign); sem destino, usa o trajeto mais próximo.
-Veículo **parado** a mais de **300 m** do trajeto da linha é tratado como fora de operação (garagem/pátio) e sai da frota de `/linhas/{linha}/veiculos`
-(contado em `foraDeOperacao.n`). EXPERIMENTAL / ESCOLHA DO SISTEMA: em 02/10/2026 vários BRT da linha 10, quase todos com ignição desligada, apareciam parados num mesmo ponto a ~2,7 km do corredor.
+(Substituído pelo motor do BRT abaixo: nenhum veículo é escondido; fora do trajeto vira OFF_ROUTE na posição real.)
 
 ## Linhas de uma estação de BRT (`/estacoes/{id}`)
 BRT com GPS a até **300 m** e ônibus (SPPO) a até **150 m** da estação nos últimos 60 min (EXPERIMENTAL / ESCOLHA DO SISTEMA). Não é a lista oficial.
@@ -153,6 +152,28 @@ Os sentidos vêm do trajeto oficial (`trip_headsign` de cada shape do GTFS). Ao 
 "Posição recente" = até **120 s** (EXPERIMENTAL / ESCOLHA DO SISTEMA). Estados geográficos só para BRT. Chuva: pluviômetros do Alerta Rio com o horário da medição.
 Ocorrências: sem fonte aberta respondendo (api.dados.rio inteiro em HTTP 503 em 02/10/2026); nenhum número é exibido sem fonte.
 Corredor de impacto (para quando houver fonte): **NO_TRAJETO** até 100 m do trajeto, **PRÓXIMA** até 800 m (`src/lib/estadoGeo.ts`).
+
+## Motor do BRT: classificação e map matching
+**Classificação (`src/lib/brt.ts`).** Fonte única: catálogo gerado do GTFS oficial (`npm run brt:atualizar` → `src/data/brt-catalogo.json`).
+BRT = `routes.route_type = 702`. O GPS do BRT também transmite alimentadores do mesmo operador (ex.: 68, 67, 28, 634 = `route_type 700` no GTFS)
+→ **BUS**; códigos que o GTFS não conhece (ex.: "0", "54", "ESP01" como 200) → **OUTROS** (fora das contas e da busca). Ônibus municipais (SPPO) → BUS.
+Nenhuma regra por número, prefixo ou cor. Linhas de cada estação: paradas das viagens 702 (`stop_times`) a até **250 m** da estação (EXPERIMENTAL / ESCOLHA DO SISTEMA).
+
+**Associação.** O GPS do BRT **não traz** `trip_id`/`shape_id` (campos: codigo, linha, latitude, longitude, dataHora, velocidade, sentido, trajeto,
+direcao, ignicao…; verificado em 02/10/2026). Por isso: linha → destino (texto `trajeto`) ↔ `trip_headsign` → shapes daquele sentido.
+O GPS dos ônibus (SPPO) traz `route_id`, `trip_id`, `shape_id`, `datetime_envio`, `datetime_servidor` — guardados na leitura ao vivo para a próxima etapa (ônibus).
+
+**Map matching (`src/lib/matching.ts`).** Projeção do GPS sobre o shape do sentido; compara o rumo do GPS com o rumo do trecho (só andando ≥ 3 km/h).
+`ROUTE_MATCHING_TOLERANCE_METERS = 60` (GPS urbano erra 10–30 m; pistas largas do corredor), `ROUTE_OFF_THRESHOLD_METERS = 300`,
+`HEADING_TOLERANCE_DEG = 60`, `STALE_AFTER_S = 180` — todos EXPERIMENTAL / ESCOLHA DO SISTEMA.
+ON_ROUTE: ≤ 60 m e rumo compatível (ou sem rumo). UNCERTAIN: 60–300 m, ou rumo > 60° do trecho (ex.: rótulo de sentido desatualizado).
+OFF_ROUTE: > 300 m. STALE: posição > 180 s. `confidence` (escala ordinal): 0,95 ON_ROUTE com rumo confirmado, 0,9 sem rumo, 0,5 UNCERTAIN, 0,15 OFF_ROUTE, 0,1 STALE.
+**Nada é colado na via fora do ON_ROUTE**: a API devolve sempre o GPS; o mapa só desenha sobre a via quem é ON_ROUTE, no shape validado.
+Diagnóstico: `/linhas/{linha}/veiculos?diag=1` e logs `[matching]` em desenvolvimento.
+
+**Causa dos veículos da linha 10 fora do corredor (02/10/2026).** Veículos parados, a maioria com `ignicao = 0`, num mesmo ponto a ~2,8–3 km
+do trajeto (garagem), ainda transmitindo a linha 10; e veículos a 15 m do trajeto com rumo 179° oposto ao sentido do rótulo (rótulo desatualizado).
+Agora: os primeiros são OFF_ROUTE na posição real; os segundos UNCERTAIN.
 
 ## Chuva (`/chuva`)
 Valores **medidos** pelos pluviômetros do Alerta Rio, repassados como vieram (mm acumulados em 5, 10, 15 min e 1, 4, 24, 96 h).

@@ -6,7 +6,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 /** Mapa operacional: um ponto por veículo (camada única de círculos, atualização incremental via setData). */
 export type PontoFrota = [number, number, string, string]; // lng, lat, fonte, estado
 export const COR_ESTADO: Record<string, string> = {
-  ON_ROUTE: "#16a34a", UNCERTAIN: "#d97706", OFF_ROUTE: "#dc2626", STALE: "#94a3b8", SEM_TRAJETO: "#2563eb",
+  ON_ROUTE: "#16a34a", UNCERTAIN: "#d97706", OFF_ROUTE: "#dc2626", STALE: "#94a3b8", SEM_TRAJETO: "#0247FE",
 };
 
 export default function MonitorMap({ pontos }: { pontos: PontoFrota[] }) {
@@ -18,7 +18,7 @@ export default function MonitorMap({ pontos }: { pontos: PontoFrota[] }) {
 
   const geo = (ps: PontoFrota[]) => ({
     type: "FeatureCollection" as const,
-    features: ps.map(([lng, lat, fonte, estado]) => ({ type: "Feature" as const, properties: { fonte, estado }, geometry: { type: "Point" as const, coordinates: [lng, lat] } })),
+    features: ps.map(([lng, lat, fonte, estado]) => ({ type: "Feature" as const, properties: { modo: fonte, estado }, geometry: { type: "Point" as const, coordinates: [lng, lat] } })),
   });
 
   useEffect(() => {
@@ -37,10 +37,10 @@ export default function MonitorMap({ pontos }: { pontos: PontoFrota[] }) {
         map.addLayer({
           id: "frota", type: "circle", source: "frota",
           paint: {
-            "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, ["match", ["get", "fonte"], "brt", 2.6, 1.6], 14, ["match", ["get", "fonte"], "brt", 6, 4]],
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, ["match", ["get", "modo"], "BRT", 2.6, 1.6], 14, ["match", ["get", "modo"], "BRT", 6, 4]],
             "circle-color": ["match", ["get", "estado"], "ON_ROUTE", COR_ESTADO.ON_ROUTE, "UNCERTAIN", COR_ESTADO.UNCERTAIN, "OFF_ROUTE", COR_ESTADO.OFF_ROUTE, "STALE", COR_ESTADO.STALE, COR_ESTADO.SEM_TRAJETO],
-            "circle-opacity": ["match", ["get", "fonte"], "brt", 0.95, 0.55],
-            "circle-stroke-width": ["match", ["get", "fonte"], "brt", 1, 0], "circle-stroke-color": escuro ? "#0b0d10" : "#ffffff",
+            "circle-opacity": ["match", ["get", "modo"], "BRT", 0.95, 0.55],
+            "circle-stroke-width": ["match", ["get", "modo"], "BRT", 1, 0], "circle-stroke-color": escuro ? "#0b0d10" : "#ffffff",
           },
         });
         pronto.current = true;
