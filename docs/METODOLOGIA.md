@@ -133,6 +133,8 @@ salvos em `src/data/trajetos-brt.json` por `npm run trajetos:atualizar` (pontos 
 No mapa, o marcador do BRT é **encaixado** no trajeto quando o GPS está a até **60 m** dele (EXPERIMENTAL / ESCOLHA DO SISTEMA), e a animação
 entre duas leituras anda pela via. Isso é só exibição: a posição observada (`lat`, `lng` da API) continua a do GPS. Longe do trajeto → mostra o GPS cru.
 O destino do veículo escolhe o sentido (trip_headsign); sem destino, usa o trajeto mais próximo.
+Veículo **parado** a mais de **300 m** do trajeto da linha é tratado como fora de operação (garagem/pátio) e sai da frota de `/linhas/{linha}/veiculos`
+(contado em `foraDeOperacao.n`). EXPERIMENTAL / ESCOLHA DO SISTEMA: em 02/10/2026 vários BRT da linha 10, quase todos com ignição desligada, apareciam parados num mesmo ponto a ~2,7 km do corredor.
 
 ## Linhas de uma estação de BRT (`/estacoes/{id}`)
 BRT com GPS a até **300 m** e ônibus (SPPO) a até **150 m** da estação nos últimos 60 min (EXPERIMENTAL / ESCOLHA DO SISTEMA). Não é a lista oficial.

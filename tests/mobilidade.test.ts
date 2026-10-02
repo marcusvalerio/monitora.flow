@@ -95,7 +95,7 @@ it("destino a partir do trajeto do BRT", () => {
   expect(destinoDoTrajeto(null, "ida")).toBeNull();
 });
 
-import { acumulado, encaixar, pontoEm, projetar, ENCAIXE_MAX_M } from "../src/lib/trajeto";
+import { acumulado, distanciaAoTrajeto, encaixar, pontoEm, projetar, ENCAIXE_MAX_M, FORA_TRAJETO_M } from "../src/lib/trajeto";
 import trajetosJson from "../src/data/trajetos-brt.json";
 
 describe("trajeto (encaixe no trajeto oficial)", () => {
@@ -122,6 +122,12 @@ describe("trajeto (encaixe no trajeto oficial)", () => {
     const volta = { sentido: 1, destino: "Estação Santa Cruz", coords: reta.map(([a, b]) => [a, b + 0.0001] as [number, number]) };
     expect(encaixar(-23.00005, -43.495, "Santa Cruz", [ida, volta])!.trajeto).toBe(1);
     expect(encaixar(-23.00005, -43.495, "Alvorada", [ida, volta])!.trajeto).toBe(0);
+  });
+  it("garagem da linha 10 (ponto real de 02/10/2026) fica fora do trajeto; corredor fica dentro", () => {
+    const l = (trajetosJson as unknown as { linhas: Record<string, { coords: [number, number][] }[]> }).linhas["10"];
+    expect(distanciaAoTrajeto(-22.9206, -43.6453, l)!).toBeGreaterThan(FORA_TRAJETO_M);
+    expect(distanciaAoTrajeto(-23.0003, -43.3964, l)!).toBeLessThan(ENCAIXE_MAX_M);
+    expect(distanciaAoTrajeto(0, 0, [])).toBeNull();
   });
   it("catálogo GTFS: linha 10 tem os dois sentidos", () => {
     const l = (trajetosJson as { linhas: Record<string, { destino: string }[]> }).linhas["10"];

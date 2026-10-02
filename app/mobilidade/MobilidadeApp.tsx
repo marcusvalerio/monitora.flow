@@ -265,6 +265,11 @@ export default function MobilidadeApp() {
                   ))}
                 </ul>
               )}
+            {veiculos?.foraDeOperacao?.n > 0 && (
+              <p className="t-meta" style={{ marginTop: 8 }}>
+                {veiculos!.foraDeOperacao.n} {veiculos!.foraDeOperacao.n === 1 ? "veículo parado" : "veículos parados"} fora do trajeto (garagem ou pátio) não {veiculos!.foraDeOperacao.n === 1 ? "aparece" : "aparecem"} no mapa.
+              </p>
+            )}
             <div className="section">
               <span className="t-label">Na região</span>
               <Rua rua={rua} />
