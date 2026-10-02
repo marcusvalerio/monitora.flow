@@ -4,6 +4,7 @@ import type { Leitura } from "../../../../src/lib/fontes";
 import { normalizarFrota } from "../../../../src/lib/veiculo";
 import trajetosJson from "../../../../src/data/trajetos-brt.json";
 import { distanciaAoTrajeto, FORA_TRAJETO_M, type Coords } from "../../../../src/lib/trajeto";
+import { estadoGeo } from "../../../../src/lib/estadoGeo";
 import { PARAMETROS } from "../../../../src/lib/parametros";
 import { ok, tratar, ErroParametro } from "../../../../src/lib/api";
 
@@ -26,7 +27,8 @@ export function GET(_req: Request, ctx: { params: Promise<{ linha: string }> }) 
     const trajetos = ((trajetosJson as unknown as { linhas: Record<string, { coords: Coords }[]> }).linhas[linha] ?? []);
     const todos = normalizarFrota(banco.concat(vivo.leituras), agora).sort((a, b) => a.idadeS - b.idadeS).map((v) => {
       const d = v.fonte === "brt" && trajetos.length ? distanciaAoTrajeto(v.lat, v.lng, trajetos) : null;
-      return { ...v, distanciaTrajetoM: d === null ? null : Math.round(d) };
+      const dist = d === null ? null : Math.round(d);
+      return { ...v, distanciaTrajetoM: dist, estadoGeo: estadoGeo(v.idadeS, dist) };
     });
     // Parado longe do trajeto oficial = garagem/pátio (fora de operação): não entra na frota exibida.
     const foraDeOperacao = todos.filter((v) => v.parado && v.distanciaTrajetoM !== null && v.distanciaTrajetoM > FORA_TRAJETO_M);
@@ -35,6 +37,7 @@ export function GET(_req: Request, ctx: { params: Promise<{ linha: string }> }) 
       linha, janelaMin: PARAMETROS.JANELA_LINHA_MIN, consultadoEm: agora, fonteAoVivoEm: vivo.consultadoEm,
       nota: "Posições ao vivo da fonte da SMTR somadas às gravadas nos últimos 10 min. rumo: graus, 0 = norte, sentido horário.",
       errosFonte: vivo.erros.length ? vivo.erros : undefined,
+      estados: "ON_ROUTE ≤ 60 m do trajeto oficial; UNCERTAIN ≤ 300 m; OFF_ROUTE > 300 m; STALE: posição com mais de 180 s; null: linha sem trajeto conhecido.",
       foraDeOperacao: { n: foraDeOperacao.length, criterio: `parado e a mais de ${FORA_TRAJETO_M} m do trajeto oficial (GTFS)` },
       observado: frota.map((v) => ({ ...v, velocidadeKmh: v.velocidadeKmh, em: v.em })),
     }, undefined, 5);

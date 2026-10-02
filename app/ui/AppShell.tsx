@@ -2,11 +2,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { CloudSun, BusFront, Ellipsis, Radar } from "lucide-react";
+import { CloudSun, BusFront, Ellipsis, Radar, Activity } from "lucide-react";
 
 const ITENS = [
   { href: "/clima", rotulo: "Clima", Icone: CloudSun },
   { href: "/mobilidade", rotulo: "Mobilidade", Icone: BusFront },
+  { href: "/monitor", rotulo: "Monitor", Icone: Activity },
   { href: "/mais", rotulo: "Mais", Icone: Ellipsis },
 ];
 

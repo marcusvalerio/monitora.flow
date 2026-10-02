@@ -64,6 +64,13 @@ export function pontoEm(c: Coords, s: number, acc = acumulado(c)): { lat: number
   return { lng: u[0], lat: u[1] };
 }
 
+/** "Terminal Alvorada" ~ "Alvorada", "Estação Santa Cruz" ~ "Santa Cruz" (ignora acento, caixa e "terminal/estação"). */
+export function mesmoDestino(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return false;
+  const x = norm(a), y = norm(b);
+  return !!x && !!y && (x.includes(y) || y.includes(x));
+}
+
 const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/\b(terminal|estacao)\b/g, "").trim();
 
 /**
@@ -74,7 +81,7 @@ export function encaixar(lat: number, lng: number, destino: string | null, traje
   if (!trajetos.length) return null;
   const d = destino ? norm(destino) : "";
   const idx = trajetos.map((_, i) => i);
-  const candidatos = d ? idx.filter((i) => { const x = norm(trajetos[i].destino); return x.includes(d) || d.includes(x); }) : [];
+  const candidatos = d ? idx.filter((i) => mesmoDestino(trajetos[i].destino, destino)) : [];
   let melhor: (Encaixe & { trajeto: number }) | null = null;
   for (const i of candidatos.length ? candidatos : idx) {
     const e = projetar(lat, lng, trajetos[i].coords, trajetos[i].acc);

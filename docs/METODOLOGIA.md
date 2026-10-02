@@ -139,6 +139,21 @@ Veículo **parado** a mais de **300 m** do trajeto da linha é tratado como fora
 ## Linhas de uma estação de BRT (`/estacoes/{id}`)
 BRT com GPS a até **300 m** e ônibus (SPPO) a até **150 m** da estação nos últimos 60 min (EXPERIMENTAL / ESCOLHA DO SISTEMA). Não é a lista oficial.
 
+## Estado geográfico do veículo (BRT) — EXPERIMENTAL / ESCOLHA DO SISTEMA
+Comparando a posição com o trajeto oficial (GTFS) da linha: **ON_ROUTE** até 60 m (desenhado sobre a via), **UNCERTAIN** até 300 m
+(posição GPS crua, contorno tracejado), **OFF_ROUTE** acima de 300 m (posição GPS crua, sinalizado "fora do trajeto esperado"),
+**STALE** posição com mais de 180 s. Ônibus convencionais: sem trajeto carregado → sem estado (`null`).
+
+## Sentido da linha
+Os sentidos vêm do trajeto oficial (`trip_headsign` de cada shape do GTFS). Ao escolher um sentido, o app mostra só os veículos cujo destino
+(do campo `trajeto` do GPS do BRT) corresponde a ele e só o desenho daquele sentido. A chegada estimada é filtrada pelos mesmos veículos.
+
+## Monitor (`/monitor/dados`)
+Última posição de cada veículo na leitura ao vivo + 10 min em memória. "Observados" = veículos distintos com GPS (não é a frota programada nem "em operação").
+"Posição recente" = até **120 s** (EXPERIMENTAL / ESCOLHA DO SISTEMA). Estados geográficos só para BRT. Chuva: pluviômetros do Alerta Rio com o horário da medição.
+Ocorrências: sem fonte aberta respondendo (api.dados.rio inteiro em HTTP 503 em 02/10/2026); nenhum número é exibido sem fonte.
+Corredor de impacto (para quando houver fonte): **NO_TRAJETO** até 100 m do trajeto, **PRÓXIMA** até 800 m (`src/lib/estadoGeo.ts`).
+
 ## Chuva (`/chuva`)
 Valores **medidos** pelos pluviômetros do Alerta Rio, repassados como vieram (mm acumulados em 5, 10, 15 min e 1, 4, 24, 96 h).
 Escolhemos as `k` estações mais próximas (haversine, padrão 3). Não há interpolação para o seu ponto nem classificação de intensidade.
