@@ -243,7 +243,7 @@ export default function MobilidadeApp() {
                       <span className="ico" style={{ color: v.fonte === "brt" ? "var(--brt)" : "var(--bus)" }}><BusFront aria-hidden /></span>
                       <span className="main">
                         <div className="t-head num">{fmtDist(v.k)} <span className="t-cap">de {ponto.nome}</span></div>
-                        <div className="t-cap">{v.destino ? `Sentido ${v.destino}` : `Veículo ${v.veiculo}`}</div>
+                        <div className="t-cap">{v.destino ? `Sentido ${v.destino} · ` : ""}Veículo {v.veiculo}</div>
                       </span>
                       <span style={{ textAlign: "right" }}>
                         <div className="t-head num">{v.parado ? "Parado" : `${v.velocidadeKmh} km/h`}</div>
@@ -387,7 +387,7 @@ function TransitSearch({ onEscolher, onLinha, comLinhas, onFechar }: { onEscolhe
       const sinal = ctrl.current.signal;
       const [r, l] = await Promise.all([
         modo === "brt" ? get(`/estacoes?q=${encodeURIComponent(termo)}&limite=30`, sinal) : get(`/paradas?q=${encodeURIComponent(termo)}&limite=20`, sinal),
-        comLinhas && termo.length <= 8 ? get(`/linhas?q=${encodeURIComponent(termo)}&fonte=${modo}&limite=8`, sinal) : Promise.resolve(null),
+        comLinhas && termo.length <= 8 ? get(`/linhas?q=${encodeURIComponent(termo)}&limite=12`, sinal) : Promise.resolve(null),
       ]);
       if (!r.cancelado) setRes({ ...r, linhas: l?.linhas ?? [] });
     }, 160);
@@ -397,7 +397,8 @@ function TransitSearch({ onEscolher, onLinha, comLinhas, onFechar }: { onEscolhe
   const estacoes: J[] = modo === "brt" ? (res?.estacoes ?? []).filter((e: J) => e.tipo === "estacao") : [];
   const terminais: J[] = modo === "brt" ? (res?.estacoes ?? []).filter((e: J) => e.tipo === "terminal") : [];
   const paradas: J[] = modo === "sppo" ? res?.paradas ?? [] : [];
-  const linhas: J[] = res?.linhas ?? [];
+  // BRT e ônibus juntos; o tipo da aba atual vem primeiro
+  const linhas: J[] = [...(res?.linhas ?? [])].sort((a: J, b: J) => Number(b.fonte === modo) - Number(a.fonte === modo));
   const vazio = res && !res.erro && !linhas.length && !estacoes.length && !terminais.length && !paradas.length;
 
   const Item = ({ p, ponto }: { p: J; ponto: Ponto }) => (
@@ -424,7 +425,7 @@ function TransitSearch({ onEscolher, onLinha, comLinhas, onFechar }: { onEscolhe
           {linhas.length > 0 && <><div className="t-label group-label">Linhas com GPS agora</div><ul className="list">{linhas.map((l) => (
             <li key={l.fonte + l.linha}><button className="list-item" onClick={() => onLinha(l.linha)} aria-label={`Linha ${l.linha}${l.destinos[0] ? `, sentido ${l.destinos.join(" e ")}` : ""}, ${l.veiculosAgora} veículos agora`}>
               <span className={`line-badge${l.fonte === "brt" ? " brt" : ""}`}>{l.linha}</span>
-              <span className="main"><div className="t-head">{l.destinos.length ? l.destinos.join(" ↔ ") : `Linha ${l.linha}`}</div><div className="t-cap">{l.veiculosAgora} {l.veiculosAgora === 1 ? "veículo" : "veículos"} com GPS agora</div></span>
+              <span className="main"><div className="t-head">{l.destinos.length ? l.destinos.join(" ↔ ") : `Linha ${l.linha}`}</div><div className="t-cap">{l.fonte === "brt" ? "BRT" : "Ônibus"} · {l.veiculosAgora} {l.veiculosAgora === 1 ? "veículo" : "veículos"} com GPS agora</div></span>
               <ChevronRight size={18} aria-hidden style={{ color: "var(--text-3)" }} />
             </button></li>))}</ul></>}
           {estacoes.length > 0 && <><div className="t-label group-label">Estações</div><ul className="list">{estacoes.map((e) => <Item key={e.id} p={e} ponto={{ id: e.id, nome: e.nome, tipo: "estacao", fonte: "brt", lat: e.lat, lng: e.lng, corredor: e.corredor, status: e.status } as Ponto} />)}</ul></>}

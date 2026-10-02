@@ -40,16 +40,19 @@ export function rumoEntre(a: { lat: number; lng: number }, b: { lat: number; lng
   return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 }
 
-/** "22 - ALVORADA X JARDIM OCEANICO (PARADOR) [IDA]" + sentido "ida" → "Jardim Oceanico". */
+/**
+ * Destino a partir do trajeto do BRT. A fonte já escreve o trajeto na ordem da viagem
+ * (verificado em 02/10/2026: "10 - SANTA CRUZ X ALVORADA [IDA]" e "10 - ALVORADA X SANTA CRUZ [VOLTA]",
+ * com o rumo do GPS batendo com o último nome), então o destino é sempre o último trecho.
+ * `sentido` fica só como confirmação: sem "[IDA]/[VOLTA]" nem sentido, não arriscamos.
+ */
 export function destinoDoTrajeto(trajeto: string | null | undefined, sentido: string | null | undefined): string | null {
   if (!trajeto) return null;
+  if (!/\[(IDA|VOLTA)\]/i.test(trajeto) && !(sentido ?? "").trim()) return null;
   const miolo = trajeto.replace(/^[^-]*-\s*/, "").replace(/\[.*?\]/g, "").replace(/\(.*?\)/g, "").trim();
   const partes = miolo.split(/\s+X\s+/i).map((p) => p.trim()).filter(Boolean);
   if (partes.length < 2) return null;
-  const s = (sentido ?? "").toLowerCase();
-  const alvo = s.startsWith("v") ? partes[0] : s.startsWith("i") ? partes[partes.length - 1] : null;
-  if (!alvo) return null;
-  return alvo.toLowerCase().replace(/(^|\s|\/)(\p{L})/gu, (_m, a, b) => a + b.toUpperCase());
+  return partes[partes.length - 1].toLowerCase().replace(/(^|\s|\/)(\p{L})/gu, (_m, a, b) => a + b.toUpperCase());
 }
 
 /**
