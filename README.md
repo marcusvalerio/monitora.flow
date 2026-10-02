@@ -13,8 +13,8 @@ Coletor + banco + API + app (PWA) com dados abertos do Rio de Janeiro: **GPS dos
 
 ## Arquitetura
 ```
-Neon Function Trigger (cron */10, UTC)
-   └─► função "disparador" (Neon Functions) ─► POST /api/coletar (Vercel)
+GitHub Actions (cron */10, UTC)
+   └─► POST /api/coletar (Vercel, com Bearer CRON_SECRET)
                                                  │ GPS BRT + SPPO: valida (zod), descarta placa, filtra
                                                  ▼
                                 Postgres Neon (projeto monitora-flow, us-east-1)
@@ -44,6 +44,6 @@ npm test                     # testes com fixtures reais
 ## Implantação atual
 - **Banco:** Neon, projeto `monitora-flow` (us-east-1). Esquema em `db/schema.sql`.
 - **Web/API:** Vercel, região `iad1` (mesma do banco, ver `vercel.json`), com `DATABASE_URL` e `CRON_SECRET` nas variáveis do projeto.
-- **Agendador:** Neon Function `disparador` (`functions/disparador.ts`) + Function Trigger cron `*/10 * * * *`.
-  Variáveis da função: `COLETOR_URL`, `CRON_SECRET`. Para redistribuir: `npx esbuild functions/disparador.ts --bundle --platform=node --format=esm --outfile=dist/index.mjs` e `neon functions deploy disparador --src dist/index.mjs --no-bundle`.
-- **Plano B do agendador:** `.github/workflows/coletar.yml` (desativado; instruções no arquivo).
+- **Agendador:** `.github/workflows/coletar.yml` (GitHub Actions, `*/10 * * * *`), com os secrets `COLETOR_URL` e `CRON_SECRET`.
+- **Alternativa guardada:** `functions/disparador.ts` (Neon Function + Function Trigger). Foi trocada pelo GitHub porque
+  o painel do Neon não permite definir o `CRON_SECRET` da função sem passar o segredo pela API.

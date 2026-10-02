@@ -1,10 +1,11 @@
-# PLANO B do agendador. O agendador principal é o Function Trigger do Neon (função "disparador").
-# Para ativar: descomente o bloco "schedule" e crie os secrets COLETOR_URL e CRON_SECRET em
-# Settings → Secrets and variables → Actions. Sem os secrets, rode só manualmente (workflow_dispatch).
-name: coletar (plano B)
+# Agendador da coleta: chama /api/coletar a cada 10 min.
+# Exige os secrets COLETOR_URL e CRON_SECRET em Settings → Secrets and variables → Actions
+# (CRON_SECRET igual ao da Vercel). O GitHub pode atrasar execuções agendadas em alguns minutos;
+# a janela do SPPO continua de onde a última coleta parou (até 20 min).
+name: coletar
 on:
-  # schedule:
-  #   - cron: "*/10 * * * *"
+  schedule:
+    - cron: "*/10 * * * *"
   workflow_dispatch:
 jobs:
   coletar:
