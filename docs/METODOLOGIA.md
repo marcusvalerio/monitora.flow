@@ -87,6 +87,12 @@ ou `historico_insuficiente` (menos de **3 dias** anteriores com dado — EXPERIM
 A associação coordenada → ponto usa até **150 m** (EXPERIMENTAL / ESCOLHA DO SISTEMA).
 Isso diz só "diferente do costume", **não** "congestionado".
 
+## Modo ao vivo (`/linhas/{linha}/veiculos` e `/chegada`)
+Esses dois endpoints não dependem do intervalo da coleta: a cada pedido leem a fonte da SMTR na hora
+(BRT: retrato atual; SPPO: últimos **3 min**), reaproveitando a leitura por até **20 s** por instância do servidor
+(EXPERIMENTAL / ESCOLHA DO SISTEMA, para não sobrecarregar a fonte). As leituras ao vivo ficam só em memória por 10 min
+(nunca no banco) e são somadas às posições gravadas. É isso que dá ao BRT a "leitura anterior" exigida pela estimativa de chegada.
+
 ## Estimativa de chegada (`/chegada`) — EXPERIMENTAL / ESCOLHA DO SISTEMA
 Não é horário oficial. Para cada veículo da linha com leituras nos últimos **10 min**:
 

@@ -48,6 +48,10 @@ export const PARAMETROS = {
   PARADA_LINHAS_RAIO_M: 100,
   /** EXPERIMENTAL / ESCOLHA DO SISTEMA — janela para "linhas vistas perto da parada" (min). */
   PARADA_LINHAS_JANELA_MIN: 60,
+  /** EXPERIMENTAL / ESCOLHA DO SISTEMA — por quanto tempo reaproveitar a leitura ao vivo da fonte (s). */
+  AO_VIVO_CACHE_S: 20,
+  /** EXPERIMENTAL / ESCOLHA DO SISTEMA — janela do SPPO pedida no modo ao vivo (min). */
+  AO_VIVO_SPPO_JANELA_MIN: 3,
   /** Fuso usado para dia da semana / hora. Rio não tem horário de verão desde 2019. */
   FUSO: "America/Sao_Paulo",
 } as const;

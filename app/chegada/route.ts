@@ -1,4 +1,6 @@
 import { lerPosicoesLinha } from "../../src/lib/coletor";
+import { linhaAoVivo } from "../../src/lib/aoVivo";
+import type { Leitura } from "../../src/lib/fontes";
 import { estimarChegadas } from "../../src/lib/chegada";
 import { AVISO_CHEGADA, PARAMETROS } from "../../src/lib/parametros";
 import { ok, numero, tratar, ErroParametro } from "../../src/lib/api";
@@ -14,14 +16,19 @@ export function GET(req: Request) {
     const lat = numero(q.get("lat"), "lat", { min: -90, max: 90 });
     const lng = numero(q.get("lng"), "lng", { min: -180, max: 180 });
     const agora = new Date();
-    const ls = await lerPosicoesLinha(linha, new Date(agora.getTime() - PARAMETROS.JANELA_LINHA_MIN * 60_000));
+    // Posições gravadas (dão a leitura anterior de cada veículo) + leitura ao vivo (dá a posição atual).
+    const [vivo, banco] = await Promise.all([
+      linhaAoVivo(linha),
+      lerPosicoesLinha(linha, new Date(agora.getTime() - PARAMETROS.JANELA_LINHA_MIN * 60_000)).catch((): Leitura[] => []),
+    ]);
+    const ls = banco.concat(vivo.leituras);
     const chegadas = estimarChegadas(ls, lat, lng, agora);
     return ok({
       avisoChegada: AVISO_CHEGADA,
       metodo: "ETA = d1/va − (agora − t1); d1 = distância em linha reta da última posição; va = aproximação observada entre duas leituras ≥ 60 s. Ver docs/METODOLOGIA.md.",
-      consulta: { linha, lat, lng }, consultadoEm: agora,
+      consulta: { linha, lat, lng }, consultadoEm: agora, fonteAoVivoEm: vivo.consultadoEm,
       observado: { veiculosNaLinha: new Set(ls.map((l) => `${l.fonte}|${l.veiculo}`)).size },
       calculado: { chegadas: chegadas.slice(0, 5), proxima: chegadas[0] ?? null },
-    });
+    }, undefined, 15);
   });
 }

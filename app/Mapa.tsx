@@ -7,7 +7,7 @@ export interface MarcadorVeiculo { id: string; lat: number; lng: number; rotulo:
 export interface MarcadorChuva { id: string; lat: number; lng: number; mm: number | null; nome: string }
 
 /** Mapa MapLibre com fundo OpenStreetMap via OpenFreeMap (sem chave). */
-export default function Mapa({ destino, veiculos, chuva }: { destino: { lat: number; lng: number }; veiculos: MarcadorVeiculo[]; chuva: MarcadorChuva[] }) {
+export default function Mapa({ destino, veiculos, chuva, altura, zoom = 14 }: { destino: { lat: number; lng: number }; veiculos: MarcadorVeiculo[]; chuva: MarcadorChuva[]; altura?: number; zoom?: number }) {
   const div = useRef<HTMLDivElement>(null);
   const mapa = useRef<MLMap | null>(null);
   const marcas = useRef<Marker[]>([]);
@@ -21,7 +21,7 @@ export default function Mapa({ destino, veiculos, chuva }: { destino: { lat: num
       mapa.current = new m.Map({
         container: div.current,
         style: "https://tiles.openfreemap.org/styles/liberty",
-        center: [destino.lng, destino.lat], zoom: 14,
+        center: [destino.lng, destino.lat], zoom,
         attributionControl: { compact: true },
       });
       mapa.current.addControl(new m.NavigationControl({ showCompass: false }), "top-right");
@@ -51,5 +51,5 @@ export default function Mapa({ destino, veiculos, chuva }: { destino: { lat: num
     marcas.current = novas;
   }
 
-  return <div ref={div} className="mapa" role="region" aria-label="Mapa" />;
+  return <div ref={div} className="mapa" style={altura ? { height: altura } : undefined} role="region" aria-label="Mapa" />;
 }
