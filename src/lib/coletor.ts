@@ -34,12 +34,12 @@ export async function coletar(agora = new Date()) {
   let leituras: Leitura[] = [];
   let nBrt = 0, nSppo = 0;
   if (brt.status === "fulfilled") {
-    try { const r = parseBrt(brt.value, agora); leituras.push(...r.leituras); nBrt = r.leituras.length; descartadas.brt = r.descartadas; }
+    try { const r = parseBrt(brt.value, agora); leituras = leituras.concat(r.leituras); nBrt = r.leituras.length; descartadas.brt = r.descartadas; }
     catch (e) { erros.push(`brt: formato inesperado: ${(e as Error).message}`); }
   } else erros.push(`brt: ${brt.reason}`);
   let sppoOk = false;
   if (sppo.status === "fulfilled") {
-    try { const r = parseSppo(sppo.value); leituras.push(...r.leituras); nSppo = r.leituras.length; descartadas.sppo = r.descartadas; sppoOk = true; }
+    try { const r = parseSppo(sppo.value); leituras = leituras.concat(r.leituras); nSppo = r.leituras.length; descartadas.sppo = r.descartadas; sppoOk = true; }
     catch (e) { erros.push(`sppo: formato inesperado: ${(e as Error).message}`); }
   } else erros.push(`sppo: ${sppo.reason}`);
 
