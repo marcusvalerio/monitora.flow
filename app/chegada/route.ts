@@ -29,6 +29,6 @@ export function GET(req: Request) {
       consulta: { linha, lat, lng }, consultadoEm: agora, fonteAoVivoEm: vivo.consultadoEm,
       observado: { veiculosNaLinha: new Set(ls.map((l) => `${l.fonte}|${l.veiculo}`)).size },
       calculado: { chegadas: chegadas.slice(0, 5), proxima: chegadas[0] ?? null },
-    }, undefined, 15);
+    }, undefined, 5);
   });
 }

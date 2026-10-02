@@ -89,7 +89,7 @@ Isso diz só "diferente do costume", **não** "congestionado".
 
 ## Modo ao vivo (`/linhas/{linha}/veiculos` e `/chegada`)
 Esses dois endpoints não dependem do intervalo da coleta: a cada pedido leem a fonte da SMTR na hora
-(BRT: retrato atual; SPPO: últimos **3 min**), reaproveitando a leitura por até **20 s** por instância do servidor
+(BRT: retrato atual; SPPO: últimos **3 min**; o app pede a cada 10 s), reaproveitando a leitura por até **8 s** por instância do servidor
 (EXPERIMENTAL / ESCOLHA DO SISTEMA, para não sobrecarregar a fonte). As leituras ao vivo ficam só em memória por 10 min
 (nunca no banco) e são somadas às posições gravadas. É isso que dá ao BRT a "leitura anterior" exigida pela estimativa de chegada.
 

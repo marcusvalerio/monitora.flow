@@ -29,6 +29,6 @@ export function GET(_req: Request, ctx: { params: Promise<{ linha: string }> }) 
         fonte: l.fonte, veiculo: l.veiculo, sentido: l.sentido, lat: l.lat, lng: l.lng,
         velocidadeKmh: l.velocidade, em: l.ts, idadeS: Math.round((agora.getTime() - l.ts.getTime()) / 1000),
       })),
-    }, undefined, 15);
+    }, undefined, 5);
   });
 }
