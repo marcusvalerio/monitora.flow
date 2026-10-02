@@ -101,6 +101,10 @@ Limitações: linha reta subestima o caminho pela rua; um veículo que contorna 
 paradas e trânsito mudam `va`; não sabe se o veículo vai mesmo passar pelo seu ponto (falta o trajeto GTFS — próximo passo).
 Sem veículo vindo → `proxima: null` (sem dado).
 
+## Linhas perto de uma parada (`/paradas/{id}/linhas`) — EXPERIMENTAL / ESCOLHA DO SISTEMA
+Linhas com pelo menos uma posição de GPS a até **100 m** da parada nos últimos **60 min** (haversine), com nº de veículos distintos.
+Não é a lista oficial de linhas da parada: pode incluir linhas que só passam pela rua sem parar e omitir linhas sem veículo na última hora.
+
 ## Chuva (`/chuva`)
 Valores **medidos** pelos pluviômetros do Alerta Rio, repassados como vieram (mm acumulados em 5, 10, 15 min e 1, 4, 24, 96 h).
 Escolhemos as `k` estações mais próximas (haversine, padrão 3). Não há interpolação para o seu ponto nem classificação de intensidade.

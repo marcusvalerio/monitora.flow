@@ -1,7 +1,7 @@
 import { ATRIBUICAO_OPEN_METEO, buscarPrevisao } from "../../src/lib/tempo";
 import { ok, numero, tratar } from "../../src/lib/api";
 
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
 
 /** GET /tempo?lat=&lng= — previsão (FONTE EXTERNA: Open-Meteo). Para chuva medida, use /chuva. */
 export function GET(req: Request) {

@@ -23,7 +23,7 @@ GitHub Actions (cron */10, UTC)
                                 └─ coletas    log
                                                  ▲
 App "Meu trajeto" (/) e MOVA ──► /agora /historico /habitual /linhas/{l}/veiculos /chegada
-                                 /chuva /tempo /geocodificar /ocorrencias /pontos /openapi
+                                 /chuva /tempo /geocodificar /paradas /ocorrencias /pontos /openapi
                                  (chuva, tempo e geocodificação são repassados ao vivo, com cache)
 ```
 

@@ -72,5 +72,11 @@ Especificação completa: `GET /openapi` (OpenAPI 3.1).
 ### `/geocodificar`
 `candidatos[] {endereco, nota, lat, lng}`.
 
+### `/paradas`
+`?q=` (nome, sem acento/caixa) e/ou `?lat=&lng=&raio=`. `paradas[] {id, nome, lat, lng, distanciaM}`; `fonte {url, versao, baixadoEm}`.
+
+### `/paradas/{id}/linhas`
+`parada`, `metodo`, `observado[] {linha, fonte, veiculos, ultimaLeitura}` (EXPERIMENTAL).
+
 ### `/ocorrencias`
 `disponivel: false`, `motivo`.
