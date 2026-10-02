@@ -9,7 +9,7 @@ export const metadata = {
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Monitora" },
 };
 export const viewport = {
-  themeColor: [{ media: "(prefers-color-scheme: light)", color: "#F4F5FA" }, { media: "(prefers-color-scheme: dark)", color: "#0C121B" }],
+  themeColor: [{ media: "(prefers-color-scheme: light)", color: "#EEF2F3" }, { media: "(prefers-color-scheme: dark)", color: "#000022" }],
   width: "device-width", initialScale: 1, viewportFit: "cover", interactiveWidget: "resizes-content",
 };
 
@@ -19,8 +19,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        {/* Display: Inter Tight (números grandes, títulos). Texto corrido: fonte do sistema (SF no iPhone). */}
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&display=swap" />
+        {/* Display: Bricolage Grotesque (números, títulos). UI e dados: Instrument Sans. */}
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600;700&display=swap" />
       </head>
       <body><AppShell>{children}</AppShell></body>
     </html>

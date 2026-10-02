@@ -4,28 +4,31 @@
    ============================================================ */
 :root {
   /* superfícies */
-  /* paleta: White Solid #F4F5FA · Liquid Neon #C8FF00 · Magic Ink #0247FE · Midnight Edition #0C121B */
-  --white-solid: #F4F5FA; --liquid-neon: #C8FF00; --magic-ink: #0247FE; --midnight: #0C121B;
-  --bg: var(--white-solid);
-  --surface: #ffffff;
-  --surface-2: #E9EBF3;
+  /* paleta Rio: Deep #000022 (profundidade) · Atlantic #104071 · Teal #1A9597 (mobilidade, informação viva)
+     · Lime #EEFF99 (estado ativo, sinal — só accent) · Off-white #FDFDFE (superfície) · Mist #EEF2F3 (fundo) */
+  --deep: #000022; --atlantic: #104071; --teal: #1A9597; --lime: #EEFF99; --offwhite: #FDFDFE; --mist: #EEF2F3;
+  --bg: var(--mist);
+  --surface: var(--offwhite);
+  --surface-2: #E3E9EC;
   --elevated: rgba(255, 255, 255, .86);
   --border: rgba(15, 23, 42, .08);
   --border-strong: rgba(15, 23, 42, .14);
   /* texto */
-  --text: var(--midnight);
-  --text-2: #4A5366;
-  --text-3: #7C8496;
+  --text: var(--deep);
+  --text-2: #3E4A5E;
+  --text-3: #6E7A8C;
   /* marca e estados */
-  --accent: var(--magic-ink);
-  --accent-soft: rgba(2, 71, 254, .1);
+  /* interativo = Atlantic; ativo/sinal = Lime sobre Deep (lime nunca é texto sobre claro) */
+  --accent: var(--atlantic);
+  --accent-soft: rgba(16, 64, 113, .1);
   --on-accent: #ffffff;
-  --neon: var(--liquid-neon);
-  /* identidade dos modos: BRT = Midnight + Neon; ônibus = Magic Ink */
-  --brt: var(--midnight); --brt-fg: var(--liquid-neon);
-  --bus: var(--magic-ink); --bus-fg: #ffffff;
+  --signal: var(--lime); --on-signal: var(--deep);
+  --live: var(--teal);
+  /* identidade dos modos (semântica fixa): BRT = Deep + Lime; ônibus = Atlantic */
+  --brt: var(--deep); --brt-fg: var(--lime);
+  --bus: var(--atlantic); --bus-fg: #ffffff;
   /* mapa */
-  --map-route: var(--magic-ink); --map-station: var(--midnight);
+  --map-route: var(--teal); --map-station: var(--deep); --map-water-tint: #9fd6d7;
   --success: #16a34a;
   --warning: #d97706;
   --danger: #dc2626;
@@ -36,12 +39,19 @@
   --r-lg: 24px;
   --shadow-1: 0 1px 2px rgba(15, 23, 42, .05), 0 2px 8px rgba(15, 23, 42, .04);
   --shadow-2: 0 2px 6px rgba(15, 23, 42, .06), 0 12px 32px rgba(15, 23, 42, .10);
-  /* motion */
-  --ease: cubic-bezier(.2, .8, .2, 1);
-  --t-fast: 160ms;
-  --t-med: 280ms;
+  /* motion — hierarquia por função (espelhada em app/ui/motion.ts):
+     micro 100–250 ms · interação 250–450 ms · transição espacial 400–700 ms · atmosfera 3–20 s */
+  --dur-micro: 180ms; --dur-interact: 340ms; --dur-space: 560ms;
+  --ease-out: cubic-bezier(.22, 1, .36, 1);        /* saída natural (deslocamentos curtos) */
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);     /* transições espaciais */
+  /* mola crítica-amortecida (sem bounce infantil): ~4% de overshoot */
+  --spring: linear(0, .009, .035 2.1%, .141 4.4%, .723 12.9%, .938 16.7%, 1.017 20.1%, 1.043 23.2%, 1.04 26.8%, 1.016 33.6%, .996 41.9%, .998 50.7%, 1);
+  --ease: var(--ease-out);
+  --t-fast: var(--dur-micro);
+  --t-med: var(--dur-interact);
   /* tipografia */
-  --font-display: "Inter Tight", -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque", "Instrument Sans", -apple-system, system-ui, sans-serif;
+  --font-ui: "Instrument Sans", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
   /* vidro (material das camadas sobre o mapa) */
   --glass-bg: rgba(255, 255, 255, .72);
   --glass-strong: rgba(250, 250, 252, .9);
@@ -59,21 +69,22 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: var(--midnight);
-    --surface: #141B26;
-    --surface-2: #1C2432;
+    --bg: var(--deep);
+    --surface: #0B1236;
+    --surface-2: #131B45;
     --elevated: rgba(22, 25, 31, .82);
     --border: rgba(255, 255, 255, .07);
     --border-strong: rgba(255, 255, 255, .13);
-    --text: var(--white-solid);
-    --text-2: #A7AFBF;
-    --text-3: #6E7789;
-    --accent: var(--liquid-neon);
-    --accent-soft: rgba(200, 255, 0, .14);
-    --on-accent: var(--midnight);
-    --brt: var(--liquid-neon); --brt-fg: var(--midnight);
-    --bus: #3D6BFF; --bus-fg: #ffffff;
-    --map-route: var(--liquid-neon); --map-station: var(--liquid-neon);
+    --text: var(--offwhite);
+    --text-2: #A9B4C6;
+    --text-3: #6F7B93;
+    --accent: #3FC1C3;
+    --accent-soft: rgba(63, 193, 195, .16);
+    --on-accent: var(--deep);
+    --live: #3FC1C3;
+    --brt: var(--lime); --brt-fg: var(--deep);
+    --bus: #2A6BB0; --bus-fg: #ffffff;
+    --map-route: #3FC1C3; --map-station: var(--lime); --map-water-tint: #1A9597;
     --success: #34d399;
     --warning: #fbbf24;
     --danger: #f87171;
@@ -92,7 +103,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); }
 body {
-  font: 400 16px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+  font: 400 16px/1.5 var(--font-ui);
   -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; overflow-x: hidden;
   text-rendering: optimizeLegibility;
 }
@@ -104,7 +115,7 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .num { font-variant-numeric: tabular-nums; }
 
 /* tipografia */
-.t-display { font-family: var(--font-display); font-size: clamp(68px, 20vw, 104px); line-height: .9; font-weight: 300; letter-spacing: -.055em; }
+.t-display { font-family: var(--font-display); font-size: clamp(64px, 19vw, 100px); line-height: .9; font-weight: 600; letter-spacing: -.045em; }
 .t-hero { font-family: var(--font-display); font-size: clamp(38px, 11vw, 52px); line-height: .98; font-weight: 600; letter-spacing: -.04em; }
 .t-title { font-family: var(--font-display); font-size: 23px; line-height: 1.15; font-weight: 600; letter-spacing: -.025em; }
 .t-head { font-size: 17px; line-height: 1.3; font-weight: 600; letter-spacing: -.01em; }
@@ -287,7 +298,7 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
   border-top: 1px solid var(--glass-border); border-radius: 28px 28px 0 0; box-shadow: 0 -10px 40px rgba(15, 23, 42, .14);
   display: flex; flex-direction: column; will-change: transform; touch-action: none;
 }
-.sheet.anim { transition: transform var(--t-med) var(--ease); }
+.sheet.anim { transition: transform var(--dur-space) var(--spring); }
 .sheet .grip { padding: 10px 0 6px; display: grid; place-items: center; cursor: grab; flex: none; }
 .sheet .grip i { width: 38px; height: 5px; border-radius: 3px; background: var(--border-strong); }
 .sheet .body { flex: 1; overflow-y: auto; padding: 4px 20px 24px; overscroll-behavior: contain; touch-action: pan-y; }
@@ -351,13 +362,13 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .monitor { display: flex; flex-direction: column; }
 .monitor-col { padding: calc(var(--safe-t) + 22px) 22px 8px; max-width: 640px; width: 100%; margin: 0 auto; }
 .m-hero { margin-top: 26px; }
-.m-hero .t-display { font-weight: 250; }
+.m-hero .t-display { font-weight: 600; }
 .m-sec { margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--border); }
-.m-big { font-family: var(--font-display); font-size: 64px; line-height: .95; font-weight: 300; letter-spacing: -.05em; margin-top: 10px; }
+.m-big { font-family: var(--font-display); font-size: 64px; line-height: .95; font-weight: 600; letter-spacing: -.045em; margin-top: 10px; }
 .m-big small { font-size: 28px; font-weight: 400; color: var(--text-2); margin-left: 2px; letter-spacing: 0; }
 .m-row { display: flex; gap: 28px; margin-top: 16px; flex-wrap: wrap; }
-.m-metric .m-v { font-family: var(--font-display); font-size: 28px; font-weight: 500; letter-spacing: -.03em; line-height: 1.05; }
-.m-metric .m-v-g { font-family: var(--font-display); font-size: 44px; font-weight: 400; letter-spacing: -.045em; line-height: 1; }
+.m-metric .m-v { font-family: var(--font-ui); font-size: 28px; font-weight: 650; letter-spacing: -.03em; line-height: 1.05; }
+.m-metric .m-v-g { font-family: var(--font-display); font-size: 44px; font-weight: 600; letter-spacing: -.045em; line-height: 1; }
 .m-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 2px; margin: 20px 0 14px; background: var(--surface-2); }
 .m-bar i { display: block; min-width: 3px; transform-origin: left; animation: cresce .9s var(--ease) both .3s; }
 .m-legend { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
@@ -386,7 +397,7 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .sentido.on { background: var(--brt); color: var(--brt-fg); }
 .sentido span { opacity: .7; }
 .eta .n, .line-badge, .chip-v, .m-hero .t-display { font-family: var(--font-display); }
-.eta .n { font-weight: 300; letter-spacing: -.055em; }
+.eta .n { font-weight: 600; letter-spacing: -.045em; }
 .linha-est { padding: 14px 0; border-bottom: 1px solid var(--border); }
 .linha-est:last-child { border-bottom: 0; }
 .sentidos-mini { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -403,11 +414,11 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 /* reflexo especular do vidro: luz de cima, muito sutil */
 .hero-atm::after { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit;
   background: linear-gradient(180deg, rgba(255, 255, 255, .16) 0%, rgba(255, 255, 255, 0) 28%), radial-gradient(60% 40% at 15% 0%, rgba(255, 255, 255, .12), transparent 70%); }
-.on-clear  { --atm-a: #9FD3FF; --atm-b: #3D86F0; --atm-c: #1F4FC4; }
+.on-clear  { --atm-a: #A9E3E0; --atm-b: #1A9597; --atm-c: #104071; }
 .on-cloudy { --atm-a: #B7C3D6; --atm-b: #7D8BA3; --atm-c: #4D5A72; }
 .on-rain   { --atm-a: #7F93AE; --atm-b: #4C5C77; --atm-c: #26324A; }
 .on-storm  { --atm-a: #5B6684; --atm-b: #2B3350; --atm-c: #0E1324; }
-.on-night  { --atm-a: #2A3A6B; --atm-b: #131C38; --atm-c: #0C121B; }
+.on-night  { --atm-a: #1B2F5E; --atm-b: #0B1236; --atm-c: #000022; }
 .on-neutral{ --atm-a: #A5ADBD; --atm-b: #6F7A8F; --atm-c: #48536A; }
 
 .atm { position: absolute; inset: 0; z-index: 1; pointer-events: none; animation: atmEntra 1.1s var(--ease) both; }
@@ -415,7 +426,7 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .atm-glow { position: absolute; display: block; border-radius: 50%; will-change: transform, opacity; }
 /* claro: luz difusa, sem sol desenhado */
 .g-sun { width: 340px; height: 340px; right: -110px; top: -140px; background: radial-gradient(circle, rgba(255, 246, 214, .75) 0%, rgba(255, 230, 160, .25) 35%, transparent 68%); animation: respira 14s ease-in-out infinite; }
-.g-haze { width: 520px; height: 260px; left: -160px; bottom: -150px; background: radial-gradient(closest-side, rgba(200, 255, 0, .10), transparent); filter: blur(10px); animation: deriva1 38s ease-in-out infinite alternate; }
+.g-haze { width: 520px; height: 260px; left: -160px; bottom: -150px; background: radial-gradient(closest-side, rgba(238, 255, 153, .14), transparent); filter: blur(10px); animation: deriva1 38s ease-in-out infinite alternate; }
 /* massas atmosféricas: manchas muito borradas, sem contorno de nuvem */
 .g-mass { width: 380px; height: 220px; background: radial-gradient(closest-side, rgba(255, 255, 255, .28), transparent); filter: blur(22px); }
 .g-mass.m1 { right: -120px; top: -40px; animation: deriva1 46s ease-in-out infinite alternate; }
@@ -443,9 +454,9 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 
 .hero-atm-body { position: relative; z-index: 2; padding: 22px 24px 22px; display: flex; flex-direction: column; min-height: 300px; }
 .hero-local { color: rgba(255, 255, 255, .78); font-weight: 600; letter-spacing: .02em; }
-.hero-temp { font-family: var(--font-display); font-weight: 200; font-size: clamp(104px, 34vw, 148px); line-height: .86; letter-spacing: -.07em; margin: 18px 0 0 -6px;
+.hero-temp { font-family: var(--font-display); font-weight: 500; font-size: clamp(104px, 34vw, 148px); line-height: .86; letter-spacing: -.07em; margin: 18px 0 0 -6px;
   text-shadow: 0 2px 30px rgba(12, 18, 27, .18); }
-.hero-temp .deg { font-weight: 200; opacity: .9; margin-left: 2px; }
+.hero-temp .deg { font-weight: 400; opacity: .85; margin-left: 2px; }
 .hero-cond { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-family: var(--font-display); font-size: 21px; font-weight: 500; letter-spacing: -.015em; }
 .hero-cond svg { width: 20px; height: 20px; opacity: .92; }
 /* Liquid Glass: uma faixa de vidro com o restante (não um card branco) */
@@ -454,9 +465,58 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
   box-shadow: 0 1px 0 rgba(255, 255, 255, .28) inset, 0 0 0 1px rgba(255, 255, 255, .12) inset, 0 8px 20px -10px rgba(12, 18, 27, .4); }
 .hero-glass span { display: grid; gap: 1px; padding: 8px 14px; border-radius: 14px; }
 .hero-glass small { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: rgba(255, 255, 255, .72); }
-.hero-glass b { font-family: var(--font-display); font-size: 20px; font-weight: 500; letter-spacing: -.02em; }
+.hero-glass b { font-family: var(--font-ui); font-size: 20px; font-weight: 650; letter-spacing: -.02em; }
 @media (min-width: 640px) { .hero-atm, .hero-atm-body { min-height: 320px; } .hero-atm-body { padding: 28px 32px; } }
 @media (prefers-reduced-motion: reduce) {
   .atm, .atm *, .atm-glow { animation: none !important; }
   .atm-flash { display: none; }
+}
+
+/* =====================================================================
+   Material: vidro com resposta (só nas camadas funcionais sobre o mapa e na navegação)
+   --mx/--my vêm do ponteiro (AppShell); sem ponteiro, a luz fica no alto à esquerda.
+   ===================================================================== */
+.map-search, .map-fab { position: relative; }
+.glass::before, .map-search::before, .map-fab::before, .nav::before, .sheet::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(160px circle at var(--mx, 22%) var(--my, 0%), rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 70%);
+  mix-blend-mode: soft-light; opacity: .75; transition: opacity var(--dur-interact) var(--ease-out); z-index: -1;
+}
+.glass, .map-search, .map-fab, .nav, .sheet { isolation: isolate; }
+@media (prefers-color-scheme: dark) { .glass::before, .map-search::before, .map-fab::before, .nav::before, .sheet::before { opacity: .35; } }
+/* pressão: o vidro "cede" e volta na mola */
+.map-search, .map-fab, .seg, .sentido, .chip, .btn, .action, .list-item { transition: transform var(--dur-interact) var(--spring), box-shadow var(--dur-interact) var(--ease-out), background var(--dur-micro) var(--ease-out); }
+.map-search:active, .map-fab:active, .seg:active, .chip:active, .btn:active, .action:active { transform: scale(.965); }
+.map-search:active::before, .map-fab:active::before { opacity: 1; }
+/* foco: anel de sinal (Lime sobre Deep) — visível em qualquer fundo */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; box-shadow: 0 0 0 5px color-mix(in srgb, var(--signal) 55%, transparent); }
+
+/* navegação: aba ativa vira cápsula de sinal; troca por mola */
+.nav a { position: relative; isolation: isolate; }
+.nav a::after { content: ""; position: absolute; z-index: -1; top: 7px; width: 54px; height: 30px; border-radius: 999px; background: var(--signal);
+  opacity: 0; transform: scale(.6); transition: transform var(--dur-interact) var(--spring), opacity var(--dur-micro) var(--ease-out); }
+.nav a[aria-current="page"] { color: var(--text); }
+.nav a[aria-current="page"]::after { opacity: 1; transform: none; }
+.nav a[aria-current="page"] svg { color: var(--on-signal); }
+@media (prefers-color-scheme: dark) { .nav a[aria-current="page"] { color: var(--text); } }
+.topnav a.item[aria-current="page"] { box-shadow: inset 0 -3px 0 var(--signal); }
+
+/* =====================================================================
+   Veículo: cada estado tem uma forma (a cor do modo nunca muda)
+   ===================================================================== */
+.veh .chip-v { transition: transform var(--dur-interact) var(--spring), opacity var(--dur-interact) var(--ease-out), filter var(--dur-interact) var(--ease-out); }
+.veh:hover .chip-v { transform: scale(1.08); }
+.veh:active .chip-v { transform: scale(.94); }
+.veh.sel .chip-v { transform: scale(1.18); box-shadow: 0 0 0 4px var(--signal), 0 4px 14px rgba(0, 0, 34, .35); }
+/* parado: anel recolhe (não gira) e chip fica mais quieto */
+.veh.parado .ring { opacity: 0 !important; transform-origin: 50% 50%; }
+.veh.parado .chip-v { filter: saturate(.6) brightness(.96); }
+.veh.parado .chip-v::after { content: ""; position: absolute; right: -3px; bottom: -3px; width: 7px; height: 7px; border-radius: 2px; background: var(--surface); box-shadow: 0 0 0 1.5px var(--text-3); }
+/* baixa confiança / fora do trajeto: contorno tracejado (já definido) e sem halo */
+.veh.incerto .ring, .veh.fora .ring { opacity: .45; }
+/* desatualizado: some para o fundo, sem animação de movimento */
+.veh.velho { opacity: .42; filter: grayscale(.7); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet.anim, .nav a::after, .veh .chip-v, .map-search, .map-fab, .seg, .sentido, .chip, .btn, .action, .list-item { transition: none !important; }
 }

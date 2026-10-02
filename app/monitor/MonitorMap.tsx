@@ -2,11 +2,12 @@
 import { useEffect, useRef } from "react";
 import type { GeoJSONSource, Map as MLMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { aguaViva } from "../ui/motion";
 
 /** Mapa operacional: um ponto por veículo (camada única de círculos, atualização incremental via setData). */
 export type PontoFrota = [number, number, string, string]; // lng, lat, fonte, estado
 export const COR_ESTADO: Record<string, string> = {
-  ON_ROUTE: "#16a34a", UNCERTAIN: "#d97706", OFF_ROUTE: "#dc2626", STALE: "#94a3b8", SEM_TRAJETO: "#0247FE",
+  ON_ROUTE: "#16a34a", UNCERTAIN: "#d97706", OFF_ROUTE: "#dc2626", STALE: "#94a3b8", SEM_TRAJETO: "#104071",
 };
 
 export default function MonitorMap({ pontos }: { pontos: PontoFrota[] }) {
@@ -23,6 +24,7 @@ export default function MonitorMap({ pontos }: { pontos: PontoFrota[] }) {
 
   useEffect(() => {
     let vivo = true;
+    let parar = () => {};
     import("maplibre-gl").then((m) => {
       if (!vivo || !div.current) return;
       const escuro = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
@@ -40,13 +42,14 @@ export default function MonitorMap({ pontos }: { pontos: PontoFrota[] }) {
             "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, ["match", ["get", "modo"], "BRT", 2.6, 1.6], 14, ["match", ["get", "modo"], "BRT", 6, 4]],
             "circle-color": ["match", ["get", "estado"], "ON_ROUTE", COR_ESTADO.ON_ROUTE, "UNCERTAIN", COR_ESTADO.UNCERTAIN, "OFF_ROUTE", COR_ESTADO.OFF_ROUTE, "STALE", COR_ESTADO.STALE, COR_ESTADO.SEM_TRAJETO],
             "circle-opacity": ["match", ["get", "modo"], "BRT", 0.95, 0.55],
-            "circle-stroke-width": ["match", ["get", "modo"], "BRT", 1, 0], "circle-stroke-color": escuro ? "#0b0d10" : "#ffffff",
+            "circle-stroke-width": ["match", ["get", "modo"], "BRT", 1, 0], "circle-stroke-color": escuro ? "#000022" : "#FDFDFE",
           },
         });
         pronto.current = true;
+        parar = aguaViva(map, getComputedStyle(document.documentElement).getPropertyValue("--map-water-tint").trim() || "#9fd6d7");
       });
     });
-    return () => { vivo = false; mapa.current?.remove(); mapa.current = null; };
+    return () => { vivo = false; parar(); mapa.current?.remove(); mapa.current = null; };
   }, []);
 
   useEffect(() => {
