@@ -30,7 +30,7 @@ const dec = (v: number) => String(v).replace(".", ",");
 const hora = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 
 async function get(url: string): Promise<J | null> {
-  try { const r = await fetch(url); return r.ok ? await r.json() : { erro: (await r.json().catch(() => ({}))).erro ?? `HTTP ${r.status}` }; }
+  try { const r = await fetch(url, { cache: "no-store" }); return r.ok ? await r.json() : { erro: (await r.json().catch(() => ({}))).erro ?? `HTTP ${r.status}` }; }
   catch { return { erro: "sem conexão" }; }
 }
 
@@ -51,17 +51,35 @@ export default function MeuTrajeto() {
   const sel = favs.find((f) => f.id === selId) ?? (favs.length ? favs[0] : EXEMPLO);
   const ehExemplo = !favs.some((f) => f.id === sel.id);
 
-  const carregar = useCallback(async () => {
+  // Dois ritmos: ônibus/chegada a cada 10 s; rua, chuva e tempo a cada 60 s.
+  const carregarOnibus = useCallback(async () => {
     const { lat, lng, linha } = sel;
-    const [agora, chuva, tempo, chegada, veiculos] = await Promise.all([
-      get(`/agora?lat=${lat}&lng=${lng}`), get(`/chuva?lat=${lat}&lng=${lng}&k=3`), get(`/tempo?lat=${lat}&lng=${lng}`),
-      linha ? get(`/chegada?linha=${encodeURIComponent(linha)}&lat=${lat}&lng=${lng}`) : Promise.resolve(null),
-      linha ? get(`/linhas/${encodeURIComponent(linha)}/veiculos`) : Promise.resolve(null),
+    if (!linha) { setDados((d) => ({ ...d, chegada: null, veiculos: null, carregadoEm: Date.now() })); return; }
+    const [chegada, veiculos] = await Promise.all([
+      get(`/chegada?linha=${encodeURIComponent(linha)}&lat=${lat}&lng=${lng}`),
+      get(`/linhas/${encodeURIComponent(linha)}/veiculos`),
     ]);
-    setDados({ agora, chuva, tempo, chegada, veiculos, carregadoEm: Date.now() });
+    setDados((d) => ({ ...d, chegada, veiculos, carregadoEm: Date.now() }));
   }, [sel]);
 
-  useEffect(() => { setDados({}); carregar(); const t = setInterval(carregar, 20_000); return () => clearInterval(t); }, [carregar]);
+  const carregarEntorno = useCallback(async () => {
+    const { lat, lng } = sel;
+    const [agora, chuva, tempo] = await Promise.all([
+      get(`/agora?lat=${lat}&lng=${lng}`), get(`/chuva?lat=${lat}&lng=${lng}&k=3`), get(`/tempo?lat=${lat}&lng=${lng}`),
+    ]);
+    setDados((d) => ({ ...d, agora, chuva, tempo }));
+  }, [sel]);
+
+  useEffect(() => {
+    setDados({});
+    carregarOnibus(); carregarEntorno();
+    const t1 = setInterval(() => { if (!document.hidden) carregarOnibus(); }, 10_000);
+    const t2 = setInterval(() => { if (!document.hidden) carregarEntorno(); }, 60_000);
+    // Ao voltar para o app (trocar de aba, desbloquear o celular), atualiza na hora.
+    const volta = () => { if (!document.hidden) { carregarOnibus(); carregarEntorno(); } };
+    document.addEventListener("visibilitychange", volta);
+    return () => { clearInterval(t1); clearInterval(t2); document.removeEventListener("visibilitychange", volta); };
+  }, [carregarOnibus, carregarEntorno]);
 
   const salvar = (f: Favorito) => { const n = [...favs.filter((x) => x.id !== f.id), f]; setFavs(n); gravarFavs(n); setSelId(f.id); setAdicionando(false); };
   const remover = (id: string) => {
