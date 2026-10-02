@@ -1,5 +1,5 @@
-import MeuTrajeto from "./MeuTrajeto";
+import Home from "./ui/Home";
 
 export default function Page() {
-  return <MeuTrajeto />;
+  return <Home />;
 }

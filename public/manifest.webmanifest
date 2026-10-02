@@ -1,6 +1,6 @@
 {
-  "name": "Meu trajeto — monitora.flow",
-  "short_name": "Meu trajeto",
+  "name": "Monitora — mobilidade e clima",
+  "short_name": "Monitora",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#111418",

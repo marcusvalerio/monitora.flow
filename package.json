@@ -11,7 +11,8 @@
     "db:migrar": "tsx scripts/migrar.ts",
     "coletar": "tsx scripts/coletar.ts",
     "fixtures:capturar": "tsx scripts/capturar-fixtures.ts",
-    "paradas:atualizar": "tsx scripts/atualizar-paradas.ts"
+    "paradas:atualizar": "tsx scripts/atualizar-paradas.ts",
+    "estacoes:atualizar": "tsx scripts/atualizar-estacoes-brt.ts"
   },
   "repository": {
     "type": "git",
@@ -24,6 +25,7 @@
   },
   "homepage": "https://github.com/marcusvalerio/monitora.flow#readme",
   "dependencies": {
+    "lucide-react": "^1.50.0",
     "maplibre-gl": "^5.24.0",
     "next": "^16.3.8",
     "postgres": "^3.4.9",
