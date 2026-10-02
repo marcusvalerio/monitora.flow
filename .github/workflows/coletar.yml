@@ -1,0 +1,19 @@
+# PLANO B do agendador. O agendador principal é o Function Trigger do Neon (função "disparador").
+# Para ativar: descomente o bloco "schedule" e crie os secrets COLETOR_URL e CRON_SECRET em
+# Settings → Secrets and variables → Actions. Sem os secrets, rode só manualmente (workflow_dispatch).
+name: coletar (plano B)
+on:
+  # schedule:
+  #   - cron: "*/10 * * * *"
+  workflow_dispatch:
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Dispara /api/coletar
+        env:
+          COLETOR_URL: ${{ secrets.COLETOR_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS --max-time 90 -X POST -H "Authorization: Bearer $CRON_SECRET" "$COLETOR_URL/api/coletar"

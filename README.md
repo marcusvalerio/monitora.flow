@@ -43,6 +43,7 @@ npm test                     # testes com fixtures reais
 
 ## Implantação atual
 - **Banco:** Neon, projeto `monitora-flow` (us-east-1). Esquema em `db/schema.sql`.
-- **Web/API:** Vercel, com `DATABASE_URL` e `CRON_SECRET` nas variáveis do projeto.
+- **Web/API:** Vercel, região `iad1` (mesma do banco, ver `vercel.json`), com `DATABASE_URL` e `CRON_SECRET` nas variáveis do projeto.
 - **Agendador:** Neon Function `disparador` (`functions/disparador.ts`) + Function Trigger cron `*/10 * * * *`.
   Variáveis da função: `COLETOR_URL`, `CRON_SECRET`. Para redistribuir: `npx esbuild functions/disparador.ts --bundle --platform=node --format=esm --outfile=dist/index.mjs` e `neon functions deploy disparador --src dist/index.mjs --no-bundle`.
+- **Plano B do agendador:** `.github/workflows/coletar.yml` (desativado; instruções no arquivo).
