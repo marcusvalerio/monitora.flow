@@ -6,7 +6,7 @@ export const metadata = {
   manifest: "/manifest.webmanifest",
   icons: { icon: "/icone.svg", apple: "/icone.svg" },
 };
-export const viewport = { themeColor: [{ media: "(prefers-color-scheme: light)", color: "#f6f7f9" }, { media: "(prefers-color-scheme: dark)", color: "#111418" }], width: "device-width", initialScale: 1 };
+export const viewport = { themeColor: [{ media: "(prefers-color-scheme: light)", color: "#f3f4f7" }, { media: "(prefers-color-scheme: dark)", color: "#0d1014" }], width: "device-width", initialScale: 1, viewportFit: "cover" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
