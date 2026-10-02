@@ -237,7 +237,7 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 /* ---------- mobilidade ---------- */
 .mob { position: fixed; inset: 0; bottom: calc(var(--nav-h) + var(--safe-b)); overflow: hidden; }
 @media (min-width: 960px) { .mob { top: 60px; bottom: 0; } }
-.map-fill { position: absolute; inset: 0; }
+.map-fill, .map-fill.maplibregl-map { position: absolute; inset: 0; }
 .map-top {
   position: absolute; z-index: 5; top: calc(var(--safe-t) + 12px); left: 12px; right: 12px; display: flex; gap: 8px; pointer-events: none;
 }

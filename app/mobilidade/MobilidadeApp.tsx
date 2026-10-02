@@ -35,6 +35,7 @@ export default function MobilidadeApp() {
   const [rua, setRua] = useState<J | null>(null);
   const [, tique] = useState(0);
   const desktop = useRef(false);
+  const linhaSemPonto = useRef(false);
 
   useEffect(() => {
     desktop.current = window.matchMedia("(min-width: 960px)").matches;
@@ -44,11 +45,20 @@ export default function MobilidadeApp() {
   }, []);
 
   const escolherPonto = useCallback((p: Ponto) => {
-    setPonto(p); setLinha(null); setInfo(null); setChegada(null); setVeiculos(null); setVeiculoSel(null);
-    gravar(K_PONTO, p); gravar(K_LINHA, null); lembrar(K_RECENTES, p); setBuscando(false); setNivel(1);
+    setPonto(p); setInfo(null); setChegada(null); setVeiculoSel(null);
+    const manter = linhaSemPonto.current;
+    linhaSemPonto.current = false;
+    setLinha((l) => { const fica = manter ? l : null; gravar(K_LINHA, fica); return fica; });
+    if (!manter) setVeiculos(null);
+    gravar(K_PONTO, p); lembrar(K_RECENTES, p); setBuscando(false); setNivel(1);
   }, []);
   const acompanhar = (l: string | null) => { setLinha(l); gravar(K_LINHA, l); setChegada(null); setVeiculos(null); setVeiculoSel(null); setNivel(l ? 0 : 1); };
-  const limpar = () => { setPonto(null); setLinha(null); gravar(K_PONTO, null); gravar(K_LINHA, null); setInfo(null); setVeiculos(null); setChegada(null); setNivel(1); };
+  const escolherLinha = (l: string) => {
+    setBuscando(false); setVeiculoSel(null); setChegada(null); setVeiculos(null);
+    setLinha(l); gravar(K_LINHA, l);
+    if (!ponto) { linhaSemPonto.current = true; setNivel(1); } else setNivel(0);
+  };
+  const limpar = () => { linhaSemPonto.current = false; setPonto(null); setLinha(null); gravar(K_PONTO, null); gravar(K_LINHA, null); setInfo(null); setVeiculos(null); setChegada(null); setNivel(1); };
 
   // estação/parada: linhas e próximos veículos (20 s)
   useEffect(() => {
@@ -67,14 +77,14 @@ export default function MobilidadeApp() {
 
   // acompanhamento de linha: veículos + chegada (10 s)
   useEffect(() => {
-    if (!ponto || !linha) return;
+    if (!linha) return;
     let vivo = true;
     const carregar = async () => {
       const [c, v] = await Promise.all([
-        get(`/chegada?linha=${encodeURIComponent(linha)}&lat=${ponto.lat}&lng=${ponto.lng}`),
+        ponto ? get(`/chegada?linha=${encodeURIComponent(linha)}&lat=${ponto.lat}&lng=${ponto.lng}`) : Promise.resolve(null),
         get(`/linhas/${encodeURIComponent(linha)}/veiculos`),
       ]);
-      if (vivo) { setChegada({ ...c, em: Date.now() }); setVeiculos({ ...v, em: Date.now() }); }
+      if (vivo) { if (c) setChegada({ ...c, em: Date.now() }); setVeiculos({ ...v, em: Date.now() }); }
     };
     carregar();
     const t = setInterval(() => { if (!document.hidden) carregar(); }, 10_000);
@@ -110,7 +120,16 @@ export default function MobilidadeApp() {
   }, [clima]);
 
   // ---------- cabeçalho do painel (visível mesmo recolhido) ----------
-  const cabecalho = !ponto ? (
+  const cabecalho = !ponto && linha ? (
+    <div className="list-item" style={{ padding: "0 20px 12px", border: 0, minHeight: 0, gap: 12 }}>
+      <span className={`line-badge lg${ehBrt ? " brt" : ""}`}>{linha}</span>
+      <div className="main">
+        <div className="t-title">Linha {linha}</div>
+        <div className="t-cap">{!veiculos ? "Carregando veículos…" : `${lista.length} ${lista.length === 1 ? "veículo" : "veículos"} com GPS agora`}</div>
+      </div>
+      <button className="btn btn-icon" onClick={limpar} aria-label="Fechar linha"><X /></button>
+    </div>
+  ) : !ponto ? (
     <div style={{ padding: "0 20px 12px" }}>
       <div className="t-title">Onde você vai embarcar?</div>
       <div className="t-cap" style={{ marginTop: 2 }}>Escolha uma estação de BRT ou parada de ônibus.</div>
@@ -160,7 +179,18 @@ export default function MobilidadeApp() {
       <BottomSheet resumo={ponto && linha ? 190 : 150} nivel={nivel} setNivel={setNivel} onAltura={setPadB} cabecalho={cabecalho}>
         {sel && <VeiculoCard v={sel} ponto={ponto} chegada={chegada} onFechar={() => setVeiculoSel(null)} />}
 
-        {!ponto && (
+        {!ponto && linha && (
+          <>
+            <span className="t-label">Onde você vai embarcar?</span>
+            <p className="t-cap" style={{ margin: "6px 0 12px" }}>Escolha a estação ou parada para ver a chegada estimada desta linha.</p>
+            <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => setBuscando(true)}><Search aria-hidden /> Escolher estação ou parada</button>
+            {veiculos?.erro && <ErrorState texto="Não foi possível obter dados atualizados desta linha." />}
+            {veiculos && !veiculos.erro && !lista.length && <EmptyState icone={BusFront} titulo="Nenhum veículo desta linha com GPS agora." texto="A localização pode voltar em instantes." />}
+            <div style={{ marginTop: 14 }}><LastUpdated em={veiculos?.em} fonte="GPS SMTR" velhoS={45} /></div>
+          </>
+        )}
+
+        {!ponto && !linha && (
           <>
             <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => setBuscando(true)}><Search aria-hidden /> Pesquisar estação ou terminal</button>
             {!perto && <button className="btn btn-ghost" style={{ width: "100%", marginTop: 10 }} onClick={pertoDeMim}><LocateFixed aria-hidden /> Estações perto de mim</button>}
@@ -238,7 +268,7 @@ export default function MobilidadeApp() {
         )}
       </BottomSheet>
 
-      {buscando && <TransitSearch onEscolher={escolherPonto} onFechar={() => setBuscando(false)} />}
+      {buscando && <TransitSearch onEscolher={escolherPonto} onLinha={escolherLinha} comLinhas={!(linha && !ponto)} onFechar={() => setBuscando(false)} />}
     </div>
   );
 }
@@ -344,18 +374,22 @@ function Recentes({ onEscolher }: { onEscolher: (p: Ponto) => void }) {
 }
 
 /** Busca especializada: BRT consulta SÓ o catálogo de estações/terminais; Ônibus consulta SÓ a camada de paradas. */
-function TransitSearch({ onEscolher, onFechar }: { onEscolher: (p: Ponto) => void; onFechar: () => void }) {
+function TransitSearch({ onEscolher, onLinha, comLinhas, onFechar }: { onEscolher: (p: Ponto) => void; onLinha: (l: string) => void; comLinhas: boolean; onFechar: () => void }) {
   const [q, setQ] = useState("");
   const [modo, setModo] = useState<"brt" | "sppo">("brt");
   const [res, setRes] = useState<J | null>(null);
   const ctrl = useRef<AbortController | null>(null);
   useEffect(() => {
     const termo = q.trim();
-    if (termo.length < 2) { setRes(null); return; }
+    if (termo.length < (/^\d/.test(termo) ? 1 : 2)) { setRes(null); return; }
     const t = setTimeout(async () => {
       ctrl.current?.abort(); ctrl.current = new AbortController();
-      const r = modo === "brt" ? await get(`/estacoes?q=${encodeURIComponent(termo)}&limite=30`, ctrl.current.signal) : await get(`/paradas?q=${encodeURIComponent(termo)}&limite=20`, ctrl.current.signal);
-      if (!r.cancelado) setRes(r);
+      const sinal = ctrl.current.signal;
+      const [r, l] = await Promise.all([
+        modo === "brt" ? get(`/estacoes?q=${encodeURIComponent(termo)}&limite=30`, sinal) : get(`/paradas?q=${encodeURIComponent(termo)}&limite=20`, sinal),
+        comLinhas && termo.length <= 8 ? get(`/linhas?q=${encodeURIComponent(termo)}&fonte=${modo}&limite=8`, sinal) : Promise.resolve(null),
+      ]);
+      if (!r.cancelado) setRes({ ...r, linhas: l?.linhas ?? [] });
     }, 160);
     return () => clearTimeout(t);
   }, [q, modo]);
@@ -363,7 +397,8 @@ function TransitSearch({ onEscolher, onFechar }: { onEscolher: (p: Ponto) => voi
   const estacoes: J[] = modo === "brt" ? (res?.estacoes ?? []).filter((e: J) => e.tipo === "estacao") : [];
   const terminais: J[] = modo === "brt" ? (res?.estacoes ?? []).filter((e: J) => e.tipo === "terminal") : [];
   const paradas: J[] = modo === "sppo" ? res?.paradas ?? [] : [];
-  const vazio = res && !res.erro && !estacoes.length && !terminais.length && !paradas.length;
+  const linhas: J[] = res?.linhas ?? [];
+  const vazio = res && !res.erro && !linhas.length && !estacoes.length && !terminais.length && !paradas.length;
 
   const Item = ({ p, ponto }: { p: J; ponto: Ponto }) => (
     <li><button className="list-item" onClick={() => onEscolher(ponto)}>
@@ -373,12 +408,12 @@ function TransitSearch({ onEscolher, onFechar }: { onEscolher: (p: Ponto) => voi
   );
 
   return (
-    <SearchSheet titulo={modo === "brt" ? "Pesquisar estação ou terminal" : "Pesquisar parada de ônibus"} placeholder={modo === "brt" ? "Ex.: Alvorada, Jardim Oceânico" : "Ex.: Mato Alto, Praça Seca"} q={q} setQ={setQ} onClose={onFechar}>
+    <SearchSheet titulo={modo === "brt" ? "Pesquisar estação ou terminal" : "Pesquisar parada de ônibus"} placeholder={modo === "brt" ? "Estação, terminal ou linha (ex.: 22)" : "Parada ou linha (ex.: 474)"} q={q} setQ={setQ} onClose={onFechar}>
       <div className="chip-row" role="tablist" aria-label="Tipo de transporte" style={{ marginTop: 6 }}>
         <button role="tab" aria-selected={modo === "brt"} className={`chip${modo === "brt" ? " on" : ""}`} onClick={() => setModo("brt")}><TrainFront size={16} aria-hidden /> BRT</button>
         <button role="tab" aria-selected={modo === "sppo"} className={`chip${modo === "sppo" ? " on" : ""}`} onClick={() => setModo("sppo")}><BusFront size={16} aria-hidden /> Ônibus</button>
       </div>
-      {q.trim().length < 2 ? (
+      {!q.trim() ? (
         <EmptyState icone={MapPin} titulo={modo === "brt" ? "Digite o nome da estação ou terminal" : "Digite o nome da parada"} texto={modo === "brt" ? "156 estações e terminais dos corredores Transoeste, Transcarioca, Transolímpica e Transbrasil." : "Paradas de ônibus municipais da Prefeitura."} />
       ) : !res ? (
         <div style={{ display: "grid", gap: 14, marginTop: 16 }}>{[0, 1, 2].map((i) => <Skel key={i} h={44} />)}</div>
@@ -386,6 +421,12 @@ function TransitSearch({ onEscolher, onFechar }: { onEscolher: (p: Ponto) => voi
       : vazio ? <EmptyState titulo={modo === "brt" ? "Nenhuma estação ou terminal encontrado." : "Nenhuma parada encontrada."} texto={modo === "brt" ? "Tente pesquisar pelo nome da estação ou terminal." : "Tente o nome da parada ou do bairro."} />
       : (
         <>
+          {linhas.length > 0 && <><div className="t-label group-label">Linhas com GPS agora</div><ul className="list">{linhas.map((l) => (
+            <li key={l.fonte + l.linha}><button className="list-item" onClick={() => onLinha(l.linha)} aria-label={`Linha ${l.linha}${l.destinos[0] ? `, sentido ${l.destinos.join(" e ")}` : ""}, ${l.veiculosAgora} veículos agora`}>
+              <span className={`line-badge${l.fonte === "brt" ? " brt" : ""}`}>{l.linha}</span>
+              <span className="main"><div className="t-head">{l.destinos.length ? l.destinos.join(" ↔ ") : `Linha ${l.linha}`}</div><div className="t-cap">{l.veiculosAgora} {l.veiculosAgora === 1 ? "veículo" : "veículos"} com GPS agora</div></span>
+              <ChevronRight size={18} aria-hidden style={{ color: "var(--text-3)" }} />
+            </button></li>))}</ul></>}
           {estacoes.length > 0 && <><div className="t-label group-label">Estações</div><ul className="list">{estacoes.map((e) => <Item key={e.id} p={e} ponto={{ id: e.id, nome: e.nome, tipo: "estacao", fonte: "brt", lat: e.lat, lng: e.lng, corredor: e.corredor, status: e.status } as Ponto} />)}</ul></>}
           {terminais.length > 0 && <><div className="t-label group-label">Terminais</div><ul className="list">{terminais.map((e) => <Item key={e.id} p={e} ponto={{ id: e.id, nome: e.nome, tipo: "terminal", fonte: "brt", lat: e.lat, lng: e.lng, corredor: e.corredor, status: e.status } as Ponto} />)}</ul></>}
           {paradas.length > 0 && <><div className="t-label group-label">Paradas</div><ul className="list">{paradas.map((p) => <Item key={p.id} p={p} ponto={{ id: p.id, nome: p.nome, tipo: "parada", fonte: "sppo", lat: p.lat, lng: p.lng, bairro: p.bairro, rua: p.rua }} />)}</ul></>}
