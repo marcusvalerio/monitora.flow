@@ -96,7 +96,7 @@ it("destino a partir do trajeto do BRT", () => {
 });
 
 import { acumulado, distanciaAoTrajeto, encaixar, pontoEm, projetar, ENCAIXE_MAX_M, FORA_TRAJETO_M } from "../src/lib/trajeto";
-import trajetosJson from "../src/data/trajetos-brt.json";
+import { linhaBrt } from "../src/lib/brt";
 
 describe("trajeto (encaixe no trajeto oficial)", () => {
   const reta: [number, number][] = [[-43.5, -23.0], [-43.49, -23.0], [-43.48, -23.0]];
@@ -124,13 +124,13 @@ describe("trajeto (encaixe no trajeto oficial)", () => {
     expect(encaixar(-23.00005, -43.495, "Alvorada", [ida, volta])!.trajeto).toBe(0);
   });
   it("garagem da linha 10 (ponto real de 02/10/2026) fica fora do trajeto; corredor fica dentro", () => {
-    const l = (trajetosJson as unknown as { linhas: Record<string, { coords: [number, number][] }[]> }).linhas["10"];
+    const l = linhaBrt("10")!.trajetos;
     expect(distanciaAoTrajeto(-22.9206, -43.6453, l)!).toBeGreaterThan(FORA_TRAJETO_M);
     expect(distanciaAoTrajeto(-23.0003, -43.3964, l)!).toBeLessThan(ENCAIXE_MAX_M);
     expect(distanciaAoTrajeto(0, 0, [])).toBeNull();
   });
   it("catálogo GTFS: linha 10 tem os dois sentidos", () => {
-    const l = (trajetosJson as { linhas: Record<string, { destino: string }[]> }).linhas["10"];
+    const l = linhaBrt("10")!.trajetos;
     expect(l.map((t) => t.destino).sort()).toEqual(["Estação Santa Cruz", "Terminal Alvorada"]);
   });
 });
@@ -157,7 +157,7 @@ describe("monitor (retrato da frota)", () => {
   const agora = new Date("2026-10-02T19:00:00Z");
   const L = (fonte: "brt" | "sppo", veiculo: string, linha: string, lat: number, lng: number, sAtras: number, vel = 30) =>
     ({ fonte, veiculo, linha, sentido: null, lat, lng, velocidade: vel, ts: new Date(agora.getTime() - sAtras * 1000) });
-  const trajetos = { "10": [{ coords: [[-43.5, -23.0], [-43.4, -23.0]] as [number, number][] }] };
+  const trajetos = (l: string) => (l === "10" ? [{ shapeId: "t", destino: "X", coords: [[-43.5, -23.0], [-43.4, -23.0]] as [number, number][] }] : []);
   it("usa a última posição de cada veículo", () => {
     expect(ultimaPorVeiculo([L("brt", "1", "10", -23, -43.45, 50), L("brt", "1", "10", -23, -43.44, 10)])[0].lng).toBe(-43.44);
   });
@@ -170,7 +170,7 @@ describe("monitor (retrato da frota)", () => {
       L("sppo", "A", "474", -22.9, -43.2, 30),
     ], agora, trajetos);
     expect(r.total).toBe(5);
-    expect(r.brt.estados).toEqual({ ON_ROUTE: 1, UNCERTAIN: 1, OFF_ROUTE: 1, STALE: 1, SEM_TRAJETO: 0 });
+    expect(r.brt.estados).toEqual({ ON_ROUTE: 1, UNCERTAIN: 1, OFF_ROUTE: 1, STALE: 1 });
     expect(r.brt.linhas).toBe(1);
     expect(r.onibus.estados).toBeNull();
     expect(r.recentes).toBe(4);

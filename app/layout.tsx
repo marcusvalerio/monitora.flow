@@ -9,7 +9,7 @@ export const metadata = {
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Monitora" },
 };
 export const viewport = {
-  themeColor: [{ media: "(prefers-color-scheme: light)", color: "#f4f5f7" }, { media: "(prefers-color-scheme: dark)", color: "#0b0d10" }],
+  themeColor: [{ media: "(prefers-color-scheme: light)", color: "#F4F5FA" }, { media: "(prefers-color-scheme: dark)", color: "#0C121B" }],
   width: "device-width", initialScale: 1, viewportFit: "cover", interactiveWidget: "resizes-content",
 };
 

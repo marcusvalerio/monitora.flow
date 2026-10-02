@@ -1,5 +1,5 @@
 "use client";
-import WeatherScene, { ContaNumero } from "./WeatherScene";
+import WeatherHero from "./WeatherHero";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, LocateFixed, Search, MapPin, Clock, Droplets, Wind, Thermometer, Eye, CloudRain, Navigation } from "lucide-react";
 import SearchSheet from "../ui/SearchSheet";
@@ -158,23 +158,7 @@ function Tempo({ tempo, chuva, local, recarregar }: { tempo: J | null; chuva: J 
 
   return (
     <div className="appear" key={`${local.lat},${local.lng}`}>
-      <WeatherScene icone={a?.descricao?.icone} dia={a?.dia}>
-      <section className="weather-hero" aria-label="Agora">
-        <div className="row" style={{ alignItems: "flex-start", justifyContent: "space-between" }}>
-          <div>
-            <div className="t-display num" aria-label={`${a?.temperaturaC == null ? "sem dado" : Math.round(a.temperaturaC) + " graus"}`}>
-              {a?.temperaturaC == null ? "—" : <ContaNumero valor={Math.round(a.temperaturaC)} sufixo="°" />}
-            </div>
-            <div className="cond">{a?.descricao?.texto ?? "Condição indisponível"}</div>
-            <div className="t-cap" style={{ marginTop: 4 }}>
-              {a?.sensacaoC != null && <>Sensação de {Math.round(a.sensacaoC)}° · </>}
-              {dias[0] && <>Máx. {Math.round(dias[0].maxC)}° · Mín. {Math.round(dias[0].minC)}°</>}
-            </div>
-          </div>
-          <span className="wx-icon" style={{ marginTop: 12 }}><IconeTempo icone={a?.descricao?.icone} dia={a?.dia} size={56} /></span>
-        </div>
-      </section>
-      </WeatherScene>
+      <WeatherHero agora={a} hoje={dias[0]} local={local.nome} />
 
       <section className="section stag" style={{ ["--i" as string]: 1 }} aria-label="Condições">
         <span className="t-label">Condições</span>

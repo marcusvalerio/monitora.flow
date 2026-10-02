@@ -24,6 +24,8 @@ export interface VeiculoNormalizado {
   parado: boolean;
   em: Date;
   idadeS: number;
+  /** BRT: ignição desligada informada pela fonte (true), ligada (false) ou desconhecida (null). */
+  ignicaoDesligada: boolean | null;
 }
 
 /** EXPERIMENTAL / ESCOLHA DO SISTEMA — abaixo disso o veículo é tratado como parado (km/h). */
@@ -86,6 +88,7 @@ export function normalizarVeiculo(atual: Leitura, historico: Leitura[], agora: D
     lat: atual.lat, lng: atual.lng, rumo: rumo === null ? null : Math.round(rumo), rumoOrigem,
     velocidadeKmh: Math.round(atual.velocidade), parado, em: atual.ts,
     idadeS: Math.max(0, Math.round((agora.getTime() - atual.ts.getTime()) / 1000)),
+    ignicaoDesligada: atual.ignicao == null ? null : !atual.ignicao,
   };
 }
 

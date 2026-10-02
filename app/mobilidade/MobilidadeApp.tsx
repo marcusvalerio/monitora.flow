@@ -37,6 +37,8 @@ export default function MobilidadeApp() {
   const [trajeto, setTrajeto] = useState<Trajeto[] | null>(null);
   // sentido escolhido = destino do trajeto oficial (trip_headsign do GTFS); null = todos
   const [sentido, setSentidoS] = useState<string | null>(null);
+  // modo da linha acompanhada (vem do catálogo, via busca/estação): BRT ou BUS; null = o servidor decide pelo catálogo
+  const [modoLinha, setModoLinha] = useState<"BRT" | "BUS" | null>(null);
   const setSentido = (s: string | null) => { setSentidoS(s); gravar(K_SENTIDO, s); setVeiculoSel(null); };
   const [, tique] = useState(0);
   const desktop = useRef(false);
@@ -57,8 +59,9 @@ export default function MobilidadeApp() {
     if (!manter) setVeiculos(null);
     gravar(K_PONTO, p); lembrar(K_RECENTES, p); setBuscando(false); setNivel(1);
   }, []);
-  const acompanhar = (l: string | null, destino?: string | null) => { setSentidoS(destino ?? null); gravar(K_SENTIDO, destino ?? null); setLinha(l); gravar(K_LINHA, l); setChegada(null); setVeiculos(null); setVeiculoSel(null); setNivel(l ? 0 : 1); };
-  const escolherLinha = (l: string) => {
+  const acompanhar = (l: string | null, destino?: string | null) => { setModoLinha(l && ponto ? (ponto.fonte === "brt" ? "BRT" : "BUS") : null); setSentidoS(destino ?? null); gravar(K_SENTIDO, destino ?? null); setLinha(l); gravar(K_LINHA, l); setChegada(null); setVeiculos(null); setVeiculoSel(null); setNivel(l ? 0 : 1); };
+  const escolherLinha = (l: string, modo?: "BRT" | "BUS") => {
+    setModoLinha(modo ?? null);
     setBuscando(false); setVeiculoSel(null); setChegada(null); setVeiculos(null);
     setLinha(l); gravar(K_LINHA, l); setSentido(null);
     if (!ponto) { linhaSemPonto.current = true; setNivel(1); } else setNivel(0);
@@ -96,7 +99,7 @@ export default function MobilidadeApp() {
     const carregar = async () => {
       const [c, v] = await Promise.all([
         ponto ? get(`/chegada?linha=${encodeURIComponent(linha)}&lat=${ponto.lat}&lng=${ponto.lng}`) : Promise.resolve(null),
-        get(`/linhas/${encodeURIComponent(linha)}/veiculos`),
+        get(`/linhas/${encodeURIComponent(linha)}/veiculos${modoLinha ? `?modo=${modoLinha}` : ""}`),
       ]);
       if (vivo) { if (c) setChegada({ ...c, em: Date.now() }); setVeiculos({ ...v, em: Date.now() }); }
     };
@@ -105,7 +108,7 @@ export default function MobilidadeApp() {
     const volta = () => { if (!document.hidden) carregar(); };
     document.addEventListener("visibilitychange", volta);
     return () => { vivo = false; clearInterval(t); document.removeEventListener("visibilitychange", volta); };
-  }, [ponto, linha]);
+  }, [ponto, linha, modoLinha]);
 
   const pertoDeMim = async () => {
     setPerto({ carregando: true });
@@ -123,8 +126,8 @@ export default function MobilidadeApp() {
   const lista: J[] = sentidoValido ? todos.filter((v) => mesmoDestino(v.destino, sentidoValido)) : todos;
   const trajetoVisivel = useMemo(() => (trajeto && sentidoValido ? trajeto.filter((t) => t.destino === sentidoValido) : trajeto), [trajeto, sentidoValido]);
   const veiculosMapa: VeiculoMapa[] = useMemo(() => lista.map((v) => ({
-    id: v.id, fonte: v.fonte, linha: v.linha, destino: v.destino, lat: v.lat, lng: v.lng, rumo: v.rumo, parado: v.parado, idadeS: v.idadeS, estado: v.estadoGeo ?? null,
-    rotulo: `${v.fonte === "brt" ? "BRT" : "Ônibus"} da linha ${v.linha}${v.destino ? `, sentido ${v.destino}` : ""}, ${v.parado ? "parado" : `a ${v.velocidadeKmh} km/h`}${v.estadoGeo === "OFF_ROUTE" ? ", fora do trajeto esperado" : v.estadoGeo === "UNCERTAIN" ? ", posição incerta" : ""}, atualizado ${ha(v.em)}`,
+    id: v.id, fonte: v.fonte, linha: v.linha, destino: v.destino, lat: v.lat, lng: v.lng, rumo: v.rumo, parado: v.parado, idadeS: v.idadeS, estado: v.routeState ?? null, shapeId: v.shapeId ?? null,
+    rotulo: `${v.fonte === "brt" ? "BRT" : "Ônibus"} da linha ${v.linha}${v.destino ? `, sentido ${v.destino}` : ""}, ${v.parado ? "parado" : `a ${v.velocidadeKmh} km/h`}${v.routeState === "OFF_ROUTE" ? ", fora do trajeto esperado" : v.routeState === "UNCERTAIN" ? ", posição incerta" : v.routeState === "STALE" ? ", posição desatualizada" : ""}, atualizado ${ha(v.em)}`,
   })), [veiculos, sentidoValido]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // chegadas do sentido escolhido (a estimativa é por veículo; filtramos pelos veículos do sentido)
@@ -278,9 +281,13 @@ export default function MobilidadeApp() {
                   ))}
                 </ul>
               )}
-            {veiculos?.foraDeOperacao?.n > 0 && (
+            {veiculos?.resumo && (veiculos.resumo.OFF_ROUTE + veiculos.resumo.UNCERTAIN + veiculos.resumo.STALE) > 0 && (
               <p className="t-meta" style={{ marginTop: 8 }}>
-                {veiculos!.foraDeOperacao.n} {veiculos!.foraDeOperacao.n === 1 ? "veículo parado" : "veículos parados"} fora do trajeto (garagem ou pátio) não {veiculos!.foraDeOperacao.n === 1 ? "aparece" : "aparecem"} no mapa.
+                Comparado ao trajeto oficial: {[
+                  veiculos.resumo.OFF_ROUTE && `${veiculos.resumo.OFF_ROUTE} fora do trajeto`,
+                  veiculos.resumo.UNCERTAIN && `${veiculos.resumo.UNCERTAIN} com posição incerta`,
+                  veiculos.resumo.STALE && `${veiculos.resumo.STALE} sem atualização recente`,
+                ].filter(Boolean).join(" · ")}. Eles aparecem no mapa onde o GPS informou, com contorno tracejado.
               </p>
             )}
             <div className="section">
@@ -328,22 +335,23 @@ function SeletorSentido({ sentidos, valor, onChange }: { sentidos: string[]; val
 }
 
 function Estacao({ ponto, info, onLinha }: { ponto: Ponto; info: J | null; onLinha: (l: string, destino?: string | null) => void }) {
-  const linhas: J[] = (ponto.fonte === "brt" ? info?.observado?.linhas : info?.observado) ?? [];
+  const brt = ponto.fonte === "brt";
+  const linhas: J[] = (brt ? info?.oficial?.linhas : info?.observado) ?? [];
   const proximos: J[] = info?.calculado?.proximos ?? [];
   if (!info) return <div style={{ display: "grid", gap: 12 }} aria-busy="true"><Skel h={18} w={140} /><Skel h={60} /><Skel h={60} /></div>;
-  if (info.erro) return <ErrorState texto="Não foi possível carregar esta estação agora." />;
+  if (info.erro) return <ErrorState texto={brt ? "Não foi possível carregar esta estação agora." : "Não foi possível carregar esta parada agora."} />;
   return (
     <div className="appear">
-      {ponto.fonte === "brt" && (
+      {brt && (
         <>
-          <span className="t-label">Próximos BRTs e ônibus</span>
+          <span className="t-label">Próximos BRTs</span>
           {!proximos.length ? (
-            <p className="t-cap" style={{ margin: "8px 0 0" }}>Nenhum veículo se aproximando desta estação agora.</p>
+            <p className="t-cap" style={{ margin: "8px 0 0" }}>Nenhum BRT se aproximando desta estação agora.</p>
           ) : (
             <ul className="list">
-              {proximos.slice(0, 8).map((p) => (
-                <li key={p.fonte + p.linha}><button className="list-item" onClick={() => onLinha(p.linha, p.destino ?? null)} aria-label={`Acompanhar linha ${p.linha}${p.destino ? `, sentido ${p.destino}` : ""}, chega em cerca de ${eta(p.etaMin)} minutos`}>
-                  <span className={`line-badge${p.fonte === "brt" ? " brt" : ""}`}>{p.linha}</span>
+              {proximos.slice(0, 6).map((p) => (
+                <li key={p.linha + p.veiculo}><button className="list-item" onClick={() => onLinha(p.linha, p.destino ?? null)} aria-label={`Acompanhar BRT da linha ${p.linha}${p.destino ? `, sentido ${p.destino}` : ""}, chega em cerca de ${eta(p.etaMin)} minutos`}>
+                  <span className="line-badge brt">{p.linha}</span>
                   <span className="main"><div className="t-head">{p.destino ? `→ ${p.destino}` : `Linha ${p.linha}`}</div><div className="t-cap">a {fmtDist(p.distanciaM / 1000)} · GPS {ha(p.ultimaLeitura)}</div></span>
                   <span className="t-head num">{eta(p.etaMin)} min</span>
                   <ChevronRight size={18} aria-hidden style={{ color: "var(--text-3)" }} />
@@ -354,20 +362,38 @@ function Estacao({ ponto, info, onLinha }: { ponto: Ponto; info: J | null; onLin
         </>
       )}
       <div className="section">
-        <span className="t-label">Linhas vistas aqui na última hora</span>
-        {!linhas.length ? <p className="t-cap" style={{ margin: 0 }}>Nenhum veículo com GPS passou por aqui na última hora. Se souber a linha, pesquise pela estação de novo mais tarde.</p> : (
+        <span className="t-label">{brt ? "Linhas que param aqui" : "Linhas vistas aqui na última hora"}</span>
+        {!linhas.length ? <p className="t-cap" style={{ margin: 0 }}>{brt ? "O GTFS oficial não lista linhas de BRT parando nesta estação." : "Nenhum veículo com GPS passou por aqui na última hora."}</p>
+        : brt ? (
+          <ul className="list">
+            {linhas.map((l) => (
+              <li key={l.linha} className="linha-est">
+                <div className="row" style={{ gap: 10 }}>
+                  <span className="line-badge brt">{l.linha}</span>
+                  <div style={{ minWidth: 0, flex: 1 }}><div className="t-head">{l.nome}</div>
+                    <div className="t-cap">{l.servico ?? "BRT"}{l.veiculosUltimaHora ? ` · ${l.veiculosUltimaHora} com GPS aqui na última hora` : ""}</div></div>
+                </div>
+                <div className="sentidos-mini">
+                  {l.sentidos.map((d: string) => (
+                    <button key={d} className="sentido mini" onClick={() => onLinha(l.linha, d)} aria-label={`Acompanhar linha ${l.linha}, sentido ${d}`}><span aria-hidden>→</span> {d}</button>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
           <div className="chip-row">
             {linhas.map((l) => (
-              <button key={`${l.fonte}${l.linha}`} className="chip" onClick={() => onLinha(String(l.linha), l.destinos?.[0] ?? null)} aria-label={`Acompanhar linha ${l.linha}${l.destinos?.[0] ? `, sentido ${l.destinos[0]}` : ""}`}>
-                <span className={`line-badge${l.fonte === "brt" ? " brt" : ""}`} style={{ height: 22, minWidth: 30, fontSize: 12 }}>{l.linha}</span>
+              <button key={`${l.fonte}${l.linha}`} className="chip" onClick={() => onLinha(String(l.linha), l.destinos?.[0] ?? null)} aria-label={`Acompanhar linha ${l.linha}`}>
+                <span className="line-badge" style={{ height: 22, minWidth: 30, fontSize: 12 }}>{l.linha}</span>
                 {l.destinos?.[0] ? `→ ${l.destinos[0]}` : `${l.veiculos} veíc.`}
               </button>
             ))}
           </div>
         )}
-        <p className="t-meta" style={{ marginTop: 10 }}>Linhas com GPS perto deste ponto. Não é a lista oficial da operação.</p>
+        <p className="t-meta" style={{ marginTop: 10 }}>{brt ? "Lista oficial do GTFS da SMTR (paradas programadas)." : "Linhas com GPS perto deste ponto. Não é a lista oficial da operação."}</p>
       </div>
-      <div style={{ marginTop: 14 }}><LastUpdated em={info.em} fonte="GPS SMTR" velhoS={60} /></div>
+      <div style={{ marginTop: 14 }}><LastUpdated em={info.em} fonte={brt ? "GTFS + GPS SMTR" : "GPS SMTR"} velhoS={60} /></div>
     </div>
   );
 }
@@ -391,8 +417,8 @@ function VeiculoCard({ v, ponto, chegada, onFechar }: { v: J; ponto: Ponto | nul
       </div>
       <div style={{ marginTop: 10 }}><LastUpdated em={v.em} fonte="GPS SMTR" velhoS={60} /></div>
       {v.rumo === null && <div className="t-meta" style={{ marginTop: 6 }}>Direção indisponível para este veículo.</div>}
-      {v.estadoGeo === "OFF_ROUTE" && <div className="notice" style={{ marginTop: 10, boxShadow: "none", background: "var(--surface-2)" }}><span className="t-cap">Fora do trajeto esperado: a {fmtDist(v.distanciaTrajetoM / 1000)} do trajeto oficial. Mostramos a posição do GPS como veio.</span></div>}
-      {v.estadoGeo === "UNCERTAIN" && <div className="t-meta" style={{ marginTop: 6 }}>Posição incerta: a {fmtDist(v.distanciaTrajetoM / 1000)} do trajeto oficial.</div>}
+      {v.routeState === "OFF_ROUTE" && <div className="notice" style={{ marginTop: 10, boxShadow: "none", background: "var(--surface-2)" }}><span className="t-cap">Fora do trajeto esperado: a {fmtDist(v.distanciaTrajetoM / 1000)} do trajeto oficial. Mostramos a posição do GPS como veio.</span></div>}
+      {v.routeState === "UNCERTAIN" && <div className="t-meta" style={{ marginTop: 6 }}>Posição incerta: {v.motivo}.</div>}
     </div>
   );
 }
@@ -430,7 +456,7 @@ function Recentes({ onEscolher }: { onEscolher: (p: Ponto) => void }) {
 }
 
 /** Busca especializada: BRT consulta SÓ o catálogo de estações/terminais; Ônibus consulta SÓ a camada de paradas. */
-function TransitSearch({ onEscolher, onLinha, comLinhas, onFechar }: { onEscolher: (p: Ponto) => void; onLinha: (l: string) => void; comLinhas: boolean; onFechar: () => void }) {
+function TransitSearch({ onEscolher, onLinha, comLinhas, onFechar }: { onEscolher: (p: Ponto) => void; onLinha: (l: string, modo: "BRT" | "BUS") => void; comLinhas: boolean; onFechar: () => void }) {
   const [q, setQ] = useState("");
   const [modo, setModo] = useState<"brt" | "sppo">("brt");
   const [res, setRes] = useState<J | null>(null);
@@ -443,7 +469,7 @@ function TransitSearch({ onEscolher, onLinha, comLinhas, onFechar }: { onEscolhe
       const sinal = ctrl.current.signal;
       const [r, l] = await Promise.all([
         modo === "brt" ? get(`/estacoes?q=${encodeURIComponent(termo)}&limite=30`, sinal) : get(`/paradas?q=${encodeURIComponent(termo)}&limite=20`, sinal),
-        comLinhas && termo.length <= 8 ? get(`/linhas?q=${encodeURIComponent(termo)}&limite=12`, sinal) : Promise.resolve(null),
+        comLinhas && termo.length <= 8 ? get(`/linhas?q=${encodeURIComponent(termo)}&modo=${modo === "brt" ? "BRT" : "BUS"}&limite=12`, sinal) : Promise.resolve(null),
       ]);
       if (!r.cancelado) setRes({ ...r, linhas: l?.linhas ?? [] });
     }, 160);
@@ -453,8 +479,8 @@ function TransitSearch({ onEscolher, onLinha, comLinhas, onFechar }: { onEscolhe
   const estacoes: J[] = modo === "brt" ? (res?.estacoes ?? []).filter((e: J) => e.tipo === "estacao") : [];
   const terminais: J[] = modo === "brt" ? (res?.estacoes ?? []).filter((e: J) => e.tipo === "terminal") : [];
   const paradas: J[] = modo === "sppo" ? res?.paradas ?? [] : [];
-  // BRT e ônibus juntos; o tipo da aba atual vem primeiro
-  const linhas: J[] = [...(res?.linhas ?? [])].sort((a: J, b: J) => Number(b.fonte === modo) - Number(a.fonte === modo));
+  // só linhas do modo da aba (classificação oficial feita no servidor)
+  const linhas: J[] = (res?.linhas ?? []).filter((l: J) => l.modo === (modo === "brt" ? "BRT" : "BUS"));
   const vazio = res && !res.erro && !linhas.length && !estacoes.length && !terminais.length && !paradas.length;
 
   const Item = ({ p, ponto }: { p: J; ponto: Ponto }) => (
@@ -478,10 +504,10 @@ function TransitSearch({ onEscolher, onLinha, comLinhas, onFechar }: { onEscolhe
       : vazio ? <EmptyState titulo={modo === "brt" ? "Nenhuma estação ou terminal encontrado." : "Nenhuma parada encontrada."} texto={modo === "brt" ? "Tente pesquisar pelo nome da estação ou terminal." : "Tente o nome da parada ou do bairro."} />
       : (
         <>
-          {linhas.length > 0 && <><div className="t-label group-label">Linhas com GPS agora</div><ul className="list">{linhas.map((l) => (
-            <li key={l.fonte + l.linha}><button className="list-item" onClick={() => onLinha(l.linha)} aria-label={`Linha ${l.linha}${l.destinos[0] ? `, sentido ${l.destinos.join(" e ")}` : ""}, ${l.veiculosAgora} veículos agora`}>
-              <span className={`line-badge${l.fonte === "brt" ? " brt" : ""}`}>{l.linha}</span>
-              <span className="main"><div className="t-head">{l.destinos.length ? l.destinos.join(" ↔ ") : `Linha ${l.linha}`}</div><div className="t-cap">{l.fonte === "brt" ? "BRT" : "Ônibus"} · {l.veiculosAgora} {l.veiculosAgora === 1 ? "veículo" : "veículos"} com GPS agora</div></span>
+          {linhas.length > 0 && <><div className="t-label group-label">{modo === "brt" ? "Linhas de BRT" : "Linhas de ônibus"}</div><ul className="list">{linhas.map((l) => (
+            <li key={l.modo + l.linha}><button className="list-item" onClick={() => onLinha(l.linha, l.modo)} aria-label={`Linha ${l.linha}${l.nome ? `, ${l.nome}` : ""}, ${l.veiculosAgora} veículos agora`}>
+              <span className={`line-badge${l.modo === "BRT" ? " brt" : ""}`}>{l.linha}</span>
+              <span className="main"><div className="t-head">{l.nome ?? (l.destinos.length ? l.destinos.join(" ↔ ") : `Linha ${l.linha}`)}</div><div className="t-cap">{l.modo === "BRT" ? (l.servico ? `BRT ${l.servico}` : "BRT") : "Ônibus"} · {l.veiculosAgora} {l.veiculosAgora === 1 ? "veículo" : "veículos"} com GPS agora</div></span>
               <ChevronRight size={18} aria-hidden style={{ color: "var(--text-3)" }} />
             </button></li>))}</ul></>}
           {estacoes.length > 0 && <><div className="t-label group-label">Estações</div><ul className="list">{estacoes.map((e) => <Item key={e.id} p={e} ponto={{ id: e.id, nome: e.nome, tipo: "estacao", fonte: "brt", lat: e.lat, lng: e.lng, corredor: e.corredor, status: e.status } as Ponto} />)}</ul></>}

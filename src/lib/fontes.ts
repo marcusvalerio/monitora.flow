@@ -21,6 +21,15 @@ export interface Leitura {
   direcao?: number | null;
   /** Trajeto informado pelo BRT (ex.: "22 - ALVORADA X JARDIM OCEANICO (PARADOR) [IDA]"). Só ao vivo. */
   trajeto?: string | null;
+  /** BRT: ignição ligada? (campo `ignicao` 1/0). Só ao vivo. */
+  ignicao?: boolean | null;
+  /** SPPO: associação oficial da viagem informada pelo próprio feed (route_id/trip_id/shape_id do GTFS). Só ao vivo. */
+  routeId?: string | null;
+  tripId?: string | null;
+  shapeId?: string | null;
+  /** SPPO: instantes de envio e de chegada ao servidor (datetime_envio / datetime_servidor). Só ao vivo. */
+  enviadoEm?: Date | null;
+  recebidoEm?: Date | null;
 }
 
 /** Converte o campo `direcao` das fontes em graus [0, 360) ou null (vazio, " ", fora do intervalo). */
@@ -55,6 +64,7 @@ const brtItem = z.object({
   sentido: z.string().nullish(),
   direcao: z.unknown().optional(),
   trajeto: z.string().nullish(),
+  ignicao: z.union([z.number(), z.string()]).nullish(),
 });
 const brtResposta = z.object({ veiculos: z.array(z.unknown()) });
 
@@ -67,6 +77,11 @@ const sppoItem = z.object({
   velocidade: num,
   datetime: z.string(),
   direcao: z.unknown().optional(),
+  route_id: z.string().nullish(),
+  trip_id: z.string().nullish(),
+  shape_id: z.string().nullish(),
+  datetime_envio: z.string().nullish(),
+  datetime_servidor: z.string().nullish(),
 });
 
 export interface ResultadoParse {
@@ -106,6 +121,7 @@ export function parseBrt(json: unknown, agora: Date): ResultadoParse {
       fonte: "brt", veiculo: it.codigo, linha: it.linha ?? null, sentido: it.sentido ?? null,
       lat: it.latitude, lng: it.longitude, velocidade: it.velocidade, ts,
       direcao: lerDirecao(it.direcao), trajeto: it.trajeto?.trim() || null,
+      ignicao: it.ignicao == null || it.ignicao === "" ? null : Number(it.ignicao) === 1,
     };
     if (validaComum(l, descartadas)) leituras.push(l);
   }
@@ -126,6 +142,8 @@ export function parseSppo(json: unknown): ResultadoParse {
       fonte: "sppo", veiculo: it.id_veiculo, linha: it.servico ?? null, sentido: it.sentido ?? null,
       lat: it.latitude, lng: it.longitude, velocidade: it.velocidade, ts,
       direcao: lerDirecao(it.direcao),
+      routeId: it.route_id || null, tripId: it.trip_id || null, shapeId: it.shape_id || null,
+      enviadoEm: it.datetime_envio ? new Date(it.datetime_envio) : null, recebidoEm: it.datetime_servidor ? new Date(it.datetime_servidor) : null,
     };
     if (validaComum(l, descartadas)) leituras.push(l);
   }
