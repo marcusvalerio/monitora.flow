@@ -5,6 +5,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import estacoesJson from "../../src/data/estacoes-brt.json";
 import { deltaAngulo } from "../../src/lib/veiculo";
 import { acumulado, encaixar, pontoEm, type Trajeto } from "../../src/lib/trajeto";
+import { aguaViva, camera, DUR, duracaoVeiculo, ease } from "../ui/motion";
 
 export interface Ponto { id: string; nome: string; tipo: "estacao" | "terminal" | "parada"; fonte: "brt" | "sppo"; lat: number; lng: number; corredor?: string | null; bairro?: string | null; rua?: string | null }
 export interface VeiculoMapa { id: string; fonte: "brt" | "sppo"; linha: string | null; lat: number; lng: number; rumo: number | null; parado: boolean; idadeS: number; rotulo: string; destino?: string | null; estado?: "ON_ROUTE" | "UNCERTAIN" | "OFF_ROUTE" | "STALE" | null; shapeId?: string | null }
@@ -17,7 +18,9 @@ const escuro = () => window.matchMedia?.("(prefers-color-scheme: dark)").matches
 const token = (nome: string, padrao: string) => (getComputedStyle(document.documentElement).getPropertyValue(nome).trim() || padrao);
 
 
-type ItemVeiculo = { marker: Marker; el: HTMLDivElement; anel: SVGSVGElement; lat: number; lng: number; angulo: number | null; anim?: number; enc?: { trajeto: number; s: number } | null };
+/** lat/lng = último dado REAL recebido; vis = onde o marcador está desenhado agora (durante a interpolação). */
+type ItemVeiculo = { marker: Marker; el: HTMLDivElement; anel: SVGSVGElement; lat: number; lng: number; vis: { lat: number; lng: number; s?: number }; recebidoEm: number;
+  angulo: number | null; anim?: number; enc?: { trajeto: number; s: number } | null };
 type TrajetoAcc = Trajeto & { acc: number[] };
 
 export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onEstacao, eu, pad, enquadrarChave, trajetos }: {
@@ -46,6 +49,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
   // --- criação do mapa (uma vez) ---
   useEffect(() => {
     let vivo = true;
+    let pararAgua = () => {};
     import("maplibre-gl").then((m) => {
       if (!vivo || !div.current) return;
       ml.current = m;
@@ -62,7 +66,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
         map.addLayer({ id: "rota-borda", type: "line", source: "rota", layout: { "line-join": "round", "line-cap": "round" },
           paint: { "line-color": escuro() ? "#14171c" : "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 4, 15, 9], "line-opacity": 0.9 } });
         map.addLayer({ id: "rota", type: "line", source: "rota", layout: { "line-join": "round", "line-cap": "round" },
-          paint: { "line-color": token("--map-route", "#0247FE"), "line-width": ["interpolate", ["linear"], ["zoom"], 10, 2, 15, 5], "line-opacity": 0.75 } });
+          paint: { "line-color": token("--map-route", "#1A9597"), "line-width": ["interpolate", ["linear"], ["zoom"], 10, 2, 15, 5], "line-opacity": 0.75 } });
         // Camada de estações/terminais do BRT: discreta; terminal um pouco maior.
         map.addSource("estacoes", {
           type: "geojson",
@@ -73,8 +77,8 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
           id: "estacoes-pt", type: "circle", source: "estacoes",
           paint: {
             "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, ["match", ["get", "tipo"], "terminal", 3.5, 2], 15, ["match", ["get", "tipo"], "terminal", 7, 4.5]],
-            "circle-color": ["match", ["get", "tipo"], "terminal", token("--map-station", "#0C121B"), fundo],
-            "circle-stroke-color": token("--map-station", "#0C121B"), "circle-stroke-width": ["match", ["get", "tipo"], "terminal", 2, 1.5],
+            "circle-color": ["match", ["get", "tipo"], "terminal", token("--map-station", "#000022"), fundo],
+            "circle-stroke-color": token("--map-station", "#000022"), "circle-stroke-width": ["match", ["get", "tipo"], "terminal", 2, 1.5],
             "circle-opacity": 0.95,
           },
         });
@@ -87,6 +91,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
         map.on("mouseenter", "estacoes-pt", () => { map.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", "estacoes-pt", () => { map.getCanvas().style.cursor = ""; });
         pronto.current = true;
+        pararAgua = aguaViva(map, token("--map-water-tint", "#9fd6d7"));
         desenhar();
       });
       map.on("click", (e) => {
@@ -94,16 +99,25 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
         if (!alvo.closest(".veh") && !map.queryRenderedFeatures(e.point, { layers: ["estacoes-pt"] }).length) ultimos.current.onVeiculo(null);
       });
     });
-    return () => { vivo = false; frota.current.forEach((i) => i.anim && cancelAnimationFrame(i.anim)); mapa.current?.remove(); mapa.current = null; };
+    return () => { vivo = false; pararAgua(); frota.current.forEach((i) => i.anim && cancelAnimationFrame(i.anim)); mapa.current?.remove(); mapa.current = null; };
   }, []);
 
   useEffect(() => { desenhar(); });
 
   useEffect(() => {
     const map = mapa.current; if (!map) return;
-    map.easeTo({ padding: { top: 76, right: 16, bottom: pad.bottom + 12, left: pad.left + 16 }, duration: 300 });
+    map.easeTo({ padding: { top: 76, right: 16, bottom: pad.bottom + 12, left: pad.left + 16 }, ...camera(DUR.interacao) });
     document.documentElement.style.setProperty("--map-pad-b", `${pad.bottom}px`);
   }, [pad.bottom, pad.left]);
+
+  // Seleção de veículo: a câmera acompanha só se ele estiver fora da área visível (continuidade espacial sem "puxão").
+  useEffect(() => {
+    const map = mapa.current, it = veiculoSel ? frota.current.get(veiculoSel) : null;
+    if (!map || !it) return;
+    const p = map.project([it.vis.lng, it.vis.lat]), c = map.getContainer();
+    const fora = p.x < 40 || p.y < 90 || p.x > c.clientWidth - 40 || p.y > c.clientHeight - (pad.bottom + 40);
+    if (fora) map.easeTo({ center: [it.vis.lng, it.vis.lat], ...camera() });
+  }, [veiculoSel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function enquadrar() {
     const m = ml.current, map = mapa.current;
@@ -116,16 +130,16 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
       if (vs.length) {
         const b = new m.LngLatBounds();
         vs.forEach((v) => b.extend([v.lng, v.lat]));
-        map.fitBounds(b, { maxZoom: 14, duration: 800, padding: 60 });
-      } else if (e) map.easeTo({ center: [e.lng, e.lat], zoom: 13.5, duration: 700 });
+        map.fitBounds(b, { maxZoom: 14, padding: 60, ...camera(700) });
+      } else if (e) map.easeTo({ center: [e.lng, e.lat], zoom: 13.5, ...camera() });
       return;
     }
     const perto = vs.map((v) => ({ v, d: Math.hypot(v.lat - p.lat, (v.lng - p.lng) * Math.cos((p.lat * Math.PI) / 180)) }))
       .filter((x) => x.d < 0.2).sort((a, b) => a.d - b.d).slice(0, 3);
-    if (!perto.length) { map.easeTo({ center: [p.lng, p.lat], zoom: 15, duration: 700 }); return; }
+    if (!perto.length) { map.easeTo({ center: [p.lng, p.lat], zoom: 15, ...camera() }); return; }
     const b = new m.LngLatBounds([p.lng, p.lat], [p.lng, p.lat]);
     perto.forEach(({ v }) => b.extend([v.lng, v.lat]));
-    map.fitBounds(b, { maxZoom: 15.5, duration: 800, padding: 60 });
+    map.fitBounds(b, { maxZoom: 15.5, padding: 60, ...camera(700) });
   }
 
   /** Anima até (lat, lng). Se o antes e o depois estão encaixados no mesmo trajeto e o veículo avançou, anda pela via. */
@@ -137,19 +151,30 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
     return e ? { ...e, trajeto: i } : null;
   }
 
+  /**
+   * Interpola do ponto DESENHADO até o novo dado real, no ritmo do GPS (ver duracaoVeiculo).
+   * Pela via só quando antes e depois estão ON_ROUTE no mesmo shape e o veículo avançou; senão, reta curta.
+   * Nunca extrapola: termina exatamente no dado recebido.
+   */
   function animar(item: ItemVeiculo, lat: number, lng: number, enc: { trajeto: number; s: number } | null) {
     if (item.anim) cancelAnimationFrame(item.anim);
-    const de = { lat: item.lat, lng: item.lng }, t0 = performance.now(), D = 1600;
-    const antes = item.enc;
-    item.lat = lat; item.lng = lng; item.enc = enc;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) { item.marker.setLngLat([lng, lat]); return; }
-    const tr = antes && enc && antes.trajeto === enc.trajeto ? rota.current.t[enc.trajeto] : null;
-    const ds = tr ? enc!.s - antes!.s : 0;
-    const pelaVia = tr && ds > 0 && ds < 5000;
+    const agora = performance.now();
+    const intervalo = agora - item.recebidoEm;
+    const de = { ...item.vis };
+    const antesS = item.enc && enc && item.enc.trajeto === enc.trajeto ? (de.s ?? item.enc.s) : null;
+    item.lat = lat; item.lng = lng; item.enc = enc; item.recebidoEm = agora;
+    const tr = antesS !== null ? rota.current.t[enc!.trajeto] : null;
+    const ds = tr ? enc!.s - antesS! : 0;
+    const pelaVia = !!tr && ds > 0 && ds < 5000;
+    const dist = Math.hypot((lng - de.lng) * 111320 * Math.cos((lat * Math.PI) / 180), (lat - de.lat) * 110540);
+    const D = duracaoVeiculo(intervalo, pelaVia ? ds : dist);
+    if (!D) { item.vis = { lat, lng, s: enc?.s }; item.marker.setLngLat([lng, lat]); return; }
+    const curva = dist > 800 ? ease.out : ease.viagem;
     const passo = (t: number) => {
-      const p = Math.min(1, (t - t0) / D), e = 1 - (1 - p) ** 3;
-      if (pelaVia) { const q = pontoEm(tr!.coords, antes!.s + ds * e, tr!.acc); item.marker.setLngLat([q.lng, q.lat]); }
-      else item.marker.setLngLat([de.lng + (lng - de.lng) * e, de.lat + (lat - de.lat) * e]);
+      const p = Math.min(1, (t - agora) / D), e = curva(p);
+      if (pelaVia) { const sv = antesS! + ds * e; const q = pontoEm(tr!.coords, sv, tr!.acc); item.vis = { ...q, s: sv }; }
+      else item.vis = { lng: de.lng + (lng - de.lng) * e, lat: de.lat + (lat - de.lat) * e, s: p === 1 ? enc?.s : undefined };
+      item.marker.setLngLat([item.vis.lng, item.vis.lat]);
       item.anim = p < 1 ? requestAnimationFrame(passo) : undefined;
     };
     item.anim = requestAnimationFrame(passo);
@@ -219,7 +244,8 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
         el.addEventListener("click", (ev) => { ev.stopPropagation(); ultimos.current.onVeiculo(v.id); });
         el.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); ultimos.current.onVeiculo(v.id); } });
         const marker = new m.Marker({ element: el }).setLngLat([v.lng, v.lat]).addTo(map);
-        it = { marker, el, anel: el.querySelector("svg") as SVGSVGElement, lat: v.lat, lng: v.lng, angulo: null, enc: enc ? { trajeto: enc.trajeto, s: enc.s } : null };
+        it = { marker, el, anel: el.querySelector("svg") as SVGSVGElement, lat: v.lat, lng: v.lng, vis: { lat: v.lat, lng: v.lng, s: enc?.s }, recebidoEm: performance.now(),
+          angulo: null, enc: enc ? { trajeto: enc.trajeto, s: enc.s } : null };
         frota.current.set(v.id, it);
       } else if (Math.abs(it.lat - v.lat) > 1e-6 || Math.abs(it.lng - v.lng) > 1e-6) {
         animar(it, v.lat, v.lng, enc ? { trajeto: enc.trajeto, s: enc.s } : null);
