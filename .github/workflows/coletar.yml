@@ -1,0 +1,19 @@
+# Agendador do coletor. O plano gratuito da Vercel só permite cron diário,
+# então o disparo a cada 5 min é feito aqui. O GitHub pode atrasar execuções agendadas
+# em alguns minutos; a janela do SPPO continua de onde a última coleta parou (até 10 min).
+name: coletar
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Dispara /api/coletar
+        env:
+          COLETOR_URL: ${{ secrets.COLETOR_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS --max-time 90 -H "Authorization: Bearer $CRON_SECRET" "$COLETOR_URL/api/coletar"

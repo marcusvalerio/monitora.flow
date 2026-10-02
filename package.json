@@ -1,0 +1,41 @@
+{
+  "name": "monitora-flow",
+  "version": "1.0.0",
+  "description": "Coletor + banco + API do GPS de BRT/ônibus do Rio (SMTR) para o MOVA",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "db:migrar": "tsx scripts/migrar.ts",
+    "coletar": "tsx scripts/coletar.ts",
+    "fixtures:capturar": "tsx scripts/capturar-fixtures.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marcusvalerio/monitora.flow.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/marcusvalerio/monitora.flow/issues"
+  },
+  "homepage": "https://github.com/marcusvalerio/monitora.flow#readme",
+  "dependencies": {
+    "next": "^16.3.8",
+    "postgres": "^3.4.9",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.3.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  },
+  "private": true,
+  "type": "module"
+}
