@@ -95,7 +95,14 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
     const chave = `${enquadrarChave}|${vs.length > 0}`;
     if (enquadrado.current === chave) return;
     enquadrado.current = chave;
-    if (!p) { if (e) map.easeTo({ center: [e.lng, e.lat], zoom: 13.5, duration: 700 }); return; }
+    if (!p) {
+      if (vs.length) {
+        const b = new m.LngLatBounds();
+        vs.forEach((v) => b.extend([v.lng, v.lat]));
+        map.fitBounds(b, { maxZoom: 14, duration: 800, padding: 60 });
+      } else if (e) map.easeTo({ center: [e.lng, e.lat], zoom: 13.5, duration: 700 });
+      return;
+    }
     const perto = vs.map((v) => ({ v, d: Math.hypot(v.lat - p.lat, (v.lng - p.lng) * Math.cos((p.lat * Math.PI) / 180)) }))
       .filter((x) => x.d < 0.2).sort((a, b) => a.d - b.d).slice(0, 3);
     if (!perto.length) { map.easeTo({ center: [p.lng, p.lat], zoom: 15, duration: 700 }); return; }
