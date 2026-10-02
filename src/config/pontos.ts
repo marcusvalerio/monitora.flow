@@ -1,4 +1,5 @@
 import type { Ponto } from "../lib/agregar";
+import { distanciaM } from "../lib/geo";
 
 /**
  * Pontos de interesse agregados continuamente (histórico de 6 meses).
@@ -18,3 +19,13 @@ export const PONTOS: Ponto[] = [
 ];
 
 export const pontoPorId = (id: string) => PONTOS.find((p) => p.id === id);
+
+/** Ponto configurado mais próximo de uma coordenada, se estiver a até `maxM` metros. */
+export function pontoProximo(lat: number, lng: number, maxM: number): Ponto | undefined {
+  let melhor: { p: Ponto; d: number } | undefined;
+  for (const p of PONTOS) {
+    const d = distanciaM(lat, lng, p.lat, p.lng);
+    if (d <= maxM && (!melhor || d < melhor.d)) melhor = { p, d };
+  }
+  return melhor?.p;
+}

@@ -1,0 +1,28 @@
+:root {
+  --bg: #f6f7f9; --card: #ffffff; --txt: #16191d; --sub: #5b636e; --linha: #e2e5ea;
+  --acento: #0b6bcb; --ok: #1a7f37; --alerta: #b54708; --ruim: #c11c1c;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #111418; --card: #1a1e24; --txt: #e8eaed; --sub: #9aa3ad; --linha: #2b3139; --acento: #5aa7ff; --ok: #4ac26b; --alerta: #f0a35a; --ruim: #ff7b72; }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--txt); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 720px; margin: 0 auto; padding: 12px 16px 48px; }
+a { color: var(--acento); }
+h1 { font-size: 1.25rem; margin: 4px 0 12px; }
+h2 { font-size: 1rem; margin: 0 0 6px; }
+.card { background: var(--card); border: 1px solid var(--linha); border-radius: 14px; padding: 12px 14px; margin: 10px 0; }
+.sub { color: var(--sub); font-size: .85rem; }
+.grande { font-size: 1.6rem; font-weight: 650; }
+.linha { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+button, input, select { font: inherit; color: inherit; }
+button { background: var(--card); border: 1px solid var(--linha); border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+button.ativo { background: var(--acento); color: #fff; border-color: var(--acento); }
+button.prim { background: var(--acento); color: #fff; border-color: var(--acento); border-radius: 10px; }
+input { width: 100%; padding: 10px 12px; border: 1px solid var(--linha); border-radius: 10px; background: var(--card); }
+.mapa { height: 340px; border-radius: 14px; overflow: hidden; border: 1px solid var(--linha); margin: 10px 0; }
+.aviso { font-size: .78rem; color: var(--sub); border-left: 3px solid var(--alerta); padding-left: 8px; margin-top: 6px; }
+.ok { color: var(--ok); } .alerta { color: var(--alerta); } .ruim { color: var(--ruim); }
+.grade { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+@media (max-width: 420px) { .grade { grid-template-columns: 1fr; } }

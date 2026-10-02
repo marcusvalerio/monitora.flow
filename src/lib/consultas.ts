@@ -8,13 +8,14 @@ export async function habitualDoBanco(ponto: string, fonte: Fonte, diaSemana: nu
   const rows = await sql()`
     select bucket, n_leituras_movimento, velocidade_media from agregados
     where ponto = ${ponto} and fonte = ${fonte} and bucket >= ${desde}
+      and bucket < date_trunc('day', ${agora}::timestamptz at time zone ${PARAMETROS.FUSO}) at time zone ${PARAMETROS.FUSO}
       and extract(dow  from bucket at time zone ${PARAMETROS.FUSO}) = ${diaSemana}
       and extract(hour from bucket at time zone ${PARAMETROS.FUSO}) = ${hora}`;
   const h = calcularHabitual(
     rows.map((r) => ({ bucket: new Date(r.bucket), nLeiturasMovimento: r.n_leituras_movimento, velocidadeMedia: r.velocidade_media })),
     diaSemana, hora,
   );
-  return { ...h, diasConsultados: dias };
+  return { ...h, diasConsultados: dias, diasMinimosParaComparar: PARAMETROS.HABITUAL_DIAS_MIN, incluiHoje: false };
 }
 
 export async function ultimaColeta() {

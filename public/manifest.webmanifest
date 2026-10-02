@@ -1,0 +1,10 @@
+{
+  "name": "Meu trajeto — monitora.flow",
+  "short_name": "Meu trajeto",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111418",
+  "theme_color": "#0b6bcb",
+  "lang": "pt-BR",
+  "icons": [{ "src": "/icone.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

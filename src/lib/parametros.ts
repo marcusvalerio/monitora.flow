@@ -17,7 +17,7 @@ export const PARAMETROS = {
    */
   BRT_IDADE_MAX_MIN: 5,
   /** EXPERIMENTAL / ESCOLHA DO SISTEMA — maior janela pedida ao SPPO por coleta (min). */
-  SPPO_JANELA_MAX_MIN: 10,
+  SPPO_JANELA_MAX_MIN: 20,
   /**
    * EXPERIMENTAL / ESCOLHA DO SISTEMA — velocidade (km/h) acima da qual a leitura conta
    * como "em movimento". Leituras com velocidade <= este valor contam como "parado"
@@ -32,9 +32,25 @@ export const PARAMETROS = {
   RETENCAO_AGREGADO_DIAS: 183,
   /** EXPERIMENTAL / ESCOLHA DO SISTEMA — dias considerados no "habitual". */
   HABITUAL_DIAS_PADRAO: 28,
+  /** EXPERIMENTAL / ESCOLHA DO SISTEMA — nº mínimo de dias para comparar com o habitual (abaixo disso: sem_dado). */
+  HABITUAL_DIAS_MIN: 3,
+  /** EXPERIMENTAL / ESCOLHA DO SISTEMA — janela de posições usada em /linhas e /chegada (min). */
+  JANELA_LINHA_MIN: 10,
+  /** EXPERIMENTAL / ESCOLHA DO SISTEMA — intervalo mínimo entre as duas leituras usadas na chegada (s). */
+  CHEGADA_DT_MIN_S: 60,
+  /** EXPERIMENTAL / ESCOLHA DO SISTEMA — aproximação mínima para considerar que o veículo está vindo (m). */
+  CHEGADA_APROX_MIN_M: 50,
+  /** EXPERIMENTAL / ESCOLHA DO SISTEMA — distância máxima considerada na chegada (m, linha reta). */
+  CHEGADA_DIST_MAX_M: 15000,
+  /** EXPERIMENTAL / ESCOLHA DO SISTEMA — distância para associar uma coordenada a um ponto configurado (m). */
+  PONTO_ASSOCIAR_MAX_M: 150,
   /** Fuso usado para dia da semana / hora. Rio não tem horário de verão desde 2019. */
   FUSO: "America/Sao_Paulo",
 } as const;
+
+export const AVISO_CHEGADA =
+  "Estimativa EXPERIMENTAL calculada por nós a partir do GPS (distância em linha reta e velocidade de " +
+  "aproximação observada). Não é horário oficial da SMTR nem das operadoras.";
 
 export const AVISO =
   "Velocidade de ônibus/BRT (GPS da frota, SMTR). Indicador indireto: os veículos param em " +

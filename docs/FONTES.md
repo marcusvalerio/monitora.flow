@@ -49,6 +49,39 @@ Ainda **não** integrado a este projeto.
 - Endpoints testados diretamente.
 - Repositórios da organização https://github.com/prefeitura-rio.
 
+## 4. Chuva medida — Alerta Rio (TESTADO, funcionando)
+- **URL:** `https://alertario.rio.rj.gov.br/upload/xml/Chuvas.xml` — XML público, atualizado a cada ~5 min (cabeçalho `Last-Modified`).
+- Testado em 02/10/2026 03:31 UTC: HTTP 200, 33 estações. (O teste anterior do projeto, de outra rede, havia sido recusado; pode haver bloqueio por origem.)
+- Campos: `estacao@id`, `@nome`, `@type` (`plv` pluviômetro, `met` meteorológica); `localizacao@latitude/@longitude/@bacia`;
+  `chuvas@m05/m10/m15/h01/h04/h24/h96/mes` (mm acumulados) e `chuvas@hora`. **Horários em Brasília, sem fuso** — convertidos para UTC (−03:00).
+- `websempre.rio.rj.gov.br/json/chuvas`: "Request Rejected" em 02/10/2026 — não usado.
+- Não guardamos histórico de chuva ainda (repassamos o dado ao vivo, com cache de 2 min).
+
+## 5. Previsão — Open-Meteo (FONTE EXTERNA, TESTADO)
+- `https://api.open-meteo.com/v1/forecast?latitude=&longitude=&current=…&hourly=…` — sem chave. Testado em 02/10/2026: HTTP 200.
+- Licença dos dados: CC BY 4.0; o plano gratuito é para uso não comercial (https://open-meteo.com/en/terms). Atribuição exibida no app.
+- INMET (`apitempo.inmet.gov.br`): sem resposta em 02/10/2026 — não usado.
+
+## 6. Geocodificação — IPP / Prefeitura (TESTADO)
+- `https://pgeo3.rio.rj.gov.br/arcgis/rest/services/Geocode/Geocode_Logradouros_WGS84/GeocodeServer/findAddressCandidates?SingleLine=…&f=json`
+- Teste: "Avenida das Américas 2000" → −23,000264 / −43,335547, nota 100. Exposto em `/geocodificar` (cache de 1 dia).
+
+## 7. Mapa — OpenStreetMap via OpenFreeMap (FONTE EXTERNA)
+- Estilo `https://tiles.openfreemap.org/styles/liberty`, sem chave. Atribuição "© OpenStreetMap" obrigatória (exibida). Renderização com MapLibre GL JS.
+
+## 8. Ocorrências do COR — SEM FONTE ABERTA AO VIVO
+- `https://api.dados.rio/v2/adm_cor_comando/ocorrencias_abertas/`: HTTP 503 em 02/10/2026.
+- Histórico: `datario.adm_cor_comando.ocorrencias` (BigQuery, exige conta Google) — não integrado. `/ocorrencias` responde `disponivel: false`.
+
+## 9. Radares CET-Rio / CIVITAS / PIT — NÃO USADOS
+Exigem autenticação. Ficam de fora até haver autorização formal (pedido via LAI em andamento). O desenho já separa fontes por `fonte`
+(`brt`, `sppo`); uma fonte `radar` pode entrar como nova tabela de leituras + os mesmos agregados por ponto.
+
+## 10. Trajetos e paradas (GTFS) — NÃO INTEGRADO AINDA
+- Camadas abertas verificadas: `https://raw.githubusercontent.com/prefeitura-rio/storage/master/layers/paradas_onibus.geojson` (HTTP 200, versão 2024-09-29).
+- Próximo passo: usar trajetos (`itinerario.geojson` / GTFS) para a chegada seguir a rua e filtrar por sentido.
+
 ## Fixtures de teste
-`tests/fixtures/*.json` são recortes de respostas reais de 02/10/2026 03:19 UTC, com as placas trocadas por `TST0000…`.
-Para atualizar: `npm run fixtures:capturar` (e ajustar `AGORA_FIXTURE` em `tests/fontes.test.ts`).
+`tests/fixtures/brt.json` e `sppo.json` são recortes de respostas reais de 02/10/2026 03:19 UTC, com as placas trocadas por `TST0000…`.
+`alertario-chuvas.xml` e `open-meteo.json` são respostas completas de 02/10/2026 (~03:31 UTC).
+Para atualizar as do GPS: `npm run fixtures:capturar` (e ajustar `AGORA_FIXTURE` em `tests/fontes.test.ts`).

@@ -17,6 +17,7 @@ create table if not exists posicoes (
 );
 create index if not exists posicoes_ts on posicoes (ts);
 create index if not exists posicoes_lat_lng on posicoes (lat, lng);
+create index if not exists posicoes_linha_ts on posicoes (linha, ts);
 
 -- CALCULADO: agregados por ponto, fonte e bucket de 5 min. Retenção ~6 meses.
 create table if not exists agregados (

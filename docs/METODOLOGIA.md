@@ -18,9 +18,11 @@ Toda resposta da API traz esse aviso no campo `aviso`.
 | **Interpretado** | campo `interpretado` do `/now?ponto=` | comparação com o habitual |
 
 ## Coleta
-- A cada 5 min (GitHub Actions → `/api/coletar`).
+- A cada **10 min** (EXPERIMENTAL / ESCOLHA DO SISTEMA): gatilho cron do Neon → função `disparador` (Neon Functions) → `/api/coletar` na Vercel.
+  10 min e não 5 para caber na cota de computação do plano gratuito do Neon (cada coleta acorda o banco). Para 5 min, mude o cron do gatilho.
 - BRT: um retrato; ficam só leituras com idade ≤ **5 min** (EXPERIMENTAL / ESCOLHA DO SISTEMA).
-- SPPO: pede a janela `[fim da última coleta, agora]`, no máximo **10 min** (EXPERIMENTAL / ESCOLHA DO SISTEMA).
+- SPPO: pede a janela `[fim da última coleta, agora]`, no máximo **20 min** (EXPERIMENTAL / ESCOLHA DO SISTEMA).
+- Como o BRT é um retrato a cada coleta, o BRT tem menos leituras que o SPPO (que manda o histórico da janela).
 - Descartes (contados em `coletas.descartadas`):
   - item fora do formato (zod);
   - `servico = "FORA DE OP"`;
@@ -57,7 +59,7 @@ são recalculados do zero. Depois disso o bucket fica congelado.
 
 Retenção: agregados por **183 dias** (~6 meses, pedido do projeto); limpeza automática a cada coleta.
 
-## `/now`
+## `/agora` (alias: `/now`)
 Leituras das últimas **15 min** (EXPERIMENTAL / ESCOLHA DO SISTEMA; parâmetro `janela`, máx. 60) dentro do raio,
 resumidas com as mesmas fórmulas acima, por fonte (`calculado.brt`, `calculado.sppo`) e somadas (`calculado.total`).
 `nVeiculos` e `velocidadeMedia` no topo da resposta = `calculado.total`.
@@ -76,10 +78,35 @@ Percentil por interpolação linear entre ordens, "tipo 7" de Hyndman & Fan (FON
 
     h = (n − 1) · p;   Q(p) = x₍⌊h⌋₎ + (h − ⌊h⌋) · (x₍⌈h⌉₎ − x₍⌊h⌋₎)
 
-## Interpretado (`/now?ponto=`)
+O dia de hoje **nunca** entra no habitual (só dias anteriores, contados no fuso do Rio).
+
+## Interpretado (`/agora?ponto=` ou coordenada a até 150 m de um ponto configurado)
 EXPERIMENTAL / ESCOLHA DO SISTEMA: compara a `velocidadeMedia` atual de cada fonte com o habitual do mesmo dia da semana e hora:
-`abaixo_da_faixa_habitual` (< p25), `dentro_da_faixa_habitual`, `acima_da_faixa_habitual` (> p75) ou `sem_dado`.
+`abaixo_da_faixa_habitual` (< p25), `dentro_da_faixa_habitual`, `acima_da_faixa_habitual` (> p75), `sem_dado`
+ou `historico_insuficiente` (menos de **3 dias** anteriores com dado — EXPERIMENTAL / ESCOLHA DO SISTEMA).
+A associação coordenada → ponto usa até **150 m** (EXPERIMENTAL / ESCOLHA DO SISTEMA).
 Isso diz só "diferente do costume", **não** "congestionado".
+
+## Estimativa de chegada (`/chegada`) — EXPERIMENTAL / ESCOLHA DO SISTEMA
+Não é horário oficial. Para cada veículo da linha com leituras nos últimos **10 min**:
+
+    p1, t1 = última leitura;  p0, t0 = leitura mais antiga com t1 − t0 ≥ 60 s
+    d1 = dist(p1, destino);  d0 = dist(p0, destino)          (haversine, linha reta)
+    va = (d0 − d1) / (t1 − t0)                              velocidade de aproximação observada (m/s)
+    o veículo só conta como "vindo" se d0 − d1 ≥ 50 m e d1 ≤ 15 km
+    ETA = max(0, d1 / va − (agora − t1))
+
+Parâmetros 10 min, 60 s, 50 m e 15 km: EXPERIMENTAL / ESCOLHA DO SISTEMA.
+Limitações: linha reta subestima o caminho pela rua; um veículo que contorna uma curva pode parecer "afastando";
+paradas e trânsito mudam `va`; não sabe se o veículo vai mesmo passar pelo seu ponto (falta o trajeto GTFS — próximo passo).
+Sem veículo vindo → `proxima: null` (sem dado).
+
+## Chuva (`/chuva`)
+Valores **medidos** pelos pluviômetros do Alerta Rio, repassados como vieram (mm acumulados em 5, 10, 15 min e 1, 4, 24, 96 h).
+Escolhemos as `k` estações mais próximas (haversine, padrão 3). Não há interpolação para o seu ponto nem classificação de intensidade.
+
+## Previsão (`/tempo`)
+FONTE EXTERNA: Open-Meteo (modelo numérico). Repassamos temperatura, probabilidade e volume de precipitação das próximas 6 h.
 
 ## Limitações
 - Velocidade de ônibus ≠ velocidade do tráfego geral; faixa exclusiva pode deixar o ônibus rápido com a via parada (e vice-versa).

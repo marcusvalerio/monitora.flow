@@ -7,9 +7,10 @@ export const FONTE = {
   documentacao: "docs/FONTES.md",
 };
 
-export function ok(corpo: Record<string, unknown>) {
-  return NextResponse.json({ fonte: FONTE, aviso: AVISO, ...corpo }, {
-    headers: { "access-control-allow-origin": "*", "cache-control": "public, max-age=60" },
+/** `aviso` = aviso fixo de "velocidade de ônibus/BRT"; passe null em endpoints que não tratam de velocidade. */
+export function ok(corpo: Record<string, unknown>, aviso: string | null = AVISO, maxAge = 30) {
+  return NextResponse.json({ fonte: FONTE, ...(aviso ? { aviso } : {}), ...corpo }, {
+    headers: { "access-control-allow-origin": "*", "cache-control": `public, max-age=${maxAge}` },
   });
 }
 

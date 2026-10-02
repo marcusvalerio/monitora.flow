@@ -31,5 +31,6 @@ it("compararComHabitual", () => {
   expect(compararComHabitual(15, h)).toBe("abaixo_da_faixa_habitual");
   expect(compararComHabitual(25, h)).toBe("dentro_da_faixa_habitual");
   expect(compararComHabitual(null, h)).toBe("sem_dado");
-  expect(compararComHabitual(25, { p25: null, p75: null, nDias: 0 })).toBe("sem_dado");
+  expect(compararComHabitual(25, { p25: null, p75: null, nDias: 0 })).toBe("historico_insuficiente");
+  expect(compararComHabitual(25, { p25: 20, p75: 30, nDias: 2 })).toBe("historico_insuficiente");
 });

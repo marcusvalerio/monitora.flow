@@ -79,3 +79,12 @@ export async function coletar(agora = new Date()) {
 
   return { inicio: agora, sppo: { de: sppoDe, ate: sppoAte, leituras: nSppo }, brt: { leituras: nBrt }, agregadosRecalculados: ags.length, descartadas, erros };
 }
+
+/** Posições recentes de uma linha (BRT `linha` ou SPPO `servico`), sem placa. */
+export async function lerPosicoesLinha(linha: string, desde: Date): Promise<Leitura[]> {
+  const rows = await sql()`select * from posicoes where linha = ${linha} and ts >= ${desde}`;
+  return rows.map((r) => ({
+    fonte: r.fonte, veiculo: r.veiculo, linha: r.linha, sentido: r.sentido,
+    lat: r.lat, lng: r.lng, velocidade: r.velocidade, ts: new Date(r.ts),
+  }));
+}

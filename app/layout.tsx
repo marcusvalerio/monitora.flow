@@ -1,9 +1,17 @@
-export const metadata = { title: "monitora.flow", description: "Coletor e API do GPS de BRT/ônibus do Rio para o MOVA" };
+import "./globals.css";
+
+export const metadata = {
+  title: "Meu trajeto — monitora.flow",
+  description: "Ônibus/BRT, ruas, chuva e previsão no seu caminho pelo Rio. Dados abertos da Prefeitura.",
+  manifest: "/manifest.webmanifest",
+  icons: { icon: "/icone.svg", apple: "/icone.svg" },
+};
+export const viewport = { themeColor: [{ media: "(prefers-color-scheme: light)", color: "#f6f7f9" }, { media: "(prefers-color-scheme: dark)", color: "#111418" }], width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body style={{ fontFamily: "system-ui, sans-serif", maxWidth: 760, margin: "2rem auto", padding: "0 16px", lineHeight: 1.5 }}>{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

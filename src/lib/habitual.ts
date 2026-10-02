@@ -25,6 +25,7 @@ export function diaHoraLocal(d: Date): { dia: number; hora: number; data: string
  *  2. valor do dia  V_d = Σ(média_b · n_b) / Σ n_b, com n_b = leituras em movimento do bucket b
  *     (média ponderada = média de todas as leituras em movimento daquela hora);
  *  3. dias sem nenhuma leitura em movimento ficam de fora (sem dado, não são zero);
+ *  (o dia de hoje nunca entra: o habitual é só de dias anteriores — ver consultas.ts)
  *  4. retorna mediana, p25 e p75 (percentil tipo 7) dos V_d e quantos dias entraram.
  */
 export function calcularHabitual(linhas: LinhaAgregada[], diaSemana: number, hora: number) {
@@ -54,7 +55,8 @@ export function calcularHabitual(linhas: LinhaAgregada[], diaSemana: number, hor
  * à faixa p25–p75 do habitual. Não é classificação de congestionamento.
  */
 export function compararComHabitual(atual: number | null, h: { p25: number | null; p75: number | null; nDias: number }) {
-  if (atual === null || h.p25 === null || h.p75 === null || h.nDias === 0) return "sem_dado" as const;
+  if (h.nDias < PARAMETROS.HABITUAL_DIAS_MIN) return "historico_insuficiente" as const;
+  if (atual === null || h.p25 === null || h.p75 === null) return "sem_dado" as const;
   if (atual < h.p25) return "abaixo_da_faixa_habitual" as const;
   if (atual > h.p75) return "acima_da_faixa_habitual" as const;
   return "dentro_da_faixa_habitual" as const;
