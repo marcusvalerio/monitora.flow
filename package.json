@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "db:migrar": "tsx scripts/migrar.ts",
     "coletar": "tsx scripts/coletar.ts",
     "fixtures:capturar": "tsx scripts/capturar-fixtures.ts"
