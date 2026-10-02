@@ -88,7 +88,9 @@ describe("interpolação angular", () => {
 
 it("destino a partir do trajeto do BRT", () => {
   expect(destinoDoTrajeto("22 - ALVORADA X JARDIM OCEANICO (PARADOR) [IDA]", "ida")).toBe("Jardim Oceanico");
-  expect(destinoDoTrajeto("22 - ALVORADA X JARDIM OCEANICO (PARADOR) [VOLTA]", "volta")).toBe("Alvorada");
+  // a fonte inverte a ordem dos nomes na volta: o destino é sempre o último trecho
+  expect(destinoDoTrajeto("10 - ALVORADA X SANTA CRUZ (EXPRESSO) [VOLTA]", "volta")).toBe("Santa Cruz");
+  expect(destinoDoTrajeto("10 - SANTA CRUZ X ALVORADA (EXPRESSO) [IDA]", "ida")).toBe("Alvorada");
   expect(destinoDoTrajeto("22 - ALVORADA X JARDIM OCEANICO", null)).toBeNull();
   expect(destinoDoTrajeto(null, "ida")).toBeNull();
 });
