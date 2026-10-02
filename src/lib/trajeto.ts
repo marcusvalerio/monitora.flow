@@ -3,6 +3,19 @@
  * EXPERIMENTAL / ESCOLHA DO SISTEMA: só encaixa se o GPS estiver a até ENCAIXE_MAX_M do trajeto; senão mostra o GPS cru.
  */
 export const ENCAIXE_MAX_M = 60;
+/**
+ * Veículo PARADO a mais que isto do trajeto da linha é tratado como fora de operação (garagem/pátio) e some do mapa.
+ * EXPERIMENTAL / ESCOLHA DO SISTEMA. Verificado em 02/10/2026: vários BRT da linha 10 parados, quase todos de ignição desligada,
+ * no mesmo ponto a ~2,7 km do corredor, ainda marcados com a linha.
+ */
+export const FORA_TRAJETO_M = 300;
+
+/** Menor distância (m) do ponto a qualquer trajeto da linha; null se a linha não tem trajeto. */
+export function distanciaAoTrajeto(lat: number, lng: number, trajetos: { coords: Coords }[]): number | null {
+  let min: number | null = null;
+  for (const t of trajetos) { const e = projetar(lat, lng, t.coords); if (e && (min === null || e.distM < min)) min = e.distM; }
+  return min;
+}
 
 export type Coords = [number, number][]; // [lng, lat]
 export interface Trajeto { sentido: number; destino: string; coords: Coords }
