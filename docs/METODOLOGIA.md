@@ -18,8 +18,8 @@ Toda resposta da API traz esse aviso no campo `aviso`.
 | **Interpretado** | campo `interpretado` do `/now?ponto=` | comparação com o habitual |
 
 ## Coleta
-- A cada **10 min** (EXPERIMENTAL / ESCOLHA DO SISTEMA): gatilho cron do Neon → função `disparador` (Neon Functions) → `/api/coletar` na Vercel.
-  10 min e não 5 para caber na cota de computação do plano gratuito do Neon (cada coleta acorda o banco). Para 5 min, mude o cron do gatilho.
+- A cada **10 min** (EXPERIMENTAL / ESCOLHA DO SISTEMA): GitHub Actions (cron) → `/api/coletar` na Vercel.
+  10 min e não 5 para caber na cota de computação do plano gratuito do Neon (cada coleta acorda o banco). Para 5 min, mude o cron em `.github/workflows/coletar.yml`.
 - BRT: um retrato; ficam só leituras com idade ≤ **5 min** (EXPERIMENTAL / ESCOLHA DO SISTEMA).
 - SPPO: pede a janela `[fim da última coleta, agora]`, no máximo **20 min** (EXPERIMENTAL / ESCOLHA DO SISTEMA).
 - Como o BRT é um retrato a cada coleta, o BRT tem menos leituras que o SPPO (que manda o histórico da janela).
