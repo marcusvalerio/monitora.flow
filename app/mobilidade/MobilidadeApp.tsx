@@ -164,9 +164,12 @@ export default function MobilidadeApp() {
     if (a.id !== sel.id) { a.id = sel.id; a.pts = []; }
     const t = Date.parse(sel.em);
     if (!a.pts.length || a.pts[a.pts.length - 1].t !== t) a.pts.push({ t, s: f.s });
-    a.pts = a.pts.filter((p) => t - p.t <= 600_000);
+    a.pts = a.pts.filter((p) => t - p.t <= 300_000); // janela curta: o ritmo de agora, não o tempo parado no terminal
     const p0 = a.pts[0], dt = (t - p0.t) / 1000, ds = f.s - p0.s;
-    const etaGpsMin = dt >= 120 && ds > 50 ? (f.restM / (ds / dt)) / 60 : null;
+    const kmh = dt > 0 ? (ds / dt) * 3.6 : 0;
+    // ritmo GPS só vale se for plausível (8–80 km/h) e não destoar demais do programado (×0,5 a ×2); senão, fica o programado
+    let etaGpsMin = dt >= 120 && kmh >= 8 && kmh <= 80 ? (f.restM / (ds / dt)) / 60 : null;
+    if (etaGpsMin != null && f.etaProgMin != null && (etaGpsMin > f.etaProgMin * 2 || etaGpsMin < f.etaProgMin * 0.5)) etaGpsMin = null;
     return { ...f, etaGpsMin };
   }, [sel, trajetoVisivel]);
 
@@ -672,7 +675,8 @@ function DialSeguindo({ v, falta, onParar, onCentrar }: { v: J; falta: Falta | n
       </svg>
       <button className="centrar" onClick={onCentrar} aria-label="Centralizar no veículo" />
       <b className="num">{v.linha}</b>
-      {falta && <span className="km num">{etaFinal(falta) != null ? `~${eta(etaFinal(falta)!)} min` : `${dec1(falta.km)} km`}</span>}
+      {v.idadeS > 90 ? <span className="km num sinal">sem sinal {Math.round(v.idadeS / 60)} min</span>
+        : falta && <span className="km num">{etaFinal(falta) != null ? `~${eta(etaFinal(falta)!)} min` : `${dec1(falta.km)} km`}</span>}
       <button className="parar" onClick={onParar} aria-label="Parar de acompanhar"><X aria-hidden /></button>
     </div>
   );
