@@ -41,6 +41,7 @@ export default function MobilidadeApp() {
   const [veiculos, setVeiculos] = useState<J | null>(() => M.veiculos ?? null);
   const [veiculoSel, setVeiculoSelS] = useState<string | null>(() => M.veiculoSel ?? null);
   const [seguindo, setSeguindo] = useState(() => M.seguindo ?? false);
+  const [recentrar, setRecentrar] = useState(0);
   const setVeiculoSel = (id: string | null) => { setVeiculoSelS(id); setSeguindo(false); };
   const [clima, setClima] = useState<J | null>(null);
   const [rua, setRua] = useState<J | null>(null);
@@ -239,9 +240,9 @@ export default function MobilidadeApp() {
         trajetos={trajetoVisivel}
         debug={debug && sel ? { gps: [sel.lng, sel.lat], proj: sel.projecao ?? null, shapeId: sel.shapeId ?? null } : null}
         enquadrarChave={`${ponto?.id ?? ""}|${linha ?? ""}`}
-        seguir={seguindo && !!sel} onSoltar={() => setSeguindo(false)} />
+        seguir={seguindo && !!sel} recentrar={recentrar} />
 
-      {seguindo && sel && <DialSeguindo v={sel} falta={falta} onParar={() => setSeguindo(false)} />}
+      {seguindo && sel && <DialSeguindo v={sel} falta={falta} onParar={() => setSeguindo(false)} onCentrar={() => setRecentrar((n) => n + 1)} />}
 
       <div className="map-top">
         <button className="map-search" onClick={() => setBuscando(true)} aria-label="Pesquisar estação, terminal ou linha">
@@ -656,7 +657,7 @@ function faltaDoTrajeto(v: J | null, trajetos: Trajeto[] | null | undefined): Fa
 }
 
 /** Mostrador do acompanhamento: número da linha no centro, anel que esvazia até o destino final; bolinha × para parar. */
-function DialSeguindo({ v, falta, onParar }: { v: J; falta: Falta | null; onParar: () => void }) {
+function DialSeguindo({ v, falta, onParar, onCentrar }: { v: J; falta: Falta | null; onParar: () => void; onCentrar: () => void }) {
   const R = 25, C = 2 * Math.PI * R, resta = falta ? 1 - falta.pct : null;
   return (
     <div className="dial-seg appear" role="status" aria-label={`Acompanhando linha ${v.linha}, veículo ${v.veiculo}${falta ? `; faltam ${dec1(falta.km)} km até ${falta.destino}` : ""}`}>
@@ -664,6 +665,7 @@ function DialSeguindo({ v, falta, onParar }: { v: J; falta: Falta | null; onPara
         <circle cx="32" cy="32" r={R} className="trilha" />
         {resta != null && <circle cx="32" cy="32" r={R} className="resta" strokeDasharray={C} strokeDashoffset={C * (1 - resta)} />}
       </svg>
+      <button className="centrar" onClick={onCentrar} aria-label="Centralizar no veículo" />
       <b className="num">{v.linha}</b>
       {falta && <span className="km num">{etaFinal(falta) != null ? `~${eta(etaFinal(falta)!)} min` : `${dec1(falta.km)} km`}</span>}
       <button className="parar" onClick={onParar} aria-label="Parar de acompanhar"><X aria-hidden /></button>
