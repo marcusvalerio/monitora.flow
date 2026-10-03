@@ -8,7 +8,7 @@ import dados from "../data/frequencias.json";
 
 type Faixa = [number, number, number];
 interface SentidoProg { sentido: number; destino: string; servicos: Record<string, Faixa[]> }
-const F = dados as unknown as { versaoGtfs: string; validoAte: string; diasDoServico: Record<string, string[]>; excecoes: Record<string, string>; linhas: Record<string, { nome: string; sentidos: SentidoProg[] }> };
+const F = dados as unknown as { duracaoShapeS: Record<string, number>; versaoGtfs: string; validoAte: string; diasDoServico: Record<string, string[]>; excecoes: Record<string, string>; linhas: Record<string, { nome: string; sentidos: SentidoProg[] }> };
 
 export const FONTE_FREQUENCIAS = { fonte: "https://dados.mobilidade.rio/gtfs/schedule", arquivo: "frequencies.txt", versaoGtfs: F.versaoGtfs, validoAte: F.validoAte };
 
@@ -60,4 +60,9 @@ export function programacao(modo: "BRT" | "BUS", linha: string, agora = new Date
     };
   });
   return { nome: l.nome, tipoDia: hoje ? ROTULO_SERVICO[hoje] ?? hoje : null, horaRio: relogioRio(agora).minuto, sentidos };
+}
+
+/** Duração programada (s) de uma viagem completa no shape: última chegada − primeira partida (stop_times, mediana). */
+export function duracaoProgramadaS(shapeId: string | null | undefined): number | null {
+  return (shapeId && F.duracaoShapeS?.[shapeId]) || null;
 }

@@ -1,3 +1,4 @@
+import { duracaoProgramadaS } from "../../../../src/lib/frequencia";
 import { CATALOGO_BRT, linhaBrt, sentidosDaLinha } from "../../../../src/lib/brt";
 import { CATALOGO_ONIBUS, linhaOnibus, trajetosOnibus } from "../../../../src/lib/onibus";
 import { ok, tratar, ErroParametro } from "../../../../src/lib/api";
@@ -18,7 +19,7 @@ export function GET(req: Request, ctx: { params: Promise<{ linha: string }> }) {
       return ok({
         linha, modo, brt: !!l, catalogo: CATALOGO_BRT, nome: l?.nome ?? null, servico: l?.servico ?? null,
         nota: "Trajeto planejado (GTFS). coords: [lng, lat]. sentido = direction_id; destino = trip_headsign.",
-        sentidos: l ? sentidosDaLinha(linha) : [], trajetos: l?.trajetos ?? [],
+        sentidos: l ? sentidosDaLinha(linha) : [], trajetos: comDuracao(l?.trajetos ?? []),
       }, null, 86400);
     }
     const o = linhaOnibus(linha);
@@ -27,7 +28,12 @@ export function GET(req: Request, ctx: { params: Promise<{ linha: string }> }) {
       linha, modo: "BUS", brt: false, catalogo: CATALOGO_ONIBUS, nome: o?.nome ?? null, servico: null,
       nota: "Trajeto planejado (GTFS). coords: [lng, lat]. Cada ônibus é comparado ao shape da própria viagem (shape_id do GPS).",
       sentidos: [...new Map(trajetos.map((t) => [t.destino, { sentido: t.sentido, destino: t.destino, shapeIds: trajetos.filter((x) => x.destino === t.destino).map((x) => x.shapeId) }])).values()],
-      trajetos,
+      trajetos: comDuracao(trajetos),
     }, null, 86400);
   });
+}
+
+/** Duração programada da viagem no shape (GTFS stop_times, mediana) — base do "ritmo programado" no app. null = sem dado. */
+function comDuracao<T extends { shapeId: string }>(ts: T[]) {
+  return ts.map((t) => ({ ...t, duracaoProgramadaS: duracaoProgramadaS(t.shapeId) }));
 }
