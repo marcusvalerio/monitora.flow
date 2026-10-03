@@ -22,7 +22,15 @@ export default function BottomSheet({ resumo, children, nivel, setNivel, onAltur
   }, []);
 
   const desktop = typeof window !== "undefined" && window.matchMedia?.("(min-width: 960px)").matches;
-  const alturas = [Math.min(resumo, h * 0.5), Math.round(h * 0.52), Math.round(h * 0.9)];
+  // a navegação flutua sobre o painel no celular: a altura recolhida reserva o espaço dela (o essencial fica sempre visível)
+  const [reserva, setReserva] = useState(0);
+  useEffect(() => {
+    const nav = document.querySelector(".nav") as HTMLElement | null;
+    const medir = () => setReserva(!nav || desktop ? 0 : Math.round(window.innerHeight - nav.getBoundingClientRect().top + 8));
+    medir(); window.addEventListener("resize", medir);
+    return () => window.removeEventListener("resize", medir);
+  }, [desktop]);
+  const alturas = [Math.min(resumo, h * 0.5) + reserva, Math.round(h * 0.5) + reserva, Math.round(h * 0.9)];
   const visivel = arrasto ?? alturas[nivel];
   const sheetH = Math.round(h * 0.92);
   const y = Math.max(0, sheetH - visivel);

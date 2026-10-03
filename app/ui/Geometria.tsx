@@ -9,7 +9,7 @@ export function MarcaMonitora({ size = 22, sinal = true }: { size?: number; sina
       <circle cx="9" cy="13" r="6.2" stroke="currentColor" strokeWidth="2" />
       <circle cx="15" cy="13" r="6.2" stroke="currentColor" strokeWidth="2" opacity=".55" />
       <path d="M4.2 6.2A10 10 0 0 1 19.8 6.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      {sinal && <circle cx="12" cy="13" r="2" fill="var(--signal)" stroke="var(--deep)" strokeWidth="1" />}
+      {sinal && <circle cx="12" cy="13" r="2" fill="var(--accent)" stroke="var(--surface)" strokeWidth="1" />}
     </svg>
   );
 }
@@ -22,7 +22,7 @@ export function Orbita({ size = 44, rotulo = "Carregando" }: { size?: number; ro
         <path className="o1" d="M24 4a20 20 0 0 1 20 20" stroke="var(--live)" strokeWidth="2.4" strokeLinecap="round" />
         <circle cx="24" cy="24" r="12" stroke="currentColor" strokeOpacity=".12" strokeWidth="2" />
         <path className="o2" d="M36 24a12 12 0 0 1-12 12" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-        <circle cx="24" cy="24" r="2.6" fill="var(--signal)" stroke="var(--deep)" strokeWidth="1" />
+        <circle cx="24" cy="24" r="2.6" fill="var(--accent)" stroke="var(--surface)" strokeWidth="1" />
       </svg>
     </span>
   );

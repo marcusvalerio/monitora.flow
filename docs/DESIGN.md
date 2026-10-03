@@ -1,59 +1,41 @@
-# Monitora — sistema de movimento e material
+# Monitora — sistema visual 5.0
 
-**Ordem de prioridade:** conteúdo → material → movimento. Nenhum efeito sem função (visual, espacial ou informacional).
-Movimento nunca esconde problema de dado; vidro nunca compensa falta de hierarquia.
+**Espaço:** mundo (mapa) embaixo · material (vidro) no meio · informação (tipografia) em cima.
+**Ordem:** conteúdo → material → movimento. Cor comunica estado; a interface é neutra.
 
-## Cor (tokens em `app/globals.css`)
+## Cor (`app/ui/tokens.ts` = fonte; espelhada em `app/globals.css`)
 | Token | Hex | Papel |
 |---|---|---|
-| Deep | `#000022` | profundidade, texto, fundo escuro, BRT (claro) |
-| Atlantic | `#104071` | interação (claro), ônibus |
-| Teal | `#1A9597` | mobilidade / informação viva, trajeto no mapa, interação (escuro) |
-| Lime | `#EEFF99` | **só sinal**: aba ativa, item selecionado, BRT (escuro), foco. Nunca texto sobre fundo claro |
-| Off-white | `#FDFDFE` | superfícies |
-| Mist | `#EEF2F3` | fundo |
+| Porcelain / Warm White / Mist | `#F5F5F2` `#FBFBF9` `#E7E9E8` | fundo, superfícies, divisões (maior parte da interface) |
+| Ink / Deep Ink | `#111318` `#080A10` | texto, BRT, modo escuro |
+| Ultramarine | `#3047C7` | **interação e seleção**: aba ativa, botão, rota ativa, veículo selecionado |
+| Periwinkle / Lilac | `#8997F5` `#C7C8F5` | atmosfera e estados brandos (posição incerta, veículo andando, clima) |
+| Coral | `#FF7058` | **só** incidente/alerta, veículo fora do trajeto e o clarão da tempestade |
+| Sea Mist | `#B9D7D6` | água do mapa (com profundidade tonal) |
 
-Cores de dado são semânticas e fixas: BRT = Deep+Lime (escuro: Lime+Deep), ônibus = Atlantic;
-estados do veículo verde/âmbar/vermelho/cinza (no trajeto / incerto / fora / sem atualização). Movimento não muda cor de dado.
+Estados do veículo (fixos em todo o produto): no trajeto = Ultramarine · incerto = Periwinkle · fora = Coral · sem atualização = cinza.
+Modos: BRT = cápsula Ink sólida; ônibus = cápsula clara com contorno Ink.
 
 ## Tipografia
-Display: **Bricolage Grotesque 600** (temperatura, ETA, totais, títulos). UI e dados: **Instrument Sans 500–650**.
-Números importantes são protagonistas e não ultrafinos.
-
-## Movimento (`--dur-*`, `--spring` no CSS; `app/ui/motion.ts` no JS)
-| Nível | Duração | Uso |
-|---|---|---|
-| Micro | 100–250 ms | pressão, hover, cor |
-| Interação | 250–450 ms | aba, chip, painel, câmera curta |
-| Espacial | 400–700 ms | câmera do mapa, painel inferior (mola) |
-| Atmosfera | 3–20 s+ | clima, água — contínuo e lento, períodos primos entre si |
-
-Curvas: `--ease-out` (saídas), `--ease-in-out` (espacial), `--spring` (mola criticamente amortecida, ~4% de overshoot — sem "bounce").
-`prefers-reduced-motion` desliga tudo que se move; o material estático fica.
-
-**Veículo.** Interpola do ponto desenhado até o dado real seguinte, no ritmo do GPS (≈ 85% do intervalo entre leituras), e sempre termina no dado
-recebido — nunca extrapola. Pela via só quando ON_ROUTE no mesmo shape; salto > 800 m (provável erro) é mostrado rápido, não suavizado.
-Estados com forma própria: andando (anel de direção), parado (anel recolhido + marca), incerto/fora (contorno tracejado, posição GPS real),
-desatualizado (esmaecido).
-
-**Mapa.** Seleção de estação/linha/veículo move a câmera com duração espacial; veículo selecionado só "puxa" a câmera se estiver fora da área visível.
-**Água.** Textura de ondulação abstrata sobre a camada `water` do estilo, deriva de ±2 px e respiração de opacidade (23/29/37/17 s), ~8 fps, pausa sem foco.
+**Geist** conduz a interface (navegação, rótulos, corpo, controles, metadados). **Sora 600** só onde o número é o objeto:
+ETA, temperatura, totais do Monitor, métricas, títulos de impacto. Ex.: "2" em Sora 600 72 px + "min" em Geist 500 20 px.
+Rótulos do mapa usam Noto Sans (as fontes do mapa precisam vir como glifos PBF; gerar Geist em PBF fica como próximo passo).
 
 ## Material (vidro)
-Só nas camadas funcionais sobre o conteúdo: busca, botões flutuantes, painel inferior, navegação, filtros e a faixa de dados do clima. Sem vidro sobre vidro.
-Resposta: luz especular segue o ponteiro (`--mx/--my`, uma escrita por frame), cede na pressão (mola) e ganha anel de sinal no foco.
+Só em busca, botões flutuantes, navegação, painel e filtros — nunca em cards nem vidro sobre vidro.
+Translucidez + blur + saturação + luz especular que segue o ponteiro + borda interna clara + sombra ambiente.
+**Responde ao ambiente:** o mapa informa o que está sob a busca (`data-sob` = água / rota / terra) e o vidro ganha uma influência mínima
+de Sea Mist ou Ultramarine — nunca altera a cor do texto.
 
-## Navegação
-Barra inferior flutuante (vidro, 12 px das bordas, acima da área segura); aba ativa = cápsula Deep com ícone Lime (escuro: Lime com Deep), troca na mola.
-
-## Linguagem geométrica (`app/ui/Geometria.tsx`)
-Círculos, arcos e interseções em módulos. **Marca**: dois círculos que se cruzam (lugar + movimento), um arco de trajeto e o ponto Lime do "agora".
-**Órbita**: arcos concêntricos girando devagar para carregamento (mapa, painéis). **Arcos**: ornamento discreto dos estados vazios.
-
-## Tipografia — escolha
-Comparadas Bricolage Grotesque, Host Grotesk, Schibsted Grotesk e Spline Sans para display. Bricolage (600) ficou: tem personalidade nos números
-(ETA, temperatura, totais) sem virar painel financeiro, e contrasta bem com Instrument Sans (UI/dados, 500–650), mais neutra e legível em 11–15 px.
+## Movimento (`--dur-*`, `--spring` no CSS; `app/ui/motion.ts` no JS)
+Micro 100–180 ms · Interação 180–350 ms · Espacial 350–600 ms · Ambiente 4–20 s+. Mola criticamente amortecida, sem bounce.
+- **Navegação:** um indicador Ultramarine único desliza entre as abas (mola) — continuidade, não troca de botão.
+- **Telas:** cada rota entra com fade; o mapa "surge" (opacidade + 1,5% de escala); a busca sobe como folha.
+- **ETA:** troca vertical (3 → 2: o antigo sobe, o novo entra) só quando o valor muda; ponto "ao vivo" pulsa só com dado novo.
+- **Rota:** fluxo discreto no sentido da viagem (troca de traço ~9 fps, pausa sem foco); rota do veículo selecionado engrossa.
+- **Veículo:** interpolação no ritmo do GPS terminando no dado real; rotação pelo menor caminho; parado não gira; STALE/OFF_ROUTE nunca suavizados.
+- **Água:** textura e luz quase imperceptíveis (períodos 17–37 s).
+`prefers-reduced-motion` zera durações e remove partículas.
 
 ## Contraste (WCAG)
-Texto principal 18:1; secundário 7,9:1; terciário 5,0:1 (era 3,9:1 — escurecido); Lime sobre Deep 19:1; branco sobre Atlantic 10,5:1.
-Branco sobre Teal (3,6:1) só aparece em traço de mapa, nunca em texto.
+Texto 17:1 · secundário 8,1:1 · terciário 5,3:1 (4,7:1 sobre Mist) · branco/Ultramarine 7,4:1 · escuro: terciário 6,4:1, aba 7,4:1.

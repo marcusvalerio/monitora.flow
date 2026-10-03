@@ -4,10 +4,10 @@
  * → MapInteractionLayer (marcadores DOM de veículo, seleção, você). Clima e ocorrências entram como camadas próprias quando houver fonte.
  */
 import type { Map as MLMap } from "maplibre-gl";
-import { estiloMonitora, type Tema } from "./estilo";
+import { estiloMonitora } from "./estilo";
 import { aguaViva } from "../ui/motion";
-
-export const temaAtual = (): Tema => (typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "escuro" : "claro");
+import { MAPA, temaAtual } from "../ui/tokens";
+export { temaAtual };
 export const token = (nome: string, padrao: string) =>
   (typeof document !== "undefined" && getComputedStyle(document.documentElement).getPropertyValue(nome).trim()) || padrao;
 
@@ -22,6 +22,6 @@ export async function criarMapa(container: HTMLElement, opts: { centro?: [number
   });
   map.touchZoomRotate.disableRotation();
   let pararAgua = () => {};
-  map.on("load", () => { pararAgua = aguaViva(map, token("--map-water-tint", "#9fd6d7")); });
+  map.on("load", () => { pararAgua = aguaViva(map, MAPA[temaAtual()].texturaAgua); });
   return { m, map, destruir: () => { pararAgua(); map.remove(); } };
 }
