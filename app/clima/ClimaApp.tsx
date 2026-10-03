@@ -1,16 +1,15 @@
 "use client";
-import WeatherHero from "./WeatherHero";
+import TempoView from "./TempoView";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronDown, LocateFixed, Search, MapPin, Clock, Droplets, Wind, Thermometer, Eye, CloudRain, Navigation } from "lucide-react";
+import { ChevronDown, LocateFixed, Search, MapPin, Clock, Navigation } from "lucide-react";
 import SearchSheet from "../ui/SearchSheet";
-import { EmptyState, ErrorState, IconeTempo, LastUpdated, Skel } from "../ui/estados";
-import { J, dec, diaSemana, distKm, fmtDist, get, gravar, horaLocal, lembrar, ler, minhaPosicao } from "../ui/util";
+import { EmptyState, ErrorState, Skel } from "../ui/estados";
+import { J, get, gravar, lembrar, ler, minhaPosicao } from "../ui/util";
 
 export interface Local { id: string; nome: string; detalhe?: string; lat: number; lng: number; gps?: boolean }
 const CHAVE_LOCAL = "monitora:clima:local";
 const CHAVE_RECENTES = "monitora:clima:recentes";
 
-const pontoCardeal = (g: number) => ["N", "NE", "L", "SE", "S", "SO", "O", "NO"][Math.round(g / 45) % 8];
 
 export default function ClimaApp() {
   const [local, setLocal] = useState<Local | null | undefined>(undefined); // undefined = lendo armazenamento
@@ -148,92 +147,6 @@ function Tempo({ tempo, chuva, local, recarregar }: { tempo: J | null; chuva: J 
     </div>
   );
   if (tempo.erro) return <ErrorState texto="Não foi possível atualizar o clima agora." tentar={recarregar} />;
-  const a = tempo.calculado?.agora;
-  const horas: J[] = tempo.calculado?.proximasHoras ?? [];
-  const dias: J[] = tempo.calculado?.proximosDias ?? [];
-  const h1 = horas[1];
-  const est = chuva?.observado?.[0];
-  const estPerto = est && distKm(local, est) <= 15 ? est : null; // pluviômetros só fazem sentido no Rio
-  const minD = Math.min(...dias.map((d) => d.minC ?? 99)), maxD = Math.max(...dias.map((d) => d.maxC ?? -99));
-
-  return (
-    <div className="appear" key={`${local.lat},${local.lng}`}>
-      <WeatherHero agora={a} hoje={dias[0]} local={local.nome} />
-
-      <section className="section stag" style={{ ["--i" as string]: 1 }} aria-label="Condições">
-        <span className="t-label">Condições</span>
-        <div className="metrics">
-          <Metrica Icone={Droplets} rotulo="Umidade" v={a?.umidadePct} u="%" />
-          <Metrica Icone={Wind} rotulo="Vento" v={a?.ventoKmh == null ? null : Math.round(a.ventoKmh)} u={a?.ventoDirecao != null ? `km/h ${pontoCardeal(a.ventoDirecao)}` : "km/h"} />
-          <Metrica Icone={CloudRain} rotulo="Chuva (1 h)" v={h1?.probabilidadeChuvaPct} u="%" />
-          <Metrica Icone={Eye} rotulo="Visibilidade" v={h1?.visibilidadeM == null ? null : h1.visibilidadeM >= 10000 ? "10+" : dec(h1.visibilidadeM / 1000)} u="km" />
-        </div>
-      </section>
-
-      {estPerto && (
-        <section className="section stag" style={{ ["--i" as string]: 2 }} aria-label="Chuva medida">
-          <span className="t-label">Chuva medida agora</span>
-          <div className="surface" style={{ padding: 16 }}>
-            <div className="row">
-              <Thermometer size={20} aria-hidden style={{ color: "var(--accent)" }} />
-              <div className="main" style={{ flex: 1 }}>
-                <div className="t-head num">{estPerto.mm.h01 == null ? "Sem medição" : `${dec(estPerto.mm.h01)} mm na última hora`}</div>
-                <div className="t-cap">{estPerto.mm.m15 != null && `${dec(estPerto.mm.m15)} mm em 15 min · `}Pluviômetro {estPerto.nome}, a {fmtDist(estPerto.distanciaM / 1000)}</div>
-              </div>
-            </div>
-            <div style={{ marginTop: 10 }}><LastUpdated em={estPerto.medidoEm} fonte="Alerta Rio" velhoS={1200} /></div>
-          </div>
-        </section>
-      )}
-
-      {horas.length > 0 && (
-        <section className="section stag" style={{ ["--i" as string]: 3 }} aria-label="Próximas horas">
-          <span className="t-label">Próximas horas</span>
-          <div className="surface hours" role="list">
-            {horas.slice(0, 24).map((h, i) => (
-              <div className="hour" role="listitem" key={h.inicio} style={{ ["--i" as string]: Math.min(i, 10) }} aria-label={`${i === 0 ? "Agora" : horaLocal(h.inicio)}: ${h.temperaturaC == null ? "sem dado" : Math.round(h.temperaturaC) + " graus"}, ${h.descricao?.texto ?? ""}, chance de chuva ${h.probabilidadeChuvaPct ?? "sem dado"}%`}>
-                <span className="t-meta">{i === 0 ? "Agora" : horaLocal(h.inicio).slice(0, 2) + "h"}</span>
-                <IconeTempo icone={h.descricao?.icone} dia={h.dia} />
-                <span className="p num">{h.probabilidadeChuvaPct >= 20 ? `${h.probabilidadeChuvaPct}%` : ""}</span>
-                <span className="t-head num">{h.temperaturaC == null ? "—" : `${Math.round(h.temperaturaC)}°`}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {dias.length > 0 && (
-        <section className="section stag" style={{ ["--i" as string]: 4 }} aria-label="Próximos dias">
-          <span className="t-label">Próximos dias</span>
-          <div className="surface">
-            {dias.map((d) => {
-              const ini = ((d.minC - minD) / Math.max(1, maxD - minD)) * 100, fim = ((d.maxC - minD) / Math.max(1, maxD - minD)) * 100;
-              return (
-                <div className="day" key={d.data} aria-label={`${diaSemana(d.data)}: ${d.descricao?.texto ?? ""}, mínima ${Math.round(d.minC)}, máxima ${Math.round(d.maxC)}, chance de chuva ${d.probabilidadeChuvaPct ?? "sem dado"}%`}>
-                  <span className="t-head">{diaSemana(d.data)}</span>
-                  <IconeTempo icone={d.descricao?.icone} />
-                  <span className="t-cap num" style={{ color: "var(--accent)", fontWeight: 600 }}>{d.probabilidadeChuvaPct >= 20 ? `${d.probabilidadeChuvaPct}%` : ""}</span>
-                  <span className="range" aria-hidden><i style={{ left: `${ini}%`, right: `${100 - fim}%`, ["--i" as string]: dias.indexOf(d) }} /></span>
-                  <span className="t-head num" style={{ textAlign: "right" }}>{Math.round(d.maxC)}°<span className="t-cap"> {Math.round(d.minC)}°</span></span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      <p className="t-meta" style={{ margin: "20px 4px 0" }}>
-        Previsão de modelo numérico (Open-Meteo, CC BY 4.0). Chuva medida: pluviômetros do Alerta Rio. <a href="/mais" style={{ textDecoration: "underline" }}>Sobre os dados</a>
-      </p>
-    </div>
-  );
+  return <TempoView tempo={tempo} chuva={chuva} local={local} />;
 }
 
-function Metrica({ Icone, rotulo, v, u }: { Icone: React.ElementType; rotulo: string; v: number | string | null | undefined; u: string }) {
-  return (
-    <div className="metric">
-      <div className="t-meta row" style={{ gap: 6 }}><Icone size={14} aria-hidden />{rotulo}</div>
-      <div className="v num">{v == null ? <span className="t-cap">Indisponível</span> : <>{v}<small>{u}</small></>}</div>
-    </div>
-  );
-}
