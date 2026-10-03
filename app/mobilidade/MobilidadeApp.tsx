@@ -177,12 +177,17 @@ export default function MobilidadeApp() {
   const prox: J | null = sentidoValido ? chegadas[0] ?? null : chegada?.calculado?.proxima ?? null;
   const ehBrt = ponto?.fonte === "brt" || lista.some((v) => v.fonte === "brt");
   const viagem = useMemo(() => viagemAte(ponto, sentidoValido, paradasLinha, desce), [ponto, sentidoValido, paradasLinha, desce]);
+  // espera no ponto de embarque: chegada do próximo ônibus ou, no terminal de origem, a próxima saída
   const saida = useMemo(() => ponto && linha ? proximaSaida(ponto, trajetoVisivel, todos, veiculos?.operacao) : null, [ponto, linha, trajetoVisivel, todos, veiculos]);
+  const esperaDest: number | null = prox ? prox.etaMin ?? null : saida?.proximaMin ?? null;
   const sel = lista.find((v) => v.id === veiculoSel) ?? null;
   // ritmo pelo GPS: progresso real do veículo ao longo do trajeto (s) entre leituras distintas, últimos 10 min
   const amostras = useRef<{ id: string; pts: { t: number; s: number }[] }>({ id: "", pts: [] });
   const falta = useMemo(() => {
-    const f = faltaDoTrajeto(sel, trajetoVisivel);
+    // destino: a estação de descida escolhida (se estiver à frente do veículo) ou o fim do trajeto
+    const tp = sel && desce ? (paradasLinha?.trajetos as J[] | undefined)?.find((t) => t.shapeId === sel.shapeId) : null;
+    const pd = tp ? (tp.paradas as J[]).find((p) => p.id === desce) : null;
+    const f = faltaDoTrajeto(sel, trajetoVisivel, pd ? { s: pd.s, nome: pd.nome } : null);
     if (!f || !sel) return f;
     const a = amostras.current;
     if (a.id !== sel.id) { a.id = sel.id; a.pts = []; }
@@ -195,7 +200,7 @@ export default function MobilidadeApp() {
     let etaGpsMin = dt >= 120 && kmh >= 8 && kmh <= 80 ? (f.restM / (ds / dt)) / 60 : null;
     if (etaGpsMin != null && f.etaProgMin != null && (etaGpsMin > f.etaProgMin * 2 || etaGpsMin < f.etaProgMin * 0.5)) etaGpsMin = null;
     return { ...f, etaGpsMin };
-  }, [sel, trajetoVisivel]);
+  }, [sel, trajetoVisivel, desce, paradasLinha]);
 
   // Contexto de clima: chuva prevista perto do ponto nas próximas 2 h (previsão Open-Meteo).
   const avisoChuva = useMemo(() => {
@@ -236,14 +241,16 @@ export default function MobilidadeApp() {
     <div style={{ padding: "0 20px 14px" }}>
       <div className="row" style={{ alignItems: "flex-end" }}>
         <div style={{ minWidth: 0, flex: 1 }}>
-          {!chegada ? <Skel h={48} w={140} /> : prox ? (
+          {!chegada ? <Skel h={48} w={140} /> : esperaDest != null && viagem?.escolhida ? (
+            <div className="eta appear" aria-live="polite"><span className="n num"><NumeroRolante valor={eta(esperaDest + viagem.escolhida.min)} /></span><span className="u">min</span></div>
+          ) : prox ? (
             <div className="eta appear" aria-live="polite"><span className="n num"><NumeroRolante valor={eta(prox.etaMin)} /></span><span className="u">min</span></div>
           ) : saida?.proximaMin != null ? (
             <div className="eta appear" aria-live="polite"><span className="n num"><NumeroRolante valor={Math.max(0, Math.round(saida.proximaMin))} /></span><span className="u">min</span></div>
           ) : saida?.intervaloMin != null ? (
             <div className="t-title" aria-live="polite">Sai a cada ~{Math.round(saida.intervaloMin)} min</div>
           ) : <div className="t-title" aria-live="polite">Sem estimativa agora</div>}
-          <div className="t-cap" style={{ marginTop: 4 }}>{sentidoValido ? <b style={{ fontWeight: 600, color: "var(--text)" }}>→ {sentidoValido} · </b> : null}{prox ? `Chegada estimada em ${ponto.nome}${viagem?.escolhida ? ` · em ${viagem.escolhida.nome} às ~${horaChegada((prox.etaMin ?? 0) + viagem.escolhida.min)}` : ""}` : saida ? textoSaida(saida, ponto.nome) : `Nenhum veículo ${sentidoValido ? "neste sentido" : "da linha"} se aproximando de ${ponto.nome}`}</div>
+          <div className="t-cap" style={{ marginTop: 4 }}>{esperaDest != null && viagem?.escolhida ? <><b style={{ fontWeight: 600, color: "var(--text)" }}>Até {viagem.escolhida.nome}</b> · chega ~{horaChegada(esperaDest + viagem.escolhida.min)} · ônibus em {eta(esperaDest)} min em {ponto.nome}</> : <>{sentidoValido ? <b style={{ fontWeight: 600, color: "var(--text)" }}>→ {sentidoValido} · </b> : null}{prox ? `Chegada estimada em ${ponto.nome}${viagem?.escolhida ? ` · em ${viagem.escolhida.nome} às ~${horaChegada((prox.etaMin ?? 0) + viagem.escolhida.min)}` : ""}` : saida ? textoSaida(saida, ponto.nome) : `Nenhum veículo ${sentidoValido ? "neste sentido" : "da linha"} se aproximando de ${ponto.nome}`}</>}</div>
         </div>
         <span className={`line-badge lg${ehBrt ? " brt" : ""}`} aria-label={`Linha ${linha}`}>{linha}</span>
       </div>
@@ -678,16 +685,18 @@ function Operacao({ op, sentido }: { op: J; sentido: string | null }) {
 
 interface Falta { km: number; pct: number; destino: string; s: number; restM: number; etaProgMin: number | null; etaGpsMin?: number | null }
 /** Calculado: quanto falta do trajeto oficial até o fim da viagem (só para veículo casado ao trajeto). */
-function faltaDoTrajeto(v: J | null, trajetos: Trajeto[] | null | undefined): Falta | null {
+function faltaDoTrajeto(v: J | null, trajetos: Trajeto[] | null | undefined, alvo?: { s: number; nome: string } | null): Falta | null {
   if (!v || (v.routeState !== "ON_ROUTE" && v.routeState !== "UNCERTAIN")) return null;
   const t = (trajetos ?? []).find((x) => x.shapeId && x.shapeId === v.shapeId);
   if (!t) return null;
   const acc = acumulado(t.coords), e = projetar(v.lat, v.lng, t.coords, acc);
   if (!e) return null;
-  const total = acc[acc.length - 1], restM = total - e.s;
+  const total = acc[acc.length - 1];
+  const ate = alvo && alvo.s > e.s ? alvo : null; // estação de descida ainda à frente
+  const restM = (ate ? ate.s : total) - e.s;
   // ritmo programado: duração da viagem no GTFS distribuída ao longo do shape
   const etaProgMin = t.duracaoProgramadaS ? (restM / total) * t.duracaoProgramadaS / 60 : null;
-  return { km: restM / 1000, pct: e.s / total, destino: t.destino, s: e.s, restM, etaProgMin };
+  return { km: restM / 1000, pct: e.s / (ate ? ate.s : total), destino: ate ? ate.nome : t.destino, s: e.s, restM, etaProgMin };
 }
 
 /** Mostrador do acompanhamento: número da linha no centro, anel que esvazia até o destino final; bolinha × para parar. */
