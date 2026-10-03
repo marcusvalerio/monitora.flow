@@ -41,6 +41,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
   ultimos.current = { ponto, veiculos, veiculoSel, eu, pad, onVeiculo, onEstacao, debug, seguir, onSoltar };
   // rastro do veículo acompanhado: só posições REAIS recebidas do GPS desde que o acompanhamento começou
   const rastro = useRef<{ id: string | null; pts: [number, number][] }>({ id: null, pts: [] });
+  const seguirDesde = useRef(0); // durante a aproximação inicial a câmera não é puxada quadro a quadro
   const enquadrado = useRef("");
   // trajeto oficial (GTFS) da linha acompanhada, com comprimentos acumulados para encaixe/animação
   const rota = useRef<{ chave: string; t: TrajetoAcc[] }>({ chave: "", t: [] });
@@ -114,7 +115,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
     desenharRastro();
     if (!map || !seguir || !veiculoSel) return;
     const it = frota.current.get(veiculoSel);
-    if (it) { rastro.current.pts.push([it.lng, it.lat]); map.easeTo({ center: [it.vis.lng, it.vis.lat], zoom: Math.max(map.getZoom(), 15.5), ...camera(900) }); }
+    if (it) { rastro.current.pts.push([it.lng, it.lat]); seguirDesde.current = performance.now() + 950; map.easeTo({ center: [it.vis.lng, it.vis.lat], zoom: Math.max(map.getZoom(), 15.5), ...camera(900) }); }
     const soltar = (e: { originalEvent?: unknown }) => { if (e.originalEvent) ultimos.current.onSoltar?.(); };
     map.on("dragstart", soltar);
     return () => { map.off("dragstart", soltar); };
@@ -200,7 +201,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
 
   function seguirSe(item: ItemVeiculo) {
     const u = ultimos.current, map = mapa.current;
-    if (!map || !u.seguir || !u.veiculoSel || frota.current.get(u.veiculoSel) !== item || map.isMoving()) return;
+    if (!map || !u.seguir || !u.veiculoSel || frota.current.get(u.veiculoSel) !== item || performance.now() < seguirDesde.current) return;
     map.setCenter([item.vis.lng, item.vis.lat]);
   }
 
@@ -286,7 +287,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
         el.tabIndex = 0; el.setAttribute("role", "button");
         el.addEventListener("click", (ev) => { ev.stopPropagation(); ultimos.current.onVeiculo(v.id); });
         el.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); ultimos.current.onVeiculo(v.id); } });
-        const marker = new m.Marker({ element: el }).setLngLat([v.lng, v.lat]).addTo(map);
+        const marker = new m.Marker({ element: el, subpixelPositioning: true }).setLngLat([v.lng, v.lat]).addTo(map);
         it = { marker, el, anel: el.querySelector("svg") as SVGSVGElement, lat: v.lat, lng: v.lng, vis: { lat: v.lat, lng: v.lng, s: enc?.s }, recebidoEm: performance.now(),
           angulo: null, enc: enc ? { trajeto: enc.trajeto, s: enc.s } : null };
         frota.current.set(v.id, it);

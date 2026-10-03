@@ -565,15 +565,21 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 }
 
 /* ---------- 12. acompanhar veículo + operação da linha ---------- */
-.seguindo { position: absolute; z-index: 6; left: 50%; top: calc(var(--safe-t) + 74px); transform: translateX(-50%); display: flex; align-items: center; gap: 10px;
-  padding: 6px 6px 6px 14px; border-radius: 999px; background: var(--ink); color: var(--porcelain); font: 500 13.5px var(--font-ui); white-space: nowrap;
-  box-shadow: 0 10px 24px -10px rgba(8, 10, 16, .5); }
-.seguindo b { font-weight: 600; }
-.seguindo button { border: 0; border-radius: 999px; padding: 7px 12px; background: rgba(255,255,255,.14); color: inherit; font: 600 12.5px var(--font-ui); cursor: pointer; }
-.seguindo .pulso { width: 8px; height: 8px; border-radius: 50%; background: var(--periwinkle); box-shadow: 0 0 0 0 rgba(137,151,245,.7); animation: pulsoSeg 1.6s ease-out infinite; }
-@keyframes pulsoSeg { to { box-shadow: 0 0 0 10px rgba(137,151,245,0); } }
-@media (prefers-color-scheme: dark) { .seguindo { background: var(--porcelain); color: var(--ink); } .seguindo button { background: rgba(17,19,24,.08); } }
-@media (min-width: 960px) { .seguindo { left: calc(50% + 208px); top: 90px; } }
+.dial-seg { position: absolute; z-index: 6; right: 16px; top: calc(var(--safe-t) + 104px); width: 72px; height: 72px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--surface); box-shadow: 0 10px 26px -10px rgba(8, 10, 16, .45), 0 0 0 1px var(--hairline); }
+.dial-seg svg { position: absolute; inset: 4px; width: 64px; height: 64px; transform: rotate(-90deg); }
+.dial-seg .trilha { fill: none; stroke: var(--surface-2); stroke-width: 5; }
+.dial-seg .resta { fill: none; stroke: var(--ultramarine); stroke-width: 5; stroke-linecap: round; transition: stroke-dashoffset 1.2s var(--ease-out); }
+.dial-seg b { font: 600 20px/1 var(--font-num); letter-spacing: -.03em; margin-top: -6px; }
+.dial-seg .km { position: absolute; bottom: 15px; font: 600 9.5px var(--font-num); color: var(--text-2); }
+.dial-seg .parar { position: absolute; top: -4px; right: -4px; width: 24px; height: 24px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center;
+  background: var(--ink); color: var(--porcelain); cursor: pointer; box-shadow: 0 0 0 2px var(--surface); }
+.dial-seg .parar svg { position: static; width: 13px; height: 13px; transform: none; }
+.dial-seg::before { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--periwinkle); opacity: 0; animation: pulsoDial 2.4s ease-out infinite; }
+@keyframes pulsoDial { 0% { transform: scale(.92); opacity: .6; } 100% { transform: scale(1.12); opacity: 0; } }
+@media (prefers-color-scheme: dark) { .dial-seg .parar { background: var(--porcelain); color: var(--ink); } }
+@media (min-width: 960px) { .dial-seg { top: 90px; } }
+@media (prefers-reduced-motion: reduce) { .dial-seg::before { animation: none; } }
 
 .viagem { margin-top: 14px; display: grid; gap: 6px; }
 .viagem-barra { position: relative; height: 6px; border-radius: 3px; background: var(--surface-2); }

@@ -22,38 +22,47 @@ const rotuloTipo = (p: Ponto & { status?: string }) => p.status === "planejada" 
 const IconePonto = ({ p }: { p: Pick<Ponto, "tipo"> }) => (p.tipo === "terminal" ? <Warehouse aria-hidden /> : p.tipo === "estacao" ? <TrainFront aria-hidden /> : <BusFront aria-hidden />);
 const eta = (min: number) => Math.max(1, Math.round(min));
 
+/** Memória da tela enquanto o app está aberto (sobrevive à troca de aba; recarregar a página volta ao que foi gravado no aparelho). */
+const M: Partial<{ ponto: Ponto | null; linha: string | null; nivel: 0 | 1 | 2; info: J | null; chegada: J | null; veiculos: J | null; veiculoSel: string | null;
+  seguindo: boolean; trajeto: Trajeto[] | null; sentido: string | null; modoLinha: "BRT" | "BUS" | null; linhaSemPonto: boolean; salvo: boolean; trajetoDe: string }> = {};
+const K_MODO = "monitora:mob:modo";
+
 export default function MobilidadeApp() {
-  const [ponto, setPonto] = useState<Ponto | null>(null);
-  const [linha, setLinha] = useState<string | null>(null);
+  const [jaRestaurado] = useState(() => !!M.salvo);
+  const [ponto, setPonto] = useState<Ponto | null>(() => M.ponto ?? null);
+  const [linha, setLinha] = useState<string | null>(() => M.linha ?? null);
   const [buscando, setBuscando] = useState(false);
-  const [nivel, setNivel] = useState<0 | 1 | 2>(1);
+  const [nivel, setNivel] = useState<0 | 1 | 2>(() => M.nivel ?? 1);
   const [padB, setPadB] = useState(0);
   const [eu, setEu] = useState<{ lat: number; lng: number } | null>(null);
   const [perto, setPerto] = useState<J | null>(null);
-  const [info, setInfo] = useState<J | null>(null);
-  const [chegada, setChegada] = useState<J | null>(null);
-  const [veiculos, setVeiculos] = useState<J | null>(null);
-  const [veiculoSel, setVeiculoSelS] = useState<string | null>(null);
-  const [seguindo, setSeguindo] = useState(false);
+  const [info, setInfo] = useState<J | null>(() => M.info ?? null);
+  const [chegada, setChegada] = useState<J | null>(() => M.chegada ?? null);
+  const [veiculos, setVeiculos] = useState<J | null>(() => M.veiculos ?? null);
+  const [veiculoSel, setVeiculoSelS] = useState<string | null>(() => M.veiculoSel ?? null);
+  const [seguindo, setSeguindo] = useState(() => M.seguindo ?? false);
   const setVeiculoSel = (id: string | null) => { setVeiculoSelS(id); setSeguindo(false); };
   const [clima, setClima] = useState<J | null>(null);
   const [rua, setRua] = useState<J | null>(null);
-  const [trajeto, setTrajeto] = useState<Trajeto[] | null>(null);
+  const [trajeto, setTrajeto] = useState<Trajeto[] | null>(() => M.trajeto ?? null);
   // sentido escolhido = destino do trajeto oficial (trip_headsign do GTFS); null = todos
-  const [sentido, setSentidoS] = useState<string | null>(null);
+  const [sentido, setSentidoS] = useState<string | null>(() => M.sentido ?? null);
   // modo da linha acompanhada (vem do catálogo, via busca/estação): BRT ou BUS; null = o servidor decide pelo catálogo
-  const [modoLinha, setModoLinha] = useState<"BRT" | "BUS" | null>(null);
+  const [modoLinha, setModoLinha] = useState<"BRT" | "BUS" | null>(() => M.modoLinha ?? null);
   const setSentido = (s: string | null) => { setSentidoS(s); gravar(K_SENTIDO, s); setVeiculoSel(null); };
+  useEffect(() => { gravar(K_MODO, modoLinha); }, [modoLinha]);
   const [, tique] = useState(0);
   const desktop = useRef(false);
   // Diagnóstico: ?debug=1 (qualquer ambiente) ou desenvolvimento local
   const [debug, setDebug] = useState(false);
   useEffect(() => { setDebug(process.env.NODE_ENV !== "production" || new URLSearchParams(location.search).get("debug") === "1"); }, []);
-  const linhaSemPonto = useRef(false);
+  const linhaSemPonto = useRef(M.linhaSemPonto ?? false);
+  // continuidade entre abas: o estado vive na memória do app enquanto ele está aberto (trocar para Clima e voltar não zera nada)
+  Object.assign(M, { ponto, linha, nivel, info, chegada, veiculos, veiculoSel, seguindo, trajeto, sentido, modoLinha, linhaSemPonto: linhaSemPonto.current, salvo: true });
 
   useEffect(() => {
     desktop.current = window.matchMedia("(min-width: 960px)").matches;
-    setPonto(ler<Ponto | null>(K_PONTO, null)); setLinha(ler<string | null>(K_LINHA, null)); setSentidoS(ler<string | null>(K_SENTIDO, null));
+    if (!jaRestaurado) { setPonto(ler<Ponto | null>(K_PONTO, null)); setLinha(ler<string | null>(K_LINHA, null)); setSentidoS(ler<string | null>(K_SENTIDO, null)); setModoLinha(ler<"BRT" | "BUS" | null>(K_MODO, null)); }
     const t = setInterval(() => tique((x) => x + 1), 5000);
     return () => clearInterval(t);
   }, []);
@@ -92,10 +101,11 @@ export default function MobilidadeApp() {
 
   // trajeto oficial da linha (GTFS; hoje só BRT)
   useEffect(() => {
-    setTrajeto(null);
+    const k = `${linha}|${modoLinha}`;
+    if (M.trajetoDe !== k) setTrajeto(null); // voltando de outra aba com a mesma linha: mantém o desenho enquanto atualiza
     if (!linha) return;
     let vivo = true;
-    get(`/linhas/${encodeURIComponent(linha)}/trajeto${modoLinha ? `?modo=${modoLinha}` : ""}`).then((r) => { if (vivo && r.trajetos?.length) setTrajeto(r.trajetos); });
+    get(`/linhas/${encodeURIComponent(linha)}/trajeto${modoLinha ? `?modo=${modoLinha}` : ""}`).then((r) => { if (vivo && r.trajetos?.length) { setTrajeto(r.trajetos); M.trajetoDe = k; } });
     return () => { vivo = false; };
   }, [linha, modoLinha]);
 
@@ -143,6 +153,7 @@ export default function MobilidadeApp() {
   const prox: J | null = sentidoValido ? chegadas[0] ?? null : chegada?.calculado?.proxima ?? null;
   const ehBrt = ponto?.fonte === "brt" || lista.some((v) => v.fonte === "brt");
   const sel = lista.find((v) => v.id === veiculoSel) ?? null;
+  const falta = useMemo(() => faltaDoTrajeto(sel, trajetoVisivel), [sel, trajetoVisivel]);
 
   // Contexto de clima: chuva prevista perto do ponto nas próximas 2 h (previsão Open-Meteo).
   const avisoChuva = useMemo(() => {
@@ -204,13 +215,7 @@ export default function MobilidadeApp() {
         enquadrarChave={`${ponto?.id ?? ""}|${linha ?? ""}`}
         seguir={seguindo && !!sel} onSoltar={() => setSeguindo(false)} />
 
-      {seguindo && sel && (
-        <div className="seguindo appear" role="status">
-          <span className="pulso" aria-hidden />
-          <span>Acompanhando <b className="num">{sel.linha}</b> · veículo {sel.veiculo}</span>
-          <button onClick={() => setSeguindo(false)}>Parar</button>
-        </div>
-      )}
+      {seguindo && sel && <DialSeguindo v={sel} falta={falta} onParar={() => setSeguindo(false)} />}
 
       <div className="map-top">
         <button className="map-search" onClick={() => setBuscando(true)} aria-label="Pesquisar estação, terminal ou linha">
@@ -220,7 +225,7 @@ export default function MobilidadeApp() {
       </div>
 
       <BottomSheet resumo={ponto && linha ? 190 : 150} nivel={nivel} setNivel={setNivel} onAltura={setPadB} cabecalho={cabecalho}>
-        {sel && <VeiculoCard v={sel} ponto={ponto} chegada={chegada} trajetos={trajetoVisivel} seguindo={seguindo} onSeguir={() => { setSeguindo((x) => !x); setNivel(0); }} onFechar={() => setVeiculoSel(null)} />}
+        {sel && <VeiculoCard v={sel} ponto={ponto} chegada={chegada} falta={falta} seguindo={seguindo} onSeguir={() => { setSeguindo((x) => !x); setNivel(0); }} onFechar={() => setVeiculoSel(null)} />}
         {sel && debug && <PainelDebug v={sel} />}
 
         {!ponto && linha && (
@@ -437,15 +442,8 @@ function PainelDebug({ v }: { v: J }) {
   );
 }
 
-function VeiculoCard({ v, ponto, chegada, trajetos, seguindo, onSeguir, onFechar }: { v: J; ponto: Ponto | null; chegada: J | null; trajetos: Trajeto[] | null | undefined; seguindo: boolean; onSeguir: () => void; onFechar: () => void }) {
+function VeiculoCard({ v, ponto, chegada, falta, seguindo, onSeguir, onFechar }: { v: J; ponto: Ponto | null; chegada: J | null; falta: Falta | null; seguindo: boolean; onSeguir: () => void; onFechar: () => void }) {
   const c = (chegada?.calculado?.chegadas ?? []).find((x: J) => `${x.fonte}:${x.veiculo}` === v.id);
-  // calculado: quanto falta do trajeto oficial até o fim da viagem (só para veículo casado ao trajeto)
-  const falta = useMemo(() => {
-    const t = (trajetos ?? []).find((x) => x.shapeId && x.shapeId === v.shapeId);
-    if (!t || (v.routeState !== "ON_ROUTE" && v.routeState !== "UNCERTAIN")) return null;
-    const acc = acumulado(t.coords), e = projetar(v.lat, v.lng, t.coords, acc);
-    return e ? { km: (acc[acc.length - 1] - e.s) / 1000, pct: e.s / acc[acc.length - 1], destino: t.destino } : null;
-  }, [trajetos, v.shapeId, v.lat, v.lng, v.routeState]);
   return (
     <div className="surface appear" style={{ padding: 16, marginBottom: 16 }} role="dialog" aria-label={`Veículo da linha ${v.linha}`}>
       <div className="row">
@@ -608,5 +606,31 @@ function Operacao({ op, sentido }: { op: J; sentido: string | null }) {
       })}
       <p className="t-meta" style={{ marginTop: 6 }}>Programado: GTFS da SMTR (frequencies.txt). Rodando: veículos com GPS casados ao trajeto oficial agora — garagem e sem sinal não contam.</p>
     </section>
+  );
+}
+
+interface Falta { km: number; pct: number; destino: string }
+/** Calculado: quanto falta do trajeto oficial até o fim da viagem (só para veículo casado ao trajeto). */
+function faltaDoTrajeto(v: J | null, trajetos: Trajeto[] | null | undefined): Falta | null {
+  if (!v || (v.routeState !== "ON_ROUTE" && v.routeState !== "UNCERTAIN")) return null;
+  const t = (trajetos ?? []).find((x) => x.shapeId && x.shapeId === v.shapeId);
+  if (!t) return null;
+  const acc = acumulado(t.coords), e = projetar(v.lat, v.lng, t.coords, acc);
+  return e ? { km: (acc[acc.length - 1] - e.s) / 1000, pct: e.s / acc[acc.length - 1], destino: t.destino } : null;
+}
+
+/** Mostrador do acompanhamento: número da linha no centro, anel que esvazia até o destino final; bolinha × para parar. */
+function DialSeguindo({ v, falta, onParar }: { v: J; falta: Falta | null; onParar: () => void }) {
+  const R = 25, C = 2 * Math.PI * R, resta = falta ? 1 - falta.pct : null;
+  return (
+    <div className="dial-seg appear" role="status" aria-label={`Acompanhando linha ${v.linha}, veículo ${v.veiculo}${falta ? `; faltam ${dec1(falta.km)} km até ${falta.destino}` : ""}`}>
+      <svg viewBox="0 0 64 64" aria-hidden>
+        <circle cx="32" cy="32" r={R} className="trilha" />
+        {resta != null && <circle cx="32" cy="32" r={R} className="resta" strokeDasharray={C} strokeDashoffset={C * (1 - resta)} />}
+      </svg>
+      <b className="num">{v.linha}</b>
+      {falta && <span className="km num">{dec1(falta.km)} km</span>}
+      <button className="parar" onClick={onParar} aria-label="Parar de acompanhar"><X aria-hidden /></button>
+    </div>
   );
 }
