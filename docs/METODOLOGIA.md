@@ -197,3 +197,19 @@ FONTE EXTERNA: Open-Meteo (modelo numérico). Repassamos condição atual (tempe
 - Linha Vermelha: quase sem ônibus municipais no teste — tende a "sem dado".
 - O agendador do GitHub Actions pode atrasar ou pular execuções; os buracos aparecem como buckets ausentes.
 - O "habitual" só fica significativo depois de algumas semanas de coleta.
+
+## GTFS-Realtime, hodômetro e intervalo real (03/10/2026)
+
+- **Viagem oficial do BRT (FONTE EXTERNA):** `https://dados.mobilidade.rio/gtfs/realtime` (VehiclePositions, protobuf) traz `trip_id`
+  para parte da frota do BRT (≈45–60 veículos de madrugada; cobertura no pico ainda a medir). Quando o veículo está no feed e o
+  `trip_id` existe no GTFS estático e é da linha consultada, o casamento usa o shape exato da viagem (`associacao: "viagem"`);
+  senão segue o casamento por destino (`trajeto` ↔ `trip_headsign`). Decodificador próprio em `src/lib/gtfsrt.ts`; a placa
+  (`license_plate`) nunca é lida.
+- **Estações restantes:** pela sequência oficial de `stop_times` da viagem (`src/data/brt-viagens.json`, `npm run brt:viagens`),
+  com o tempo PROGRAMADO entre paradas a partir da posição atual (interpolada entre a parada anterior e a próxima). CALCULADO.
+- **Hodômetro do BRT (OBSERVADO):** campo `hodometro`, em km. No app, o ritmo do veículo acompanhado usa Δhodômetro/Δtempo; uma
+  posição que salta muito mais que o hodômetro andou (> 1,6× + 300 m) é descartada como salto de GPS. EXPERIMENTAL / ESCOLHA DO SISTEMA.
+- **Intervalo real × programado:** mediana das distâncias entre veículos consecutivos do mesmo trajeto ÷ ritmo programado
+  (comprimento ÷ duração da viagem no GTFS). Comparado com `frequencies.txt`. CALCULADO / EXPERIMENTAL.
+- **Sem sinal:** ônibus (SPPO) após 60 s sem posição (latência mediana 10 s, pings ~30 s); BRT após 90 s.
+- `capacidadePeVeiculo` / `capacidadeSentadoVeiculo` vêm sempre 0 → não usados.

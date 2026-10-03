@@ -5,11 +5,13 @@ import { normalizarFrota } from "../../../../src/lib/veiculo";
 import { linhaBrt, modoDaLinha, CATALOGO_BRT, type TransportMode } from "../../../../src/lib/brt";
 import { casarVeiculo, diagnostico, ROUTE_MATCHING_TOLERANCE_METERS, ROUTE_OFF_THRESHOLD_METERS, HEADING_TOLERANCE_DEG, STALE_AFTER_S } from "../../../../src/lib/matching";
 import { acumulado, projetar } from "../../../../src/lib/trajeto";
-import { programacao, FONTE_FREQUENCIAS } from "../../../../src/lib/frequencia";
+import { programacao, FONTE_FREQUENCIAS, duracaoProgramadaS } from "../../../../src/lib/frequencia";
 import { trajetosDaLinha } from "../../../../src/lib/catalogo";
 import { CATALOGO_ONIBUS } from "../../../../src/lib/onibus";
 import { PARAMETROS } from "../../../../src/lib/parametros";
 import { ok, tratar, ErroParametro } from "../../../../src/lib/api";
+import { lerGtfsRt, URL_GTFS_RT } from "../../../../src/lib/gtfsrt";
+import { viagemBrt, estacoesRestantes } from "../../../../src/lib/viagensBrt";
 
 export const dynamic = "force-dynamic";
 
@@ -33,17 +35,30 @@ export function GET(req: Request, ctx: { params: Promise<{ linha: string }> }) {
     const diag = u.searchParams.get("diag") === "1";
 
     const agora = new Date();
-    const [vivo, banco] = await Promise.all([
+    const [vivo, banco, rt] = await Promise.all([
       linhaAoVivo(linha),
       lerPosicoesLinha(linha, new Date(agora.getTime() - PARAMETROS.JANELA_LINHA_MIN * 60_000)).catch((): Leitura[] => []),
+      modo === "BRT" ? lerGtfsRt() : Promise.resolve(null),
     ]);
+    // GTFS-Realtime: viagem oficial (trip_id) de cada BRT, quando o feed traz o veículo e a viagem é desta linha
+    const rtPorVeiculo = new Map((rt?.posicoes ?? []).map((p) => [p.veiculo, p]));
     const leituras = banco.concat(vivo.leituras).filter((l) => modoDaLinha(l.linha, l.fonte) === modo);
     const trajetos = trajetosDaLinha(linha, modo).map((t) => ({ ...t, acc: acumulado(t.coords) }));
 
-    const frota = normalizarFrota(leituras, agora).sort((a, b) => a.idadeS - b.idadeS).map((v) => {
+    const frota = normalizarFrota(leituras, agora).sort((a, b) => a.idadeS - b.idadeS).map((v0) => {
+      const p = modo === "BRT" ? rtPorVeiculo.get(v0.veiculo) : undefined;
+      const vg = p ? viagemBrt(p.tripId) : null;
+      const daLinha = vg && vg.linha === linha && trajetos.some((t) => t.shapeId === vg.shapeId) ? vg : null;
+      const v = daLinha ? { ...v0, tripId: daLinha.tripId, shapeIdGps: daLinha.shapeId } : v0;
       const c = casarVeiculo(v, trajetos);
+      const tr = daLinha && c.routeState !== "OFF_ROUTE" && c.routeState !== "STALE" ? trajetos.find((t) => t.shapeId === daLinha.shapeId) : null;
+      const viagem = daLinha ? {
+        fonte: "GTFS-Realtime", tripId: daLinha.tripId, inicio: p!.startTime, sentido: daLinha.sentido,
+        // estações à frente pela sequência oficial de paradas (stop_times), com o tempo programado restante
+        proximas: tr ? estacoesRestantes(daLinha, tr.coords, v.lat, v.lng) : null,
+      } : null;
       if (diag || process.env.NODE_ENV !== "production") console.info(`[matching] ${diagnostico(v.veiculo, linha, c)}`);
-      return { ...v, modo, ...c, ...(diag ? { diagnostico: diagnostico(v.veiculo, linha, c) } : {}) };
+      return { ...v, modo, ...c, viagem, ...(diag ? { diagnostico: diagnostico(v.veiculo, linha, c) } : {}) };
     });
     const conta = (s: string) => frota.filter((v) => v.routeState === s).length;
 
@@ -59,15 +74,18 @@ export function GET(req: Request, ctx: { params: Promise<{ linha: string }> }) {
         const p = prog?.sentidos.find((x) => x.sentido === sid) ?? null;
         const tsDoSentido = trajetos.filter((t) => t.sentido === sid);
         const rodando = frota.filter((v) => (v.routeState === "ON_ROUTE" || v.routeState === "UNCERTAIN") && tsDoSentido.some((t) => t.shapeId === v.shapeId));
-        const gaps: number[] = [];
+        const gaps: number[] = [], gapsMin: number[] = [];
         for (const t of tsDoSentido) {
           const ss = rodando.filter((v) => v.shapeId === t.shapeId).map((v) => projetar(v.lat, v.lng, t.coords, t.acc)?.s).filter((x): x is number => x != null).sort((a, b) => a - b);
-          for (let i = 1; i < ss.length; i++) gaps.push(ss[i] - ss[i - 1]);
+          // intervalo real ≈ distância entre veículos consecutivos ÷ ritmo programado do trajeto (comprimento ÷ duração, GTFS)
+          const dur = duracaoProgramadaS(t.shapeId), total = t.acc[t.acc.length - 1];
+          for (let i = 1; i < ss.length; i++) { gaps.push(ss[i] - ss[i - 1]); if (dur && total) gapsMin.push(((ss[i] - ss[i - 1]) / total) * dur / 60); }
         }
+        const mediana = (xs: number[]) => { if (!xs.length) return null; const o = [...xs].sort((a, b) => a - b); return o[Math.floor(o.length / 2)]; };
         return {
           sentido: sid, destino: tsDoSentido[0]?.destino ?? p?.destino ?? null,
           programado: p ? { intervaloS: p.intervaloS, partidasPorHora: p.partidasPorHora, faixa: p.faixa, perfil: p.perfil } : null,
-          observado: { rodando: rodando.length, espacamentoMedioKm: gaps.length ? Math.round((gaps.reduce((a, b) => a + b, 0) / gaps.length) / 100) / 10 : null },
+          observado: { rodando: rodando.length, intervaloRealMin: gapsMin.length ? Math.round(mediana(gapsMin)! * 10) / 10 : null, espacamentoMedioKm: gaps.length ? Math.round((gaps.reduce((a, b) => a + b, 0) / gaps.length) / 100) / 10 : null },
         };
       }),
     } : undefined;
@@ -85,6 +103,7 @@ export function GET(req: Request, ctx: { params: Promise<{ linha: string }> }) {
         resumo: { ON_ROUTE: conta("ON_ROUTE"), UNCERTAIN: conta("UNCERTAIN"), OFF_ROUTE: conta("OFF_ROUTE"), STALE: conta("STALE") },
       } : {}),
       operacao,
+      gtfsRealtime: modo === "BRT" ? { fonte: URL_GTFS_RT, em: rt?.em ?? null, veiculosNoFeed: rt?.posicoes.length ?? 0, comViagemDaLinha: frota.filter((v) => v.viagem).length } : undefined,
       observado: frota,
     }, undefined, 5);
   });
