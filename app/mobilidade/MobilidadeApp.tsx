@@ -173,8 +173,12 @@ export default function MobilidadeApp() {
 
   // chegadas do sentido escolhido (a estimativa é por veículo; filtramos pelos veículos do sentido)
   const idsSentido = new Set(lista.map((v) => v.id));
-  const chegadas: J[] = (chegada?.calculado?.chegadas ?? []).filter((c: J) => !sentidoValido || idsSentido.has(`${c.fonte}:${c.veiculo}`));
-  const prox: J | null = sentidoValido ? chegadas[0] ?? null : chegada?.calculado?.proxima ?? null;
+  const chegadasLinhaReta: J[] = (chegada?.calculado?.chegadas ?? []).filter((c: J) => !sentidoValido || idsSentido.has(`${c.fonte}:${c.veiculo}`));
+  // Chegada pelo TRAJETO (não depende de o veículo estar andando na hora): todo veículo do sentido, casado ao trajeto
+  // oficial e ainda ANTES da estação, entra com o tempo programado do trecho; com viagem oficial (GTFS-Realtime),
+  // usa a sequência de paradas. A estimativa em linha reta da /chegada fica só para quem não tem trajeto.
+  const chegadas: J[] = useMemo(() => mesclarChegadas(ponto, lista, trajetoVisivel, chegadasLinhaReta), [ponto, lista, trajetoVisivel, chegada]); // eslint-disable-line react-hooks/exhaustive-deps
+  const prox: J | null = chegadas[0] ?? null;
   const ehBrt = ponto?.fonte === "brt" || lista.some((v) => v.fonte === "brt");
   const viagem = useMemo(() => viagemAte(ponto, sentidoValido, paradasLinha, desce), [ponto, sentidoValido, paradasLinha, desce]);
   // espera no ponto de embarque: chegada do próximo ônibus ou, no terminal de origem, a próxima saída
@@ -821,4 +825,27 @@ function Destino({ v, valor, onChange, espera }: { v: Viagem; valor: string | nu
       {e && <p className="t-meta" style={{ margin: "6px 2px 0" }}>Viagem no ritmo programado da linha (GTFS){espera == null ? "; sem estimativa de espera agora" : ""}.</p>}
     </div>
   );
+}
+
+/** Chegadas na estação: pelo trajeto oficial (preferido) + linha reta (/chegada) para quem ficar de fora; ordenadas. */
+function mesclarChegadas(ponto: Ponto | null, frota: J[], trajetos: Trajeto[] | null | undefined, linhaReta: J[]): J[] {
+  if (!ponto) return linhaReta;
+  const porId = new Map<string, J>(), avaliados = new Set<string>();
+  for (const v of frota) {
+    if (v.routeState !== "ON_ROUTE" && v.routeState !== "UNCERTAIN") continue;
+    // 1) viagem oficial: a estação está na lista de próximas paradas
+    const naSeq = (v.viagem?.proximas as J[] | undefined)?.find((p) => p.estacao === ponto.id || p.nome === ponto.nome);
+    if (naSeq) { avaliados.add(v.id); porId.set(v.id, { fonte: v.fonte, veiculo: v.veiculo, etaMin: naSeq.min, ultimaLeitura: v.em, metodo: "paradas" }); continue; }
+    // 2) trajeto oficial no ritmo programado
+    const t = (trajetos ?? []).find((x) => x.shapeId && x.shapeId === v.shapeId);
+    if (!t?.duracaoProgramadaS) continue;
+    const acc = acumulado(t.coords), total = acc[acc.length - 1];
+    const est = projetar(ponto.lat, ponto.lng, t.coords, acc), eu = projetar(v.lat, v.lng, t.coords, acc);
+    if (!est || !eu || est.distM > 300) continue; // estação fora deste trajeto
+    avaliados.add(v.id);
+    if (eu.s > est.s + 50) continue; // já passou da estação
+    porId.set(v.id, { fonte: v.fonte, veiculo: v.veiculo, etaMin: ((est.s - eu.s) / total) * t.duracaoProgramadaS / 60, ultimaLeitura: v.em, distanciaM: Math.round(est.s - eu.s), metodo: "trajeto" });
+  }
+  for (const c of linhaReta) { const id = `${c.fonte}:${c.veiculo}`; if (!porId.has(id) && !avaliados.has(id)) porId.set(id, { ...c, metodo: "linha-reta" }); }
+  return [...porId.values()].filter((c) => c.etaMin != null).sort((a, b) => a.etaMin - b.etaMin);
 }
