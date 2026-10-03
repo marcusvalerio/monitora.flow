@@ -22,38 +22,47 @@ const rotuloTipo = (p: Ponto & { status?: string }) => p.status === "planejada" 
 const IconePonto = ({ p }: { p: Pick<Ponto, "tipo"> }) => (p.tipo === "terminal" ? <Warehouse aria-hidden /> : p.tipo === "estacao" ? <TrainFront aria-hidden /> : <BusFront aria-hidden />);
 const eta = (min: number) => Math.max(1, Math.round(min));
 
+/** Memória da tela enquanto o app está aberto (sobrevive à troca de aba; recarregar a página volta ao que foi gravado no aparelho). */
+const M: Partial<{ ponto: Ponto | null; linha: string | null; nivel: 0 | 1 | 2; info: J | null; chegada: J | null; veiculos: J | null; veiculoSel: string | null;
+  seguindo: boolean; trajeto: Trajeto[] | null; sentido: string | null; modoLinha: "BRT" | "BUS" | null; linhaSemPonto: boolean; salvo: boolean; trajetoDe: string }> = {};
+const K_MODO = "monitora:mob:modo";
+
 export default function MobilidadeApp() {
-  const [ponto, setPonto] = useState<Ponto | null>(null);
-  const [linha, setLinha] = useState<string | null>(null);
+  const [jaRestaurado] = useState(() => !!M.salvo);
+  const [ponto, setPonto] = useState<Ponto | null>(() => M.ponto ?? null);
+  const [linha, setLinha] = useState<string | null>(() => M.linha ?? null);
   const [buscando, setBuscando] = useState(false);
-  const [nivel, setNivel] = useState<0 | 1 | 2>(1);
+  const [nivel, setNivel] = useState<0 | 1 | 2>(() => M.nivel ?? 1);
   const [padB, setPadB] = useState(0);
   const [eu, setEu] = useState<{ lat: number; lng: number } | null>(null);
   const [perto, setPerto] = useState<J | null>(null);
-  const [info, setInfo] = useState<J | null>(null);
-  const [chegada, setChegada] = useState<J | null>(null);
-  const [veiculos, setVeiculos] = useState<J | null>(null);
-  const [veiculoSel, setVeiculoSelS] = useState<string | null>(null);
-  const [seguindo, setSeguindo] = useState(false);
+  const [info, setInfo] = useState<J | null>(() => M.info ?? null);
+  const [chegada, setChegada] = useState<J | null>(() => M.chegada ?? null);
+  const [veiculos, setVeiculos] = useState<J | null>(() => M.veiculos ?? null);
+  const [veiculoSel, setVeiculoSelS] = useState<string | null>(() => M.veiculoSel ?? null);
+  const [seguindo, setSeguindo] = useState(() => M.seguindo ?? false);
   const setVeiculoSel = (id: string | null) => { setVeiculoSelS(id); setSeguindo(false); };
   const [clima, setClima] = useState<J | null>(null);
   const [rua, setRua] = useState<J | null>(null);
-  const [trajeto, setTrajeto] = useState<Trajeto[] | null>(null);
+  const [trajeto, setTrajeto] = useState<Trajeto[] | null>(() => M.trajeto ?? null);
   // sentido escolhido = destino do trajeto oficial (trip_headsign do GTFS); null = todos
-  const [sentido, setSentidoS] = useState<string | null>(null);
+  const [sentido, setSentidoS] = useState<string | null>(() => M.sentido ?? null);
   // modo da linha acompanhada (vem do catálogo, via busca/estação): BRT ou BUS; null = o servidor decide pelo catálogo
-  const [modoLinha, setModoLinha] = useState<"BRT" | "BUS" | null>(null);
+  const [modoLinha, setModoLinha] = useState<"BRT" | "BUS" | null>(() => M.modoLinha ?? null);
   const setSentido = (s: string | null) => { setSentidoS(s); gravar(K_SENTIDO, s); setVeiculoSel(null); };
+  useEffect(() => { gravar(K_MODO, modoLinha); }, [modoLinha]);
   const [, tique] = useState(0);
   const desktop = useRef(false);
   // Diagnóstico: ?debug=1 (qualquer ambiente) ou desenvolvimento local
   const [debug, setDebug] = useState(false);
   useEffect(() => { setDebug(process.env.NODE_ENV !== "production" || new URLSearchParams(location.search).get("debug") === "1"); }, []);
-  const linhaSemPonto = useRef(false);
+  const linhaSemPonto = useRef(M.linhaSemPonto ?? false);
+  // continuidade entre abas: o estado vive na memória do app enquanto ele está aberto (trocar para Clima e voltar não zera nada)
+  Object.assign(M, { ponto, linha, nivel, info, chegada, veiculos, veiculoSel, seguindo, trajeto, sentido, modoLinha, linhaSemPonto: linhaSemPonto.current, salvo: true });
 
   useEffect(() => {
     desktop.current = window.matchMedia("(min-width: 960px)").matches;
-    setPonto(ler<Ponto | null>(K_PONTO, null)); setLinha(ler<string | null>(K_LINHA, null)); setSentidoS(ler<string | null>(K_SENTIDO, null));
+    if (!jaRestaurado) { setPonto(ler<Ponto | null>(K_PONTO, null)); setLinha(ler<string | null>(K_LINHA, null)); setSentidoS(ler<string | null>(K_SENTIDO, null)); setModoLinha(ler<"BRT" | "BUS" | null>(K_MODO, null)); }
     const t = setInterval(() => tique((x) => x + 1), 5000);
     return () => clearInterval(t);
   }, []);
@@ -92,10 +101,11 @@ export default function MobilidadeApp() {
 
   // trajeto oficial da linha (GTFS; hoje só BRT)
   useEffect(() => {
-    setTrajeto(null);
+    const k = `${linha}|${modoLinha}`;
+    if (M.trajetoDe !== k) setTrajeto(null); // voltando de outra aba com a mesma linha: mantém o desenho enquanto atualiza
     if (!linha) return;
     let vivo = true;
-    get(`/linhas/${encodeURIComponent(linha)}/trajeto${modoLinha ? `?modo=${modoLinha}` : ""}`).then((r) => { if (vivo && r.trajetos?.length) setTrajeto(r.trajetos); });
+    get(`/linhas/${encodeURIComponent(linha)}/trajeto${modoLinha ? `?modo=${modoLinha}` : ""}`).then((r) => { if (vivo && r.trajetos?.length) { setTrajeto(r.trajetos); M.trajetoDe = k; } });
     return () => { vivo = false; };
   }, [linha, modoLinha]);
 
