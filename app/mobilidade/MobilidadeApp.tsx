@@ -57,7 +57,7 @@ export default function MobilidadeApp() {
   const setSentido = (s: string | null) => { setSentidoS(s); gravar(K_SENTIDO, s); setVeiculoSel(null); };
   useEffect(() => { gravar(K_MODO, modoLinha); }, [modoLinha]);
   const [, tique] = useState(0);
-  const desktop = useRef(false), paisagem = useRef(false);
+  const desktop = useRef(false), paisagem = useRef(false), ladoEsq = useRef(416);
   // Diagnóstico: ?debug=1 (qualquer ambiente) ou desenvolvimento local
   const [debug, setDebug] = useState(false);
   useEffect(() => { setDebug(process.env.NODE_ENV !== "production" || new URLSearchParams(location.search).get("debug") === "1"); }, []);
@@ -67,11 +67,16 @@ export default function MobilidadeApp() {
 
   useEffect(() => {
     const mq = window.matchMedia(PAINEL_LATERAL), mqP = window.matchMedia(PAISAGEM);
-    const medir = () => { desktop.current = mq.matches; paisagem.current = mqP.matches; tique((x) => x + 1); };
+    // largura real ocupada pelo painel lateral (inclui a área do entalhe no celular deitado)
+    const medir = () => {
+      desktop.current = mq.matches; paisagem.current = mqP.matches;
+      requestAnimationFrame(() => { const r = document.querySelector(".mob .sheet")?.getBoundingClientRect(); ladoEsq.current = r && desktop.current ? Math.round(r.right) : 416; tique((x) => x + 1); });
+    };
+    window.addEventListener("resize", medir);
     medir(); mq.addEventListener("change", medir); mqP.addEventListener("change", medir);
     if (!jaRestaurado) { setPonto(ler<Ponto | null>(K_PONTO, null)); setLinha(ler<string | null>(K_LINHA, null)); setSentidoS(ler<string | null>(K_SENTIDO, null)); setModoLinha(ler<"BRT" | "BUS" | null>(K_MODO, null)); }
     const t = setInterval(() => tique((x) => x + 1), 5000);
-    return () => { clearInterval(t); mq.removeEventListener("change", medir); mqP.removeEventListener("change", medir); };
+    return () => { clearInterval(t); mq.removeEventListener("change", medir); mqP.removeEventListener("change", medir); window.removeEventListener("resize", medir); };
   }, []);
 
   const escolherPonto = useCallback((p: Ponto) => {
@@ -263,7 +268,7 @@ export default function MobilidadeApp() {
           const e = ESTACOES.find((x) => x.id === id);
           if (e) escolherPonto({ id: e.id, nome: e.nome, tipo: e.tipo as "estacao" | "terminal", fonte: "brt", lat: e.lat, lng: e.lng, corredor: e.corredor });
         }}
-        pad={{ bottom: desktop.current ? 0 : padB, left: desktop.current ? (paisagem.current ? 372 : 416) : 0 }}
+        pad={{ bottom: desktop.current ? 0 : padB, left: desktop.current ? ladoEsq.current : 0 }}
         trajetos={trajetoVisivel}
         debug={debug && sel ? { gps: [sel.lng, sel.lat], proj: sel.projecao ?? null, shapeId: sel.shapeId ?? null } : null}
         enquadrarChave={`${ponto?.id ?? ""}|${linha ?? ""}`}

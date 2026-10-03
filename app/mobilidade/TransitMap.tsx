@@ -76,6 +76,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
         map.on("mouseenter", "estacoes-pt", () => { map.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", "estacoes-pt", () => { map.getCanvas().style.cursor = ""; });
         pronto.current = true;
+        aplicarMargens(false); // o mapa pode nascer depois do primeiro cálculo das margens (ex.: voltando de outra aba)
         desenhar();
         sentirAmbiente();
       });
@@ -101,7 +102,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
 
   useEffect(() => {
     const map = mapa.current; if (!map) return;
-    map.easeTo({ padding: { top: 76, right: 16, bottom: pad.bottom + 12, left: pad.left + 16 }, ...camera(DUR.interacao) });
+    aplicarMargens(true);
     document.documentElement.style.setProperty("--map-pad-b", `${pad.bottom}px`);
   }, [pad.bottom, pad.left]);
 
@@ -160,6 +161,14 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
     map.addSource("rastro", { type: "geojson", data: dados });
     map.addLayer({ id: "rastro", type: "line", source: "rastro", layout: { "line-cap": "round", "line-join": "round" },
       paint: { "line-color": "#8997F5", "line-width": 4, "line-opacity": 0.85, "line-dasharray": [0.5, 1.6] } });
+  }
+
+  /** Área útil do mapa = tela menos painel lateral/inferior; a câmera centraliza o veículo e a estação dentro dela. */
+  function aplicarMargens(animar: boolean) {
+    const map = mapa.current; if (!map) return;
+    const p = ultimos.current.pad;
+    const padding = { top: 76, right: 16, bottom: p.bottom + 12, left: p.left + 16 };
+    if (animar) map.easeTo({ padding, ...camera(DUR.interacao) }); else map.setPadding(padding);
   }
 
   function enquadrar() {
