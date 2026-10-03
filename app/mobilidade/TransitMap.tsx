@@ -23,8 +23,10 @@ type TrajetoAcc = Trajeto & { acc: number[] };
 /** Diagnóstico (modo debug): GPS real, projeção no shape e o segmento que os liga. */
 export interface DebugGeo { gps: [number, number]; proj: [number, number] | null; shapeId: string | null }
 
-export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onEstacao, eu, pad, enquadrarChave, trajetos, debug }: {
+export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onEstacao, eu, pad, enquadrarChave, trajetos, debug, seguir = false, onSoltar }: {
   ponto: Ponto | null; veiculos: VeiculoMapa[]; veiculoSel: string | null; trajetos?: Trajeto[] | null; debug?: DebugGeo | null;
+  /** modo acompanhar: a câmera segue o veículo selecionado; arrastar o mapa solta (onSoltar). */
+  seguir?: boolean; onSoltar?: () => void;
   onVeiculo: (id: string | null) => void; onEstacao: (id: string) => void;
   eu: { lat: number; lng: number } | null; pad: { bottom: number; left: number }; enquadrarChave: string;
 }) {
@@ -35,8 +37,10 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
   const marcaPonto = useRef<Marker | null>(null);
   const marcaEu = useRef<Marker | null>(null);
   const pronto = useRef(false);
-  const ultimos = useRef({ ponto, veiculos, veiculoSel, eu, pad, onVeiculo, onEstacao, debug });
-  ultimos.current = { ponto, veiculos, veiculoSel, eu, pad, onVeiculo, onEstacao, debug };
+  const ultimos = useRef({ ponto, veiculos, veiculoSel, eu, pad, onVeiculo, onEstacao, debug, seguir, onSoltar });
+  ultimos.current = { ponto, veiculos, veiculoSel, eu, pad, onVeiculo, onEstacao, debug, seguir, onSoltar };
+  // rastro do veículo acompanhado: só posições REAIS recebidas do GPS desde que o acompanhamento começou
+  const rastro = useRef<{ id: string | null; pts: [number, number][] }>({ id: null, pts: [] });
   const enquadrado = useRef("");
   // trajeto oficial (GTFS) da linha acompanhada, com comprimentos acumulados para encaixe/animação
   const rota = useRef<{ chave: string; t: TrajetoAcc[] }>({ chave: "", t: [] });
@@ -103,6 +107,29 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
     if (fora) map.easeTo({ center: [it.vis.lng, it.vis.lat], ...camera() });
   }, [veiculoSel]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Acompanhar: aproxima no veículo; qualquer arrasto do usuário solta a câmera.
+  useEffect(() => {
+    const map = mapa.current;
+    rastro.current = { id: seguir ? veiculoSel : null, pts: [] };
+    desenharRastro();
+    if (!map || !seguir || !veiculoSel) return;
+    const it = frota.current.get(veiculoSel);
+    if (it) { rastro.current.pts.push([it.lng, it.lat]); map.easeTo({ center: [it.vis.lng, it.vis.lat], zoom: Math.max(map.getZoom(), 15.5), ...camera(900) }); }
+    const soltar = (e: { originalEvent?: unknown }) => { if (e.originalEvent) ultimos.current.onSoltar?.(); };
+    map.on("dragstart", soltar);
+    return () => { map.off("dragstart", soltar); };
+  }, [seguir, veiculoSel]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function desenharRastro() {
+    const map = mapa.current; if (!map || !pronto.current) return;
+    const dados = { type: "FeatureCollection" as const, features: rastro.current.pts.length > 1 ? [{ type: "Feature" as const, properties: {}, geometry: { type: "LineString" as const, coordinates: rastro.current.pts } }] : [] };
+    const src = map.getSource("rastro") as GeoJSONSource | undefined;
+    if (src) { src.setData(dados); return; }
+    map.addSource("rastro", { type: "geojson", data: dados });
+    map.addLayer({ id: "rastro", type: "line", source: "rastro", layout: { "line-cap": "round", "line-join": "round" },
+      paint: { "line-color": "#8997F5", "line-width": 4, "line-opacity": 0.85, "line-dasharray": [0.5, 1.6] } });
+  }
+
   function enquadrar() {
     const m = ml.current, map = mapa.current;
     if (!m || !map || !pronto.current) return;
@@ -165,9 +192,16 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
       if (pelaVia) { const sv = antesS! + ds * e; const q = pontoEm(tr!.coords, sv, tr!.acc); item.vis = { ...q, s: sv }; }
       else item.vis = { lng: de.lng + (lng - de.lng) * e, lat: de.lat + (lat - de.lat) * e, s: p === 1 ? enc?.s : undefined };
       item.marker.setLngLat([item.vis.lng, item.vis.lat]);
+      seguirSe(item);
       item.anim = p < 1 ? requestAnimationFrame(passo) : undefined;
     };
     item.anim = requestAnimationFrame(passo);
+  }
+
+  function seguirSe(item: ItemVeiculo) {
+    const u = ultimos.current, map = mapa.current;
+    if (!map || !u.seguir || !u.veiculoSel || frota.current.get(u.veiculoSel) !== item || map.isMoving()) return;
+    map.setCenter([item.vis.lng, item.vis.lat]);
   }
 
   /** Gira o anel pelo menor caminho; ignora tremidas < 4°; sem rumo → anel some (estado neutro). */
@@ -258,6 +292,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
         frota.current.set(v.id, it);
       } else if (Math.abs(it.lat - v.lat) > 1e-6 || Math.abs(it.lng - v.lng) > 1e-6) {
         animar(it, v.lat, v.lng, enc ? { trajeto: enc.trajeto, s: enc.s } : null, v.estado === "STALE");
+        if (rastro.current.id === v.id) { rastro.current.pts.push([v0.lng, v0.lat]); desenharRastro(); }
       }
       girar(it, v.rumo);
       it.el.className = `veh ${v.fonte}${v.parado ? " parado" : ""}${v.idadeS > 180 || v.estado === "STALE" ? " velho" : ""}${v.estado === "OFF_ROUTE" ? " fora" : v.estado === "UNCERTAIN" ? " incerto" : ""}${v.id === sel ? " sel" : ""}`;

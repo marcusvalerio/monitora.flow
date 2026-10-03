@@ -2,13 +2,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Orbita } from "../ui/Geometria";
-import { TriangleAlert, Search, LocateFixed, TrainFront, Warehouse, BusFront, MapPin, X, Clock, CloudRain, Gauge, ChevronRight, Info } from "lucide-react";
+import { TriangleAlert, Search, LocateFixed, TrainFront, Warehouse, BusFront, MapPin, X, Clock, CloudRain, Gauge, ChevronRight, Info, Navigation } from "lucide-react";
 import BottomSheet from "./BottomSheet";
 import SearchSheet from "../ui/SearchSheet";
 import { EmptyState, ErrorState, LastUpdated, Skel } from "../ui/estados";
 import { J, distKm, fmtDist, get, gravar, ha, horaLocal, lembrar, ler, minhaPosicao } from "../ui/util";
 import type { Ponto, VeiculoMapa } from "./TransitMap";
-import { mesmoDestino, type Trajeto } from "../../src/lib/trajeto";
+import { acumulado, mesmoDestino, projetar, type Trajeto } from "../../src/lib/trajeto";
 import { NumeroRolante } from "../ui/Numero";
 import estacoesJson from "../../src/data/estacoes-brt.json";
 
@@ -33,7 +33,9 @@ export default function MobilidadeApp() {
   const [info, setInfo] = useState<J | null>(null);
   const [chegada, setChegada] = useState<J | null>(null);
   const [veiculos, setVeiculos] = useState<J | null>(null);
-  const [veiculoSel, setVeiculoSel] = useState<string | null>(null);
+  const [veiculoSel, setVeiculoSelS] = useState<string | null>(null);
+  const [seguindo, setSeguindo] = useState(false);
+  const setVeiculoSel = (id: string | null) => { setVeiculoSelS(id); setSeguindo(false); };
   const [clima, setClima] = useState<J | null>(null);
   const [rua, setRua] = useState<J | null>(null);
   const [trajeto, setTrajeto] = useState<Trajeto[] | null>(null);
@@ -199,7 +201,16 @@ export default function MobilidadeApp() {
         pad={{ bottom: desktop.current ? 0 : padB, left: desktop.current ? 416 : 0 }}
         trajetos={trajetoVisivel}
         debug={debug && sel ? { gps: [sel.lng, sel.lat], proj: sel.projecao ?? null, shapeId: sel.shapeId ?? null } : null}
-        enquadrarChave={`${ponto?.id ?? ""}|${linha ?? ""}`} />
+        enquadrarChave={`${ponto?.id ?? ""}|${linha ?? ""}`}
+        seguir={seguindo && !!sel} onSoltar={() => setSeguindo(false)} />
+
+      {seguindo && sel && (
+        <div className="seguindo appear" role="status">
+          <span className="pulso" aria-hidden />
+          <span>Acompanhando <b className="num">{sel.linha}</b> · veículo {sel.veiculo}</span>
+          <button onClick={() => setSeguindo(false)}>Parar</button>
+        </div>
+      )}
 
       <div className="map-top">
         <button className="map-search" onClick={() => setBuscando(true)} aria-label="Pesquisar estação, terminal ou linha">
@@ -209,7 +220,7 @@ export default function MobilidadeApp() {
       </div>
 
       <BottomSheet resumo={ponto && linha ? 190 : 150} nivel={nivel} setNivel={setNivel} onAltura={setPadB} cabecalho={cabecalho}>
-        {sel && <VeiculoCard v={sel} ponto={ponto} chegada={chegada} onFechar={() => setVeiculoSel(null)} />}
+        {sel && <VeiculoCard v={sel} ponto={ponto} chegada={chegada} trajetos={trajetoVisivel} seguindo={seguindo} onSeguir={() => { setSeguindo((x) => !x); setNivel(0); }} onFechar={() => setVeiculoSel(null)} />}
         {sel && debug && <PainelDebug v={sel} />}
 
         {!ponto && linha && (
@@ -220,6 +231,7 @@ export default function MobilidadeApp() {
             <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => setBuscando(true)}><Search aria-hidden /> Escolher estação ou parada</button>
             {veiculos?.erro && <ErrorState texto="Não foi possível obter dados atualizados desta linha." />}
             {veiculos && !veiculos.erro && !lista.length && <EmptyState icone={BusFront} titulo="Nenhum veículo desta linha com GPS agora." texto="A localização pode voltar em instantes." />}
+            {veiculos?.operacao && <div style={{ marginTop: 18 }}><Operacao op={veiculos.operacao} sentido={sentidoValido} /></div>}
             <div style={{ marginTop: 14 }}><LastUpdated em={veiculos?.em} fonte="GPS SMTR" velhoS={45} /></div>
           </>
         )}
@@ -267,6 +279,7 @@ export default function MobilidadeApp() {
                   <div className="t-cap">Por volta das {avisoChuva.hora}{avisoChuva.p != null ? ` · ${avisoChuva.p}% de chance` : ""} · previsão Open-Meteo</div></div>
               </div>
             )}
+            {veiculos?.operacao && <Operacao op={veiculos.operacao} sentido={sentidoValido} />}
             <span className="t-label">Veículos da linha</span>
             {!veiculos ? <div style={{ display: "grid", gap: 12, marginTop: 10 }}><Skel h={52} /><Skel h={52} /></div>
               : veiculos.erro ? <ErrorState texto="Não foi possível obter dados atualizados desta linha." />
@@ -424,8 +437,15 @@ function PainelDebug({ v }: { v: J }) {
   );
 }
 
-function VeiculoCard({ v, ponto, chegada, onFechar }: { v: J; ponto: Ponto | null; chegada: J | null; onFechar: () => void }) {
+function VeiculoCard({ v, ponto, chegada, trajetos, seguindo, onSeguir, onFechar }: { v: J; ponto: Ponto | null; chegada: J | null; trajetos: Trajeto[] | null | undefined; seguindo: boolean; onSeguir: () => void; onFechar: () => void }) {
   const c = (chegada?.calculado?.chegadas ?? []).find((x: J) => `${x.fonte}:${x.veiculo}` === v.id);
+  // calculado: quanto falta do trajeto oficial até o fim da viagem (só para veículo casado ao trajeto)
+  const falta = useMemo(() => {
+    const t = (trajetos ?? []).find((x) => x.shapeId && x.shapeId === v.shapeId);
+    if (!t || (v.routeState !== "ON_ROUTE" && v.routeState !== "UNCERTAIN")) return null;
+    const acc = acumulado(t.coords), e = projetar(v.lat, v.lng, t.coords, acc);
+    return e ? { km: (acc[acc.length - 1] - e.s) / 1000, pct: e.s / acc[acc.length - 1], destino: t.destino } : null;
+  }, [trajetos, v.shapeId, v.lat, v.lng, v.routeState]);
   return (
     <div className="surface appear" style={{ padding: 16, marginBottom: 16 }} role="dialog" aria-label={`Veículo da linha ${v.linha}`}>
       <div className="row">
@@ -441,6 +461,15 @@ function VeiculoCard({ v, ponto, chegada, onFechar }: { v: J; ponto: Ponto | nul
         <div><div className="t-head num"><Gauge size={14} aria-hidden style={{ verticalAlign: "-2px" }} /> {v.parado ? "Parado" : `${v.velocidadeKmh} km/h`}</div>
           {ponto && <div className="t-cap">{fmtDist(distKm(ponto, { lat: v.lat, lng: v.lng }))} de {ponto.nome}</div>}</div>
       </div>
+      {falta && (
+        <div className="viagem" aria-label={`Faltam ${dec1(falta.km)} km até ${falta.destino}`}>
+          <div className="viagem-barra" aria-hidden><i style={{ width: `${Math.round(falta.pct * 100)}%` }} /><b style={{ left: `${Math.round(falta.pct * 100)}%` }} /></div>
+          <div className="t-cap">Faltam <b className="num">{dec1(falta.km)} km</b> até {falta.destino} · {Math.round(falta.pct * 100)}% do trajeto</div>
+        </div>
+      )}
+      <button className={`btn ${seguindo ? "btn-ghost" : "btn-primary"}`} style={{ width: "100%", marginTop: 12 }} onClick={onSeguir} aria-pressed={seguindo}>
+        <Navigation aria-hidden /> {seguindo ? "Parar de acompanhar" : "Acompanhar no mapa"}
+      </button>
       <div style={{ marginTop: 10 }}><LastUpdated em={v.em} fonte="GPS SMTR" velhoS={60} /></div>
       {v.rumo === null && <div className="t-meta" style={{ marginTop: 6 }}>Direção indisponível para este veículo.</div>}
       {v.routeState === "OFF_ROUTE" && <div className="notice" style={{ marginTop: 10, boxShadow: "none", background: "var(--surface-2)" }}><span className="t-cap">Fora do trajeto esperado: a {fmtDist(v.distanciaTrajetoM / 1000)} do trajeto oficial. Mostramos a posição do GPS como veio.</span></div>}
@@ -542,5 +571,42 @@ function TransitSearch({ onEscolher, onLinha, comLinhas, onFechar }: { onEscolhe
         </>
       )}
     </SearchSheet>
+  );
+}
+
+const dec1 = (x: number) => x.toLocaleString("pt-BR", { maximumFractionDigits: 1, minimumFractionDigits: x < 10 ? 1 : 0 });
+const fmtIntervalo = (s: number) => s < 90 ? `${s} s` : `${Math.round(s / 60)} min`;
+
+/** Operação da linha: PROGRAMADO (GTFS frequencies, fonte externa) × RODANDO AGORA (GPS, calculado). */
+function Operacao({ op, sentido }: { op: J; sentido: string | null }) {
+  const sentidos: J[] = (op.sentidos ?? []).filter((s: J) => !sentido || mesmoDestino(s.destino, sentido));
+  if (!sentidos.length) return null;
+  const hora = Number(new Intl.DateTimeFormat("pt-BR", { hour: "numeric", hour12: false, timeZone: "America/Sao_Paulo" }).format(new Date()));
+  return (
+    <section className="operacao" aria-label="Operação da linha agora">
+      <span className="t-label">Operação agora{op.tipoDia ? ` · ${op.tipoDia}` : ""}</span>
+      {sentidos.map((s: J) => {
+        const p = s.programado, o = s.observado;
+        const perfil: (number | null)[] = p?.perfil ?? [];
+        const max = Math.max(1, ...perfil.map((x) => x ?? 0));
+        return (
+          <div className="op-sentido" key={s.sentido}>
+            {sentidos.length > 1 && <div className="t-cap op-dest">→ {s.destino}</div>}
+            <div className="op-nums">
+              <div><span className="op-n num">{o.rodando}</span><span className="t-cap">rodando agora<br />no trajeto (GPS)</span></div>
+              <div><span className="op-n num">{p?.intervaloS ? fmtIntervalo(p.intervaloS) : "—"}</span><span className="t-cap">{p?.intervaloS ? <>intervalo programado<br />{p.partidasPorHora}/h até {p.faixa?.fim}</> : <>sem partidas<br />programadas agora</>}</span></div>
+              <div><span className="op-n num">{o.espacamentoMedioKm == null ? "—" : `${dec1(o.espacamentoMedioKm)} km`}</span><span className="t-cap">entre um ônibus<br />e outro (média)</span></div>
+            </div>
+            {perfil.some((x) => x != null) && (
+              <div className="op-perfil" aria-label={`Partidas programadas por hora ao longo do dia; agora ${perfil[hora] ?? 0} por hora`}>
+                {perfil.map((x, h) => <i key={h} className={h === hora ? "agora" : ""} style={{ height: `${x == null ? 0 : Math.max(6, (x / max) * 100)}%`, ["--i" as string]: h }} title={`${h}h: ${x ?? 0}/h`} />)}
+                <div className="op-eixo t-meta"><span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span></div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <p className="t-meta" style={{ marginTop: 6 }}>Programado: GTFS da SMTR (frequencies.txt). Rodando: veículos com GPS casados ao trajeto oficial agora — garagem e sem sinal não contam.</p>
+    </section>
   );
 }
