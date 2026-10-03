@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { Orbita } from "../ui/Geometria";
 import { TriangleAlert, Search, LocateFixed, TrainFront, Warehouse, BusFront, MapPin, X, Clock, CloudRain, Gauge, ChevronRight, Info, Navigation } from "lucide-react";
 import BottomSheet from "./BottomSheet";
+import { PAINEL_LATERAL, PAISAGEM } from "../ui/telas";
 import SearchSheet from "../ui/SearchSheet";
 import { EmptyState, ErrorState, LastUpdated, Skel } from "../ui/estados";
 import { J, distKm, fmtDist, get, gravar, ha, horaLocal, lembrar, ler, minhaPosicao } from "../ui/util";
@@ -24,7 +25,7 @@ const eta = (min: number) => Math.max(1, Math.round(min));
 
 /** Memória da tela enquanto o app está aberto (sobrevive à troca de aba; recarregar a página volta ao que foi gravado no aparelho). */
 const M: Partial<{ ponto: Ponto | null; linha: string | null; nivel: 0 | 1 | 2; info: J | null; chegada: J | null; veiculos: J | null; veiculoSel: string | null;
-  seguindo: boolean; trajeto: Trajeto[] | null; sentido: string | null; modoLinha: "BRT" | "BUS" | null; linhaSemPonto: boolean; salvo: boolean; trajetoDe: string }> = {};
+  seguindo: boolean; trajeto: Trajeto[] | null; sentido: string | null; modoLinha: "BRT" | "BUS" | null; linhaSemPonto: boolean; salvo: boolean; trajetoDe: string; desce: string | null; paradasLinha: J | null }> = {};
 const K_MODO = "monitora:mob:modo";
 
 export default function MobilidadeApp() {
@@ -42,6 +43,9 @@ export default function MobilidadeApp() {
   const [veiculoSel, setVeiculoSelS] = useState<string | null>(() => M.veiculoSel ?? null);
   const [seguindo, setSeguindo] = useState(() => M.seguindo ?? false);
   const [recentrar, setRecentrar] = useState(0);
+  // estação onde a pessoa vai DESCER (id); a estimativa passa a ser até lá
+  const [desce, setDesce] = useState<string | null>(() => M.desce ?? null);
+  const [paradasLinha, setParadasLinha] = useState<J | null>(() => M.paradasLinha ?? null);
   const setVeiculoSel = (id: string | null) => { setVeiculoSelS(id); setSeguindo(false); };
   const [clima, setClima] = useState<J | null>(null);
   const [rua, setRua] = useState<J | null>(null);
@@ -53,19 +57,21 @@ export default function MobilidadeApp() {
   const setSentido = (s: string | null) => { setSentidoS(s); gravar(K_SENTIDO, s); setVeiculoSel(null); };
   useEffect(() => { gravar(K_MODO, modoLinha); }, [modoLinha]);
   const [, tique] = useState(0);
-  const desktop = useRef(false);
+  const desktop = useRef(false), paisagem = useRef(false);
   // Diagnóstico: ?debug=1 (qualquer ambiente) ou desenvolvimento local
   const [debug, setDebug] = useState(false);
   useEffect(() => { setDebug(process.env.NODE_ENV !== "production" || new URLSearchParams(location.search).get("debug") === "1"); }, []);
   const linhaSemPonto = useRef(M.linhaSemPonto ?? false);
   // continuidade entre abas: o estado vive na memória do app enquanto ele está aberto (trocar para Clima e voltar não zera nada)
-  Object.assign(M, { ponto, linha, nivel, info, chegada, veiculos, veiculoSel, seguindo, trajeto, sentido, modoLinha, linhaSemPonto: linhaSemPonto.current, salvo: true });
+  Object.assign(M, { ponto, linha, nivel, info, chegada, veiculos, veiculoSel, seguindo, trajeto, sentido, modoLinha, linhaSemPonto: linhaSemPonto.current, salvo: true, desce, paradasLinha });
 
   useEffect(() => {
-    desktop.current = window.matchMedia("(min-width: 960px)").matches;
+    const mq = window.matchMedia(PAINEL_LATERAL), mqP = window.matchMedia(PAISAGEM);
+    const medir = () => { desktop.current = mq.matches; paisagem.current = mqP.matches; tique((x) => x + 1); };
+    medir(); mq.addEventListener("change", medir); mqP.addEventListener("change", medir);
     if (!jaRestaurado) { setPonto(ler<Ponto | null>(K_PONTO, null)); setLinha(ler<string | null>(K_LINHA, null)); setSentidoS(ler<string | null>(K_SENTIDO, null)); setModoLinha(ler<"BRT" | "BUS" | null>(K_MODO, null)); }
     const t = setInterval(() => tique((x) => x + 1), 5000);
-    return () => clearInterval(t);
+    return () => { clearInterval(t); mq.removeEventListener("change", medir); mqP.removeEventListener("change", medir); };
   }, []);
 
   const escolherPonto = useCallback((p: Ponto) => {
@@ -110,6 +116,18 @@ export default function MobilidadeApp() {
     return () => { vivo = false; };
   }, [linha, modoLinha]);
 
+  // estações/paradas ao longo da linha (para "até onde você vai?")
+  useEffect(() => {
+    if (!linha) { setParadasLinha(null); return; }
+    if (paradasLinha?.linha === linha && (!modoLinha || paradasLinha?.modo === modoLinha)) return;
+    let vivo = true;
+    get(`/linhas/${encodeURIComponent(linha)}/paradas${modoLinha ? `?modo=${modoLinha}` : ""}`).then((r) => { if (vivo && r.trajetos) setParadasLinha(r); });
+    return () => { vivo = false; };
+  }, [linha, modoLinha]); // eslint-disable-line react-hooks/exhaustive-deps
+  // trocar estação, linha ou sentido zera o destino
+  const chaveDesce = useRef(`${ponto?.id}|${linha}|${sentido}`);
+  useEffect(() => { const k = `${ponto?.id}|${linha}|${sentido}`; if (chaveDesce.current !== k) { chaveDesce.current = k; setDesce(null); } }, [ponto, linha, sentido]);
+
   // acompanhamento de linha: veículos + chegada (10 s)
   useEffect(() => {
     if (!linha) return;
@@ -153,6 +171,7 @@ export default function MobilidadeApp() {
   const chegadas: J[] = (chegada?.calculado?.chegadas ?? []).filter((c: J) => !sentidoValido || idsSentido.has(`${c.fonte}:${c.veiculo}`));
   const prox: J | null = sentidoValido ? chegadas[0] ?? null : chegada?.calculado?.proxima ?? null;
   const ehBrt = ponto?.fonte === "brt" || lista.some((v) => v.fonte === "brt");
+  const viagem = useMemo(() => viagemAte(ponto, sentidoValido, paradasLinha, desce), [ponto, sentidoValido, paradasLinha, desce]);
   const saida = useMemo(() => ponto && linha ? proximaSaida(ponto, trajetoVisivel, todos, veiculos?.operacao) : null, [ponto, linha, trajetoVisivel, todos, veiculos]);
   const sel = lista.find((v) => v.id === veiculoSel) ?? null;
   // ritmo pelo GPS: progresso real do veículo ao longo do trajeto (s) entre leituras distintas, últimos 10 min
@@ -219,7 +238,7 @@ export default function MobilidadeApp() {
           ) : saida?.intervaloMin != null ? (
             <div className="t-title" aria-live="polite">Sai a cada ~{Math.round(saida.intervaloMin)} min</div>
           ) : <div className="t-title" aria-live="polite">Sem estimativa agora</div>}
-          <div className="t-cap" style={{ marginTop: 4 }}>{sentidoValido ? <b style={{ fontWeight: 600, color: "var(--text)" }}>→ {sentidoValido} · </b> : null}{prox ? `Chegada estimada em ${ponto.nome}` : saida ? textoSaida(saida, ponto.nome) : `Nenhum veículo ${sentidoValido ? "neste sentido" : "da linha"} se aproximando de ${ponto.nome}`}</div>
+          <div className="t-cap" style={{ marginTop: 4 }}>{sentidoValido ? <b style={{ fontWeight: 600, color: "var(--text)" }}>→ {sentidoValido} · </b> : null}{prox ? `Chegada estimada em ${ponto.nome}${viagem?.escolhida ? ` · em ${viagem.escolhida.nome} às ~${horaChegada((prox.etaMin ?? 0) + viagem.escolhida.min)}` : ""}` : saida ? textoSaida(saida, ponto.nome) : `Nenhum veículo ${sentidoValido ? "neste sentido" : "da linha"} se aproximando de ${ponto.nome}`}</div>
         </div>
         <span className={`line-badge lg${ehBrt ? " brt" : ""}`} aria-label={`Linha ${linha}`}>{linha}</span>
       </div>
@@ -244,7 +263,7 @@ export default function MobilidadeApp() {
           const e = ESTACOES.find((x) => x.id === id);
           if (e) escolherPonto({ id: e.id, nome: e.nome, tipo: e.tipo as "estacao" | "terminal", fonte: "brt", lat: e.lat, lng: e.lng, corredor: e.corredor });
         }}
-        pad={{ bottom: desktop.current ? 0 : padB, left: desktop.current ? 416 : 0 }}
+        pad={{ bottom: desktop.current ? 0 : padB, left: desktop.current ? (paisagem.current ? 372 : 416) : 0 }}
         trajetos={trajetoVisivel}
         debug={debug && sel ? { gps: [sel.lng, sel.lat], proj: sel.projecao ?? null, shapeId: sel.shapeId ?? null } : null}
         enquadrarChave={`${ponto?.id ?? ""}|${linha ?? ""}`}
@@ -254,8 +273,9 @@ export default function MobilidadeApp() {
 
       <div className="map-top">
         <button className="map-search" onClick={() => setBuscando(true)} aria-label="Pesquisar estação, terminal ou linha">
-          <Search aria-hidden /><span>{ponto ? ponto.nome : "Estação, terminal ou linha"}</span>
+          <Search aria-hidden /><span>{ponto ? ponto.nome : linha ? `Linha ${linha}` : "Estação, terminal ou linha"}</span>
         </button>
+        {(ponto || linha) && <button className="map-limpar" onClick={() => { setSeguindo(false); setVeiculoSelS(null); setDesce(null); limpar(); }} aria-label="Limpar pesquisa"><X /></button>}
         <button className={`map-fab${perto?.carregando ? " buscando" : ""}`} onClick={pertoDeMim} aria-label="Usar minha localização" aria-busy={!!perto?.carregando}><LocateFixed /></button>
       </div>
 
@@ -307,6 +327,7 @@ export default function MobilidadeApp() {
         {ponto && linha && (
           <>
             {sentidos.length > 1 && <SeletorSentido sentidos={sentidos} valor={sentidoValido} onChange={setSentido} />}
+            {viagem && <Destino v={viagem} valor={desce} onChange={setDesce} espera={prox ? prox.etaMin : saida?.proximaMin ?? null} />}
             {chegadas.length > 1 && (
               <div className="t-cap" style={{ marginBottom: 12 }}>
                 Depois: {chegadas.slice(1, 3).map((c: J) => `~${eta(c.etaMin)} min`).join(" · ")}
@@ -717,4 +738,50 @@ function textoSaida(s: Saida, nome: string) {
   if (s.intervaloMin != null && s.proximaMin != null) partes.push(`a cada ~${Math.round(s.intervaloMin)} min (programado)`);
   if (s.aguardando) partes.push(`${s.aguardando} ${s.aguardando === 1 ? "veículo aguardando" : "veículos aguardando"} no terminal`);
   return partes.join(" · ");
+}
+
+interface Viagem { opcoes: { id: string; nome: string; min: number | null; km: number }[]; escolhida: { id: string; nome: string; min: number } | null }
+/**
+ * Estações à frente da estação de embarque, no sentido escolhido, com o tempo de viagem até cada uma
+ * (trecho ÷ comprimento do trajeto × duração programada da viagem no GTFS). Estimativa do Monitora.
+ */
+function viagemAte(ponto: Ponto | null, sentido: string | null, pl: J | null, desce: string | null): Viagem | null {
+  if (!ponto || !pl?.trajetos?.length) return null;
+  const cand = (pl.trajetos as J[]).filter((t) => !sentido || mesmoDestino(t.destino, sentido));
+  for (const t of cand) {
+    const embarque = (t.paradas as J[]).find((p) => p.id === ponto.id || p.nome === ponto.nome);
+    if (!embarque) continue;
+    const opcoes = (t.paradas as J[]).filter((p) => p.s > embarque.s + 100).map((p) => ({
+      id: p.id as string, nome: p.nome as string, km: (p.s - embarque.s) / 1000,
+      min: t.duracaoProgramadaS ? ((p.s - embarque.s) / t.total) * t.duracaoProgramadaS / 60 : null,
+    }));
+    if (!opcoes.length) continue;
+    const e = opcoes.find((o) => o.id === desce);
+    return { opcoes, escolhida: e && e.min != null ? { id: e.id, nome: e.nome, min: e.min } : null };
+  }
+  return null;
+}
+const horaChegada = (min: number) => new Date(Date.now() + min * 60_000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+
+function Destino({ v, valor, onChange, espera }: { v: Viagem; valor: string | null; onChange: (id: string | null) => void; espera: number | null }) {
+  const e = v.escolhida;
+  return (
+    <div className="destino">
+      <label className="t-label" htmlFor="desce">Até onde você vai?</label>
+      <div className="destino-sel">
+        <select id="desce" value={valor ?? ""} onChange={(ev) => onChange(ev.target.value || null)}>
+          <option value="">Escolha a estação de descida</option>
+          {v.opcoes.map((o) => <option key={o.id} value={o.id}>{o.nome}{o.min != null ? ` · ~${Math.max(1, Math.round(o.min))} min` : ""}</option>)}
+        </select>
+      </div>
+      {e && (
+        <div className="destino-res appear" aria-live="polite">
+          {espera != null && <div><span className="num">{Math.max(1, Math.round(espera))}</span><small>min de espera</small></div>}
+          <div><span className="num">{Math.max(1, Math.round(e.min))}</span><small>min de viagem</small></div>
+          <div><span className="num">{horaChegada((espera ?? 0) + e.min)}</span><small>chega em {e.nome}</small></div>
+        </div>
+      )}
+      {e && <p className="t-meta" style={{ margin: "6px 2px 0" }}>Viagem no ritmo programado da linha (GTFS){espera == null ? "; sem estimativa de espera agora" : ""}.</p>}
+    </div>
+  );
 }

@@ -7,6 +7,7 @@
  * Regras de dado: só o que veio da previsão/medição. Campo ausente → "—" ou o bloco some.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ArrowUp } from "lucide-react";
 import { ContaNumero } from "./WeatherHero";
 import { IconeTempo, LastUpdated } from "../ui/estados";
@@ -102,6 +103,8 @@ export default function TempoView({ tempo, chuva, local }: { tempo: J; chuva: J 
           <LastUpdated em={estPerto.medidoEm} fonte="Alerta Rio" velhoS={1200} />
         </Bloco>
       )}
+
+      <Standby horas={horas} agora={a} hoje={hoje} local={local.nome} />
 
       <p className="rc-fonte">
         Previsão de modelo numérico (Open-Meteo, CC BY 4.0). Chuva medida: pluviômetros do Alerta Rio. <a href="/mais">Sobre os dados</a>
@@ -270,4 +273,28 @@ function Sol({ nascer, por }: { nascer: string; por: string }) {
       </dd>
     </div>
   );
+}
+
+/**
+ * StandBy: celular deitado (paisagem baixa) vira um relógio de mesa — hora grande à esquerda,
+ * relógio do céu à direita. Só CSS decide quando aparece (globals.css, seção 14); fora disso fica oculto.
+ */
+function Standby({ horas, agora, hoje, local }: { horas: J[]; agora: J | null | undefined; hoje: J | null | undefined; local: string }) {
+  const [t, setT] = useState<Date | null>(null);
+  useEffect(() => { setT(new Date()); const i = setInterval(() => setT(new Date()), 10_000); return () => clearInterval(i); }, []);
+  const hm = t ? t.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }) : "--:--";
+  const [h, m] = hm.split(":");
+  const [alvo, setAlvo] = useState<HTMLElement | null>(null);
+  useEffect(() => setAlvo(document.body), []); // fora da página: a transição da página usa transform, que prenderia o position: fixed
+  const data = t ? t.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", timeZone: "America/Sao_Paulo" }) : "";
+  if (!alvo) return null;
+  return createPortal(
+    <div className="standby" aria-hidden>
+      <div className="sb-relogio">
+        <div className="sb-hora num"><span>{h}</span><i className="sb-sep">:</i><span>{m}</span></div>
+        <div className="sb-data">{data}</div>
+        <div className="sb-local">{local}</div>
+      </div>
+      <div className="sb-ceu"><Relogio horas={horas} agora={agora} hoje={hoje} /></div>
+    </div>, alvo);
 }
