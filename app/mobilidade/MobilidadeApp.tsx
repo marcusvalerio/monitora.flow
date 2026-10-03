@@ -153,7 +153,20 @@ export default function MobilidadeApp() {
   const prox: J | null = sentidoValido ? chegadas[0] ?? null : chegada?.calculado?.proxima ?? null;
   const ehBrt = ponto?.fonte === "brt" || lista.some((v) => v.fonte === "brt");
   const sel = lista.find((v) => v.id === veiculoSel) ?? null;
-  const falta = useMemo(() => faltaDoTrajeto(sel, trajetoVisivel), [sel, trajetoVisivel]);
+  // ritmo pelo GPS: progresso real do veículo ao longo do trajeto (s) entre leituras distintas, últimos 10 min
+  const amostras = useRef<{ id: string; pts: { t: number; s: number }[] }>({ id: "", pts: [] });
+  const falta = useMemo(() => {
+    const f = faltaDoTrajeto(sel, trajetoVisivel);
+    if (!f || !sel) return f;
+    const a = amostras.current;
+    if (a.id !== sel.id) { a.id = sel.id; a.pts = []; }
+    const t = Date.parse(sel.em);
+    if (!a.pts.length || a.pts[a.pts.length - 1].t !== t) a.pts.push({ t, s: f.s });
+    a.pts = a.pts.filter((p) => t - p.t <= 600_000);
+    const p0 = a.pts[0], dt = (t - p0.t) / 1000, ds = f.s - p0.s;
+    const etaGpsMin = dt >= 120 && ds > 50 ? (f.restM / (ds / dt)) / 60 : null;
+    return { ...f, etaGpsMin };
+  }, [sel, trajetoVisivel]);
 
   // Contexto de clima: chuva prevista perto do ponto nas próximas 2 h (previsão Open-Meteo).
   const avisoChuva = useMemo(() => {
@@ -163,7 +176,20 @@ export default function MobilidadeApp() {
   }, [clima]);
 
   // ---------- cabeçalho do painel (visível mesmo recolhido) ----------
-  const cabecalho = !ponto && linha ? (
+  const cabecalho = linha && seguindo && sel && falta ? (
+    <div style={{ padding: "0 20px 14px" }}>
+      <div className="row" style={{ alignItems: "flex-end" }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          {etaFinal(falta) != null ? (
+            <div className="eta appear" aria-live="polite"><span className="n num"><NumeroRolante valor={eta(etaFinal(falta)!)} /></span><span className="u">min</span></div>
+          ) : <div className="t-title" aria-live="polite">{dec1(falta.km)} km</div>}
+          <div className="t-cap" style={{ marginTop: 4 }}><b style={{ fontWeight: 600, color: "var(--text)" }}>Até {falta.destino}</b> · {falta.etaGpsMin != null ? "pelo ritmo atual (GPS)" : falta.etaProgMin != null ? "pelo ritmo programado da linha" : "sem ritmo para estimar ainda"} · veículo {sel.veiculo}</div>
+        </div>
+        <span className={`line-badge lg${ehBrt ? " brt" : ""}`} aria-label={`Linha ${linha}`}>{linha}</span>
+      </div>
+      <div style={{ marginTop: 8 }}><LastUpdated em={sel.em} fonte="GPS SMTR" velhoS={60} /></div>
+    </div>
+  ) : !ponto && linha ? (
     <div className="list-item" style={{ padding: "0 20px 12px", border: 0, minHeight: 0, gap: 12 }}>
       <span className={`line-badge lg${ehBrt ? " brt" : ""}`}>{linha}</span>
       <div className="main">
@@ -463,6 +489,12 @@ function VeiculoCard({ v, ponto, chegada, falta, seguindo, onSeguir, onFechar }:
         <div className="viagem" aria-label={`Faltam ${dec1(falta.km)} km até ${falta.destino}`}>
           <div className="viagem-barra" aria-hidden><i style={{ width: `${Math.round(falta.pct * 100)}%` }} /><b style={{ left: `${Math.round(falta.pct * 100)}%` }} /></div>
           <div className="t-cap">Faltam <b className="num">{dec1(falta.km)} km</b> até {falta.destino} · {Math.round(falta.pct * 100)}% do trajeto</div>
+          {(falta.etaGpsMin != null || falta.etaProgMin != null) && (
+            <div className="t-cap">Chegada ao terminal: {[
+              falta.etaGpsMin != null && <span key="g"><b className="num">~{eta(falta.etaGpsMin)} min</b> pelo ritmo atual (GPS)</span>,
+              falta.etaProgMin != null && <span key="p"><b className="num">~{eta(falta.etaProgMin)} min</b> pelo programado</span>,
+            ].filter(Boolean).reduce((acc: React.ReactNode[], x, i) => (i ? [...acc, " · ", x] : [x]), [])}</div>
+          )}
         </div>
       )}
       <button className={`btn ${seguindo ? "btn-ghost" : "btn-primary"}`} style={{ width: "100%", marginTop: 12 }} onClick={onSeguir} aria-pressed={seguindo}>
@@ -609,14 +641,18 @@ function Operacao({ op, sentido }: { op: J; sentido: string | null }) {
   );
 }
 
-interface Falta { km: number; pct: number; destino: string }
+interface Falta { km: number; pct: number; destino: string; s: number; restM: number; etaProgMin: number | null; etaGpsMin?: number | null }
 /** Calculado: quanto falta do trajeto oficial até o fim da viagem (só para veículo casado ao trajeto). */
 function faltaDoTrajeto(v: J | null, trajetos: Trajeto[] | null | undefined): Falta | null {
   if (!v || (v.routeState !== "ON_ROUTE" && v.routeState !== "UNCERTAIN")) return null;
   const t = (trajetos ?? []).find((x) => x.shapeId && x.shapeId === v.shapeId);
   if (!t) return null;
   const acc = acumulado(t.coords), e = projetar(v.lat, v.lng, t.coords, acc);
-  return e ? { km: (acc[acc.length - 1] - e.s) / 1000, pct: e.s / acc[acc.length - 1], destino: t.destino } : null;
+  if (!e) return null;
+  const total = acc[acc.length - 1], restM = total - e.s;
+  // ritmo programado: duração da viagem no GTFS distribuída ao longo do shape
+  const etaProgMin = t.duracaoProgramadaS ? (restM / total) * t.duracaoProgramadaS / 60 : null;
+  return { km: restM / 1000, pct: e.s / total, destino: t.destino, s: e.s, restM, etaProgMin };
 }
 
 /** Mostrador do acompanhamento: número da linha no centro, anel que esvazia até o destino final; bolinha × para parar. */
@@ -629,8 +665,11 @@ function DialSeguindo({ v, falta, onParar }: { v: J; falta: Falta | null; onPara
         {resta != null && <circle cx="32" cy="32" r={R} className="resta" strokeDasharray={C} strokeDashoffset={C * (1 - resta)} />}
       </svg>
       <b className="num">{v.linha}</b>
-      {falta && <span className="km num">{dec1(falta.km)} km</span>}
+      {falta && <span className="km num">{etaFinal(falta) != null ? `~${eta(etaFinal(falta)!)} min` : `${dec1(falta.km)} km`}</span>}
       <button className="parar" onClick={onParar} aria-label="Parar de acompanhar"><X aria-hidden /></button>
     </div>
   );
 }
+
+/** Estimativa até o terminal final: ritmo real do GPS quando já há 2+ min de progresso observado; senão o ritmo programado (GTFS). */
+const etaFinal = (f: Falta) => f.etaGpsMin ?? f.etaProgMin ?? null;

@@ -18,7 +18,7 @@ export function distanciaAoTrajeto(lat: number, lng: number, trajetos: { coords:
 }
 
 export type Coords = [number, number][]; // [lng, lat]
-export interface Trajeto { sentido: number; destino: string; coords: Coords; shapeId?: string }
+export interface Trajeto { sentido: number; destino: string; coords: Coords; shapeId?: string; duracaoProgramadaS?: number | null }
 export interface Encaixe { lat: number; lng: number; s: number; distM: number; indice: number }
 
 const K_LAT = 110540;

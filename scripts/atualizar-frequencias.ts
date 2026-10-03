@@ -16,7 +16,7 @@ const URL_GTFS = "https://dados.mobilidade.rio/gtfs/schedule";
 const dir = mkdtempSync(join(tmpdir(), "gtfs-"));
 const zip = join(dir, "g.zip");
 writeFileSync(zip, Buffer.from(await (await fetch(URL_GTFS)).arrayBuffer()));
-execFileSync("unzip", ["-o", "-q", zip, "routes.txt", "trips.txt", "frequencies.txt", "calendar.txt", "calendar_dates.txt", "feed_info.txt", "-d", dir]);
+execFileSync("unzip", ["-o", "-q", zip, "routes.txt", "trips.txt", "frequencies.txt", "calendar.txt", "calendar_dates.txt", "feed_info.txt", "stop_times.txt", "-d", dir]);
 
 function csv(nome: string): Record<string, string>[] {
   const [cab, ...linhas] = readFileSync(join(dir, nome), "utf8").replace(/^﻿/, "").split(/\r?\n/).filter(Boolean);
@@ -56,6 +56,32 @@ for (const l of Object.values(linhas)) {
   }
 }
 
+// Duração programada da viagem por shape (stop_times: última chegada − primeira partida), mediana entre viagens.
+// Usada para o "ritmo programado" (comprimento do shape ÷ duração). Lido em fluxo: o arquivo tem ~85 MB.
+const seg = (hms: string) => { const [h, m, x] = hms.split(":").map(Number); return h * 3600 + m * 60 + (x || 0); };
+const extremos = new Map<string, [number, number]>();
+{
+  const txt = readFileSync(join(dir, "stop_times.txt"), "utf8");
+  const cab = txt.slice(0, txt.indexOf("\n")).replace(/^\uFEFF/, "").trim().split(",");
+  const iT = cab.indexOf("trip_id"), iA = cab.indexOf("arrival_time"), iD = cab.indexOf("departure_time");
+  let ini = txt.indexOf("\n") + 1;
+  while (ini < txt.length) {
+    let fim = txt.indexOf("\n", ini); if (fim < 0) fim = txt.length;
+    const c = txt.slice(ini, fim).split(","); ini = fim + 1;
+    if (c.length <= iD) continue;
+    const a = c[iA] || c[iD], d = c[iD] || c[iA]; if (!a) continue;
+    const e = extremos.get(c[iT]), sa = seg(a), sd = seg(d);
+    if (!e) extremos.set(c[iT], [sd, sa]); else { if (sd < e[0]) e[0] = sd; if (sa > e[1]) e[1] = sa; }
+  }
+}
+const porShape = new Map<string, number[]>();
+for (const [trip, [a, b]] of extremos) {
+  const t = viagens.get(trip); if (!t?.shape_id || b <= a) continue;
+  (porShape.get(t.shape_id) ?? porShape.set(t.shape_id, []).get(t.shape_id)!).push(b - a);
+}
+const duracaoShapeS: Record<string, number> = {};
+for (const [sh, ds] of porShape) { ds.sort((x, y) => x - y); duracaoShapeS[sh] = ds[Math.floor(ds.length / 2)]; }
+
 const dias: Record<string, string[]> = {};
 for (const c of csv("calendar.txt")) {
   const ds = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].map((d, i) => (c[d] === "1" ? i : -1)).filter((i) => i >= 0);
@@ -68,6 +94,6 @@ const feed = csv("feed_info.txt")[0] ?? {};
 writeFileSync("src/data/frequencias.json", JSON.stringify({
   fonte: URL_GTFS, versaoGtfs: feed.feed_version ?? "", validoAte: feed.feed_end_date ?? "",
   nota: "Programação oficial (frequencies.txt). Faixas: [inícioMin, fimMin, intervaloS]. Dias da semana: 0 = segunda.",
-  diasDoServico: dias, excecoes, linhas,
+  diasDoServico: dias, excecoes, linhas, duracaoShapeS,
 }));
-console.log(`frequências: ${Object.keys(linhas).length} linhas`);
+console.log(`frequências: ${Object.keys(linhas).length} linhas; durações: ${Object.keys(duracaoShapeS).length} shapes`);
