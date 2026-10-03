@@ -153,6 +153,7 @@ export default function MobilidadeApp() {
   const chegadas: J[] = (chegada?.calculado?.chegadas ?? []).filter((c: J) => !sentidoValido || idsSentido.has(`${c.fonte}:${c.veiculo}`));
   const prox: J | null = sentidoValido ? chegadas[0] ?? null : chegada?.calculado?.proxima ?? null;
   const ehBrt = ponto?.fonte === "brt" || lista.some((v) => v.fonte === "brt");
+  const saida = useMemo(() => ponto && linha ? proximaSaida(ponto, trajetoVisivel, todos, veiculos?.operacao) : null, [ponto, linha, trajetoVisivel, todos, veiculos]);
   const sel = lista.find((v) => v.id === veiculoSel) ?? null;
   // ritmo pelo GPS: progresso real do veículo ao longo do trajeto (s) entre leituras distintas, últimos 10 min
   const amostras = useRef<{ id: string; pts: { t: number; s: number }[] }>({ id: "", pts: [] });
@@ -210,8 +211,12 @@ export default function MobilidadeApp() {
         <div style={{ minWidth: 0, flex: 1 }}>
           {!chegada ? <Skel h={48} w={140} /> : prox ? (
             <div className="eta appear" aria-live="polite"><span className="n num"><NumeroRolante valor={eta(prox.etaMin)} /></span><span className="u">min</span></div>
+          ) : saida?.proximaMin != null ? (
+            <div className="eta appear" aria-live="polite"><span className="n num"><NumeroRolante valor={Math.max(0, Math.round(saida.proximaMin))} /></span><span className="u">min</span></div>
+          ) : saida?.intervaloMin != null ? (
+            <div className="t-title" aria-live="polite">Sai a cada ~{Math.round(saida.intervaloMin)} min</div>
           ) : <div className="t-title" aria-live="polite">Sem estimativa agora</div>}
-          <div className="t-cap" style={{ marginTop: 4 }}>{sentidoValido ? <b style={{ fontWeight: 600, color: "var(--text)" }}>→ {sentidoValido} · </b> : null}{prox ? `Chegada estimada em ${ponto.nome}` : `Nenhum veículo ${sentidoValido ? "neste sentido" : "da linha"} se aproximando de ${ponto.nome}`}</div>
+          <div className="t-cap" style={{ marginTop: 4 }}>{sentidoValido ? <b style={{ fontWeight: 600, color: "var(--text)" }}>→ {sentidoValido} · </b> : null}{prox ? `Chegada estimada em ${ponto.nome}` : saida ? textoSaida(saida, ponto.nome) : `Nenhum veículo ${sentidoValido ? "neste sentido" : "da linha"} se aproximando de ${ponto.nome}`}</div>
         </div>
         <span className={`line-badge lg${ehBrt ? " brt" : ""}`} aria-label={`Linha ${linha}`}>{linha}</span>
       </div>
@@ -675,3 +680,37 @@ function DialSeguindo({ v, falta, onParar, onCentrar }: { v: J; falta: Falta | n
 
 /** Estimativa até o terminal final: ritmo real do GPS quando já há 2+ min de progresso observado; senão o ritmo programado (GTFS). */
 const etaFinal = (f: Falta) => f.etaGpsMin ?? f.etaProgMin ?? null;
+
+interface Saida { destino: string; intervaloMin: number | null; desdeMin: number | null; proximaMin: number | null; aguardando: number }
+/**
+ * Estação de ORIGEM do sentido (início do trajeto oficial): estima a próxima saída.
+ * - intervalo: programado (GTFS frequencies) para agora;
+ * - última saída: o veículo do sentido mais próximo à frente da estação; minutos desde a saída = trecho percorrido no ritmo programado;
+ * - próxima ≈ intervalo − minutos desde a última saída (estimativa do Monitora, não horário oficial).
+ */
+function proximaSaida(ponto: Ponto, trajetos: Trajeto[] | null | undefined, frota: J[], operacao: J | undefined): Saida | null {
+  for (const t of trajetos ?? []) {
+    const acc = acumulado(t.coords), e = projetar(ponto.lat, ponto.lng, t.coords, acc);
+    if (!e || e.distM > 300 || e.s > 600) continue; // a estação não é o começo deste trajeto
+    const total = acc[acc.length - 1];
+    const op = (operacao?.sentidos ?? []).find((x: J) => mesmoDestino(x.destino, t.destino));
+    const intervaloMin = op?.programado?.intervaloS ? op.programado.intervaloS / 60 : null;
+    const aguardando = frota.filter((v) => distKm(ponto, { lat: v.lat, lng: v.lng }) < 0.3 && (v.parado || v.velocidadeKmh < 5) && (!v.destino || mesmoDestino(v.destino, t.destino))).length;
+    let desdeMin: number | null = null;
+    if (t.duracaoProgramadaS) {
+      const ss = frota.filter((v) => v.shapeId === t.shapeId && (v.routeState === "ON_ROUTE" || v.routeState === "UNCERTAIN"))
+        .map((v) => projetar(v.lat, v.lng, t.coords, acc)?.s).filter((x): x is number => x != null && x > e.s + 300);
+      if (ss.length) desdeMin = ((Math.min(...ss) - e.s) / total) * t.duracaoProgramadaS / 60;
+    }
+    const proximaMin = intervaloMin != null && desdeMin != null && desdeMin < intervaloMin * 2 ? Math.max(0, intervaloMin - desdeMin) : null;
+    return { destino: t.destino, intervaloMin, desdeMin, proximaMin, aguardando };
+  }
+  return null;
+}
+function textoSaida(s: Saida, nome: string) {
+  const partes = [s.proximaMin != null ? `Próxima saída estimada de ${nome}` : `Saída de ${nome}`];
+  if (s.desdeMin != null) partes.push(`último saiu há ~${Math.max(1, Math.round(s.desdeMin))} min`);
+  if (s.intervaloMin != null && s.proximaMin != null) partes.push(`a cada ~${Math.round(s.intervaloMin)} min (programado)`);
+  if (s.aguardando) partes.push(`${s.aguardando} ${s.aguardando === 1 ? "veículo aguardando" : "veículos aguardando"} no terminal`);
+  return partes.join(" · ");
+}
