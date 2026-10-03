@@ -28,6 +28,8 @@ export interface VeiculoNormalizado {
   ignicaoDesligada: boolean | null;
   /** Ônibus: associação oficial informada pelo próprio GPS (GTFS). null no BRT (o feed não traz). */
   routeId: string | null; tripId: string | null; shapeIdGps: string | null;
+  /** BRT: hodômetro (km) da última leitura — distância real percorrida, para ritmo e checagem de saltos de GPS. */
+  hodometroKm: number | null;
 }
 
 /** EXPERIMENTAL / ESCOLHA DO SISTEMA — abaixo disso o veículo é tratado como parado (km/h). */
@@ -92,6 +94,7 @@ export function normalizarVeiculo(atual: Leitura, historico: Leitura[], agora: D
     idadeS: Math.max(0, Math.round((agora.getTime() - atual.ts.getTime()) / 1000)),
     ignicaoDesligada: atual.ignicao == null ? null : !atual.ignicao,
     routeId: atual.routeId ?? null, tripId: atual.tripId ?? null, shapeIdGps: atual.shapeId ?? null,
+    hodometroKm: atual.hodometroKm ?? null,
   };
 }
 

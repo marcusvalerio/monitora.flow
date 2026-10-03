@@ -182,7 +182,7 @@ export default function MobilidadeApp() {
   const esperaDest: number | null = prox ? prox.etaMin ?? null : saida?.proximaMin ?? null;
   const sel = lista.find((v) => v.id === veiculoSel) ?? null;
   // ritmo pelo GPS: progresso real do veículo ao longo do trajeto (s) entre leituras distintas, últimos 10 min
-  const amostras = useRef<{ id: string; pts: { t: number; s: number }[] }>({ id: "", pts: [] });
+  const amostras = useRef<{ id: string; pts: { t: number; s: number; odo: number | null }[] }>({ id: "", pts: [] });
   const falta = useMemo(() => {
     // destino: a estação de descida escolhida (se estiver à frente do veículo) ou o fim do trajeto
     const tp = sel && desce ? (paradasLinha?.trajetos as J[] | undefined)?.find((t) => t.shapeId === sel.shapeId) : null;
@@ -192,14 +192,25 @@ export default function MobilidadeApp() {
     const a = amostras.current;
     if (a.id !== sel.id) { a.id = sel.id; a.pts = []; }
     const t = Date.parse(sel.em);
-    if (!a.pts.length || a.pts[a.pts.length - 1].t !== t) a.pts.push({ t, s: f.s });
+    const odo = typeof sel.hodometroKm === "number" ? sel.hodometroKm : null;
+    const ult = a.pts[a.pts.length - 1];
+    // checagem de coerência (BRT): salto de posição muito maior que o hodômetro andou = salto de GPS → amostra descartada
+    const salto = ult && odo != null && ult.odo != null && Math.abs(f.s - ult.s) > (odo - ult.odo) * 1000 * 1.6 + 300;
+    if ((!ult || ult.t !== t) && !salto) a.pts.push({ t, s: f.s, odo });
     a.pts = a.pts.filter((p) => t - p.t <= 300_000); // janela curta: o ritmo de agora, não o tempo parado no terminal
-    const p0 = a.pts[0], dt = (t - p0.t) / 1000, ds = f.s - p0.s;
+    const p0 = a.pts[0], dt = (t - p0.t) / 1000;
+    // distância real: hodômetro (BRT) quando houver nas duas pontas; senão o avanço projetado no trajeto
+    const ds = p0.odo != null && odo != null ? (odo - p0.odo) * 1000 : f.s - p0.s;
     const kmh = dt > 0 ? (ds / dt) * 3.6 : 0;
     // ritmo GPS só vale se for plausível (8–80 km/h) e não destoar demais do programado (×0,5 a ×2); senão, fica o programado
     let etaGpsMin = dt >= 120 && kmh >= 8 && kmh <= 80 ? (f.restM / (ds / dt)) / 60 : null;
-    if (etaGpsMin != null && f.etaProgMin != null && (etaGpsMin > f.etaProgMin * 2 || etaGpsMin < f.etaProgMin * 0.5)) etaGpsMin = null;
-    return { ...f, etaGpsMin };
+    // estação de descida pela sequência oficial de paradas da viagem (GTFS-Realtime + stop_times), quando houver
+    const prox: J[] | null = sel.viagem?.proximas ?? null;
+    const alvoNome = desce ? (paradasLinha?.trajetos as J[] | undefined)?.flatMap((t) => t.paradas as J[]).find((p) => p.id === desce)?.nome : null;
+    const naSeq = prox ? (desce ? prox.find((p) => p.estacao === desce || (alvoNome && p.nome === alvoNome)) : prox[prox.length - 1]) : null;
+    const etaProgMin = naSeq ? naSeq.min : f.etaProgMin;
+    if (etaGpsMin != null && etaProgMin != null && (etaGpsMin > etaProgMin * 2 || etaGpsMin < etaProgMin * 0.5)) etaGpsMin = null;
+    return { ...f, etaProgMin, etaGpsMin, porParadas: !!naSeq };
   }, [sel, trajetoVisivel, desce, paradasLinha]);
 
   // Contexto de clima: chuva prevista perto do ponto nas próximas 2 h (previsão Open-Meteo).
@@ -217,7 +228,7 @@ export default function MobilidadeApp() {
           {etaFinal(falta) != null ? (
             <div className="eta appear" aria-live="polite"><span className="n num"><NumeroRolante valor={eta(etaFinal(falta)!)} /></span><span className="u">min</span></div>
           ) : <div className="t-title" aria-live="polite">{dec1(falta.km)} km</div>}
-          <div className="t-cap" style={{ marginTop: 4 }}><b style={{ fontWeight: 600, color: "var(--text)" }}>Até {falta.destino}</b> · {falta.etaGpsMin != null ? "pelo ritmo atual (GPS)" : falta.etaProgMin != null ? "pelo ritmo programado da linha" : "sem ritmo para estimar ainda"} · veículo {sel.veiculo}</div>
+          <div className="t-cap" style={{ marginTop: 4 }}><b style={{ fontWeight: 600, color: "var(--text)" }}>Até {falta.destino}</b> · {falta.etaGpsMin != null ? "pelo ritmo atual (GPS)" : falta.etaProgMin != null ? (falta.porParadas ? "pelas paradas programadas da viagem" : "pelo ritmo programado da linha") : "sem ritmo para estimar ainda"} · veículo {sel.veiculo}</div>
         </div>
         <span className={`line-badge lg${ehBrt ? " brt" : ""}`} aria-label={`Linha ${linha}`}>{linha}</span>
       </div>
@@ -539,6 +550,17 @@ function VeiculoCard({ v, ponto, chegada, falta, seguindo, onSeguir, onFechar }:
           )}
         </div>
       )}
+      {v.viagem?.proximas?.length > 0 && (
+        <div className="proximas">
+          <div className="t-label">Próximas estações</div>
+          <ol>
+            {(v.viagem.proximas as J[]).slice(0, 5).map((p, i) => (
+              <li key={`${p.nome}${i}`}><span>{p.nome}</span><b className="num">~{Math.max(1, Math.round(p.min))} min</b></li>
+            ))}
+          </ol>
+          <p className="t-meta" style={{ margin: "4px 0 0" }}>Viagem oficial pelo GTFS-Realtime{v.viagem.inicio ? ` (saiu ${v.viagem.inicio.slice(0, 5)})` : ""}; tempos programados entre paradas.</p>
+        </div>
+      )}
       <button className={`btn ${seguindo ? "btn-ghost" : "btn-primary"}`} style={{ width: "100%", marginTop: 12 }} onClick={onSeguir} aria-pressed={seguindo}>
         <Navigation aria-hidden /> {seguindo ? "Parar de acompanhar" : "Acompanhar no mapa"}
       </button>
@@ -667,6 +689,7 @@ function Operacao({ op, sentido }: { op: J; sentido: string | null }) {
             <div className="op-nums">
               <div><span className="op-n num">{o.rodando}</span><span className="t-cap">rodando agora<br />no trajeto (GPS)</span></div>
               <div><span className="op-n num">{p?.intervaloS ? fmtIntervalo(p.intervaloS) : "—"}</span><span className="t-cap">{p?.intervaloS ? <>intervalo programado<br />{p.partidasPorHora}/h até {p.faixa?.fim}</> : <>sem partidas<br />programadas agora</>}</span></div>
+              <div><span className={`op-n num${o.intervaloRealMin != null && p?.intervaloS && o.intervaloRealMin > (p.intervaloS / 60) * 1.5 ? " op-alerta" : ""}`}>{o.intervaloRealMin == null ? "—" : `${Math.max(1, Math.round(o.intervaloRealMin))} min`}</span><span className="t-cap">intervalo real<br />(GPS, mediana)</span></div>
               <div><span className="op-n num">{o.espacamentoMedioKm == null ? "—" : `${dec1(o.espacamentoMedioKm)} km`}</span><span className="t-cap">entre um ônibus<br />e outro (média)</span></div>
             </div>
             {perfil.some((x) => x != null) && (
@@ -683,7 +706,7 @@ function Operacao({ op, sentido }: { op: J; sentido: string | null }) {
   );
 }
 
-interface Falta { km: number; pct: number; destino: string; s: number; restM: number; etaProgMin: number | null; etaGpsMin?: number | null }
+interface Falta { km: number; pct: number; destino: string; s: number; restM: number; etaProgMin: number | null; etaGpsMin?: number | null; porParadas?: boolean }
 /** Calculado: quanto falta do trajeto oficial até o fim da viagem (só para veículo casado ao trajeto). */
 function faltaDoTrajeto(v: J | null, trajetos: Trajeto[] | null | undefined, alvo?: { s: number; nome: string } | null): Falta | null {
   if (!v || (v.routeState !== "ON_ROUTE" && v.routeState !== "UNCERTAIN")) return null;
@@ -710,7 +733,7 @@ function DialSeguindo({ v, falta, onParar, onCentrar }: { v: J; falta: Falta | n
       </svg>
       <button className="centrar" onClick={onCentrar} aria-label="Centralizar no veículo" />
       <b className="num">{v.linha}</b>
-      {v.idadeS > 90 ? <span className="km num sinal">sem sinal {Math.round(v.idadeS / 60)} min</span>
+      {v.idadeS > (v.fonte === "sppo" ? 60 : 90) ? <span className="km num sinal">sem sinal {Math.round(v.idadeS / 60)} min</span>
         : falta && <span className="km num">{etaFinal(falta) != null ? `~${eta(etaFinal(falta)!)} min` : `${dec1(falta.km)} km`}</span>}
       <button className="parar" onClick={onParar} aria-label="Parar de acompanhar"><X aria-hidden /></button>
     </div>

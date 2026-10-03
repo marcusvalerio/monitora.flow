@@ -14,7 +14,8 @@
     "paradas:atualizar": "tsx scripts/atualizar-paradas.ts",
     "estacoes:atualizar": "tsx scripts/atualizar-estacoes-brt.ts",
     "brt:atualizar": "tsx scripts/atualizar-catalogo-brt.ts",
-    "frequencias:atualizar": "tsx scripts/atualizar-frequencias.ts"
+    "frequencias:atualizar": "tsx scripts/atualizar-frequencias.ts",
+    "brt:viagens": "tsx scripts/atualizar-viagens-brt.ts"
   },
   "repository": {
     "type": "git",

@@ -21,6 +21,8 @@ export interface Leitura {
   direcao?: number | null;
   /** Trajeto informado pelo BRT (ex.: "22 - ALVORADA X JARDIM OCEANICO (PARADOR) [IDA]"). Só ao vivo. */
   trajeto?: string | null;
+  /** BRT: hodômetro do veículo em km (campo `hodometro`; Δ≈0,5 km em 40 s a ~40 km/h, verificado em 03/10/2026). Só ao vivo. */
+  hodometroKm?: number | null;
   /** BRT: ignição ligada? (campo `ignicao` 1/0). Só ao vivo. */
   ignicao?: boolean | null;
   /** SPPO: associação oficial da viagem informada pelo próprio feed (route_id/trip_id/shape_id do GTFS). Só ao vivo. */
@@ -65,6 +67,7 @@ const brtItem = z.object({
   direcao: z.unknown().optional(),
   trajeto: z.string().nullish(),
   ignicao: z.union([z.number(), z.string()]).nullish(),
+  hodometro: num.nullish(),
 });
 const brtResposta = z.object({ veiculos: z.array(z.unknown()) });
 
@@ -122,6 +125,7 @@ export function parseBrt(json: unknown, agora: Date): ResultadoParse {
       lat: it.latitude, lng: it.longitude, velocidade: it.velocidade, ts,
       direcao: lerDirecao(it.direcao), trajeto: it.trajeto?.trim() || null,
       ignicao: it.ignicao == null || it.ignicao === "" ? null : Number(it.ignicao) === 1,
+      hodometroKm: it.hodometro != null && it.hodometro > 0 ? it.hodometro : null,
     };
     if (validaComum(l, descartadas)) leituras.push(l);
   }
