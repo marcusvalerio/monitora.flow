@@ -3,6 +3,14 @@
 **Espaço:** mundo (mapa) embaixo · material (vidro) no meio · informação (tipografia) em cima.
 **Ordem:** conteúdo → material → movimento. Cor comunica estado; a interface é neutra.
 
+## Marca
+- **"Lente":** dois arcos deitados que afinam nas pontas formam uma pálpebra aberta (observar); quatro colchetes por fora,
+  em cima e embaixo, enquadram a cidade. Simétrica nos dois eixos, sem ponto central. Caminhos em `MARCA_CAMINHOS`
+  (`app/ui/Geometria.tsx`), viewBox 120, `currentColor`. Colchetes engrossados e afastados dos arcos para ler em 16–20 px.
+- **Ícone do app:** fundo `#2C42C2`, cantos `rx=27` (viewBox 120), marca branca em escala 0,8 centralizada (`public/icone.svg`).
+  PNG: `icone-512-arredondado.png`, `apple-touch-icon.png` (quadrado, o sistema arredonda), `favicon-32.png`;
+  *maskable* `icone-192.png` / `icone-512.png` com a marca em escala 0,6 (margem segura de 20%).
+
 ## Cor (`app/ui/tokens.ts` = fonte; espelhada em `app/globals.css`)
 | Token | Hex | Papel |
 |---|---|---|

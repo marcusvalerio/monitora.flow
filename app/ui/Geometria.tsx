@@ -1,16 +1,23 @@
 /**
  * Linguagem geométrica do Monitora: círculos, arcos e interseções em módulos.
- * Marca: dois círculos que se cruzam (lugar + movimento) e um arco de trajeto; o ponto de sinal (Lime) é o "agora".
+ * Marca: "lente" — dois arcos que afinam nas pontas (pálpebra aberta: observar) e quatro colchetes que enquadram a cidade.
  * Órbita: arcos concêntricos para carregamento — gira devagar (interação), para com reduced-motion.
  */
-/** Marca do Monitora: mostrador de 24 h em gomos (o "relógio do céu"), um M de traço único (trajeto) e o ponto "agora". */
-export function MarcaMonitora({ size = 22, sinal = true }: { size?: number; sinal?: boolean }) {
+/**
+ * Marca do Monitora — "lente": dois arcos que afinam nas pontas formam uma pálpebra aberta (observar)
+ * e quatro colchetes por fora enquadram a cidade. Simétrica nos dois eixos; viewBox 120; cor = currentColor.
+ * Mesmos caminhos de public/icone.svg (lá em branco, escala 0,8, sobre #2C42C2).
+ */
+export const MARCA_CAMINHOS = [
+  "M 98 46 C 80 24 40 24 22 46 L 22 54 C 40 36 80 36 98 54Z",
+  "M 98 74 C 80 96 40 96 22 74 L 22 66 C 40 84 80 84 98 66Z",
+  "M 76 4 L 91 29 L 79 29 L 70 14Z M 76 116 L 91 91 L 79 91 L 70 106Z M 44 4 L 29 29 L 41 29 L 50 14Z M 44 116 L 29 91 L 41 91 L 50 106Z",
+] as const;
+
+export function MarcaMonitora({ size = 22 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="9.6" stroke="currentColor" strokeOpacity=".3" strokeWidth="2" strokeDasharray="3.4 1.6" transform="rotate(-90 12 12)" />
-      <circle cx="12" cy="12" r="9.6" stroke="currentColor" strokeWidth="2" strokeDasharray="3.4 1.6 3.4 1.6 3.4 1.6 3.4 60" transform="rotate(-90 12 12)" />
-      <path d="M8.2 15.6V8.6L12 13l3.8-4.4v7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-      {sinal && <circle cx="12" cy="2.4" r="1.6" fill="var(--accent)" />}
+    <svg width={size} height={size} viewBox="0 0 120 120" fill="currentColor" aria-hidden>
+      {MARCA_CAMINHOS.map((d) => <path key={d} d={d} />)}
     </svg>
   );
 }
