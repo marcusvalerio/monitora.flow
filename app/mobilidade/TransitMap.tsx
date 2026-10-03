@@ -50,6 +50,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
   useEffect(() => {
     let vivo = true;
     let destruir = () => {};
+    let pararFluxo = () => {};
     criarMapa(div.current!).then(({ m, map, destruir: d }) => {
       destruir = d;
       if (!vivo) { d(); return; }
@@ -57,7 +58,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
       map.addControl(new m.NavigationControl({ showCompass: false }), "bottom-right");
       mapa.current = map;
       map.on("load", () => {
-        camadasRota(map);
+        pararFluxo = camadasRota(map);
         camadasDiagnostico(map);
         camadasEstacoes(map, ESTACOES);
         map.on("click", "estacoes-pt", (e) => { const id = e.features?.[0]?.properties?.id; if (id) ultimos.current.onEstacao(id); });
@@ -65,13 +66,24 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
         map.on("mouseleave", "estacoes-pt", () => { map.getCanvas().style.cursor = ""; });
         pronto.current = true;
         desenhar();
+        sentirAmbiente();
       });
+      // Material responde ao ambiente: o que está sob a busca (água, rota ativa, terra) tinge levemente o vidro.
+      const sentirAmbiente = () => {
+        const alvo = div.current?.closest(".mob") as HTMLElement | null;
+        if (!alvo || !map.isStyleLoaded()) return;
+        const w = map.getContainer().clientWidth;
+        const caixa: [[number, number], [number, number]] = [[16, 20], [w - 16, 70]];
+        const sob = map.queryRenderedFeatures(caixa, { layers: ["route-active", "water"].filter((l) => map.getLayer(l)) });
+        alvo.dataset.sob = sob.some((f) => f.layer.id === "route-active") ? "rota" : sob.some((f) => f.layer.id === "water") ? "agua" : "terra";
+      };
+      map.on("moveend", sentirAmbiente);
       map.on("click", (e) => {
         const alvo = e.originalEvent.target as HTMLElement;
         if (!alvo.closest(".veh") && !map.queryRenderedFeatures(e.point, { layers: ["estacoes-pt"] }).length) ultimos.current.onVeiculo(null);
       });
     });
-    return () => { vivo = false; frota.current.forEach((i) => i.anim && cancelAnimationFrame(i.anim)); destruir(); mapa.current = null; };
+    return () => { vivo = false; pararFluxo(); frota.current.forEach((i) => i.anim && cancelAnimationFrame(i.anim)); destruir(); mapa.current = null; };
   }, []);
 
   useEffect(() => { desenhar(); });

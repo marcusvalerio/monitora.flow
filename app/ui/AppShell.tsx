@@ -40,11 +40,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <Link key={href} href={href} className="item" aria-current={ativo(href) ? "page" : undefined}>{rotulo}</Link>
         ))}
       </header>
-      {children}
-      <nav className="nav" aria-label="Navegação principal">
+      {/* continuidade espacial: cada tela entra com a mesma transição (chave = rota) */}
+      <div className="rota-entra" key={p}>{children}</div>
+      <nav className="nav" aria-label="Navegação principal" style={{ ["--n" as string]: ITENS.length, ["--i" as string]: Math.max(0, ITENS.findIndex((x) => ativo(x.href))) }}>
+        {/* indicador único que desliza entre as abas: uma peça do material, não um botão dentro da barra */}
+        <span className={`nav-ind${ITENS.some((x) => ativo(x.href)) ? "" : " oculto"}`} aria-hidden />
         {ITENS.map(({ href, rotulo, Icone }) => (
           <Link key={href} href={href} aria-current={ativo(href) ? "page" : undefined}>
-            <Icone aria-hidden strokeWidth={ativo(href) ? 2.2 : 1.8} />
+            <Icone aria-hidden strokeWidth={ativo(href) ? 2 : 1.7} />
             {rotulo}
           </Link>
         ))}

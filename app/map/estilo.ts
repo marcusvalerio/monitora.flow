@@ -6,26 +6,14 @@
  */
 import type { StyleSpecification, ExpressionSpecification } from "maplibre-gl";
 
-export type Tema = "claro" | "escuro";
-
-const PALETA = {
-  claro: {
-    fundo: "#EEF2F3", verde: "#E2EBE6", predio: "#E4E9EC", agua: "#A9CDD4", aguaLinha: "#97C1CA", aguaRotulo: "#3C7480",
-    viaPrincipal: "#FDFDFE", viaPrincipalBorda: "#D5DEE3", viaSecundaria: "#FDFDFE", viaMenor: "#F6F8F9", trilho: "#C9D3D8",
-    rotulo: "#55627A", rotuloForte: "#1E2A44", halo: "#EEF2F3",
-  },
-  escuro: {
-    fundo: "#000022", verde: "#04102C", predio: "#0A1436", agua: "#0B2A4C", aguaLinha: "#0F3558", aguaRotulo: "#5FA3B8",
-    viaPrincipal: "#1A2756", viaPrincipalBorda: "#0B1236", viaSecundaria: "#141F4A", viaMenor: "#0F1940", trilho: "#18224F",
-    rotulo: "#7E8AA6", rotuloForte: "#C9D2E3", halo: "#000022",
-  },
-};
+import { MAPA, type Tema } from "../ui/tokens";
+export type { Tema };
 
 const z = (pares: number[]): ExpressionSpecification => ["interpolate", ["exponential", 1.5], ["zoom"], ...pares] as ExpressionSpecification;
 const classe = (...cs: string[]): ExpressionSpecification => ["match", ["get", "class"], cs, true, false] as ExpressionSpecification;
 
 export function estiloMonitora(tema: Tema): StyleSpecification {
-  const c = PALETA[tema];
+  const c = MAPA[tema];
   const nome: ExpressionSpecification = ["coalesce", ["get", "name:pt"], ["get", "name"]] as ExpressionSpecification;
   return {
     version: 8,
@@ -33,12 +21,15 @@ export function estiloMonitora(tema: Tema): StyleSpecification {
     glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
     sources: { base: { type: "vector", url: "https://tiles.openfreemap.org/planet", attribution: "© OpenStreetMap · OpenFreeMap" } },
     layers: [
-      { id: "fundo", type: "background", paint: { "background-color": c.fundo } },
+      { id: "fundo", type: "background", paint: { "background-color": c.terra } },
       // relevo/verde: muito discreto
       { id: "verde", type: "fill", source: "base", "source-layer": "landcover", filter: classe("wood", "grass", "farmland", "wetland"), paint: { "fill-color": c.verde, "fill-opacity": 0.7 } },
       { id: "parque", type: "fill", source: "base", "source-layer": "park", paint: { "fill-color": c.verde, "fill-opacity": 0.8 } },
       // água: identidade própria (azul-teal), base para a "água viva" (app/ui/motion.ts)
       { id: "water", type: "fill", source: "base", "source-layer": "water", filter: ["!=", ["get", "brunnel"], "tunnel"], paint: { "fill-color": c.agua, "fill-antialias": true } },
+      // profundidade tonal: a borda interna da água é mais clara (faixa rasa), o meio mais profundo
+      { id: "agua-raso", type: "line", source: "base", "source-layer": "water", filter: ["!=", ["get", "brunnel"], "tunnel"],
+        paint: { "line-color": c.terra, "line-width": z([8, 1.5, 14, 10]), "line-blur": z([8, 2, 14, 12]), "line-opacity": 0.55 } },
       { id: "agua-curso", type: "line", source: "base", "source-layer": "waterway", minzoom: 11, paint: { "line-color": c.aguaLinha, "line-width": z([11, 0.6, 16, 2]) } },
       { id: "predios", type: "fill", source: "base", "source-layer": "building", minzoom: 15, paint: { "fill-color": c.predio, "fill-opacity": z([15, 0, 16, 0.75]) } },
       // vias: 3 níveis; caminhos e serviço ficam de fora

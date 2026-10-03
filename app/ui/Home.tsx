@@ -27,12 +27,12 @@ export default function Home() {
 
       <div className="actions">
         <Link href="/clima" className="action appear">
-          <span className="ico" style={{ background: "color-mix(in srgb, var(--info) 14%, transparent)", color: "var(--info)" }}><CloudSun aria-hidden /></span>
+          <span className="ico" style={{ background: "color-mix(in srgb, var(--accent) 14%, transparent)", color: "var(--accent)" }}><CloudSun aria-hidden /></span>
           <span style={{ flex: 1 }}><div className="t-title">Ver o clima</div><div className="t-cap">Agora, próximas horas e próximos dias</div></span>
           <ChevronRight aria-hidden style={{ color: "var(--text-3)" }} />
         </Link>
         <Link href="/mobilidade" className="action appear">
-          <span className="ico" style={{ background: "color-mix(in srgb, var(--brt) 14%, transparent)", color: "var(--brt)" }}><BusFront aria-hidden /></span>
+          <span className="ico" style={{ background: "color-mix(in srgb, var(--text) 14%, transparent)", color: "var(--text)" }}><BusFront aria-hidden /></span>
           <span style={{ flex: 1 }}><div className="t-title">Acompanhar transporte</div><div className="t-cap">BRT e ônibus ao vivo, chegada estimada</div></span>
           <ChevronRight aria-hidden style={{ color: "var(--text-3)" }} />
         </Link>
@@ -56,7 +56,7 @@ export default function Home() {
             )}
             {mob.ponto && (
               <Link href="/mobilidade" className="list-item">
-                <span className="ico" style={{ color: "var(--brt)" }}><BusFront aria-hidden /></span>
+                <span className="ico" style={{ color: "var(--text)" }}><BusFront aria-hidden /></span>
                 <span className="main"><div className="t-head">{mob.linha ? `Continuar: linha ${mob.linha}` : mob.ponto.nome}</div><div className="t-cap">{mob.linha ? mob.ponto.nome : "Última estação consultada"}</div></span>
                 <ChevronRight aria-hidden style={{ color: "var(--text-3)" }} />
               </Link>

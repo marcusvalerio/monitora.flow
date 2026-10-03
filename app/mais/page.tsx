@@ -66,7 +66,7 @@ export default function Mais() {
 
 function Bloco({ t, children, ultimo }: { t: string; children: React.ReactNode; ultimo?: boolean }) {
   return (
-    <div style={{ paddingBottom: ultimo ? 0 : 14, marginBottom: ultimo ? 0 : 14, borderBottom: ultimo ? 0 : "1px solid var(--border)" }}>
+    <div style={{ paddingBottom: ultimo ? 0 : 14, marginBottom: ultimo ? 0 : 14, borderBottom: ultimo ? 0 : "1px solid var(--hairline)" }}>
       <div className="t-head">{t}</div>
       <div className="t-cap" style={{ marginTop: 4 }}>{children}</div>
     </div>

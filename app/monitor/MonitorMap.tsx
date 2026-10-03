@@ -2,13 +2,12 @@
 import { useEffect, useRef } from "react";
 import type { GeoJSONSource, Map as MLMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { criarMapa, token } from "../map/engine";
+import { criarMapa } from "../map/engine";
+import { COR_ESTADO, MAPA, temaAtual } from "../ui/tokens";
 
 /** Mapa operacional: um ponto por veículo (camada única de círculos, atualização incremental via setData). */
 export type PontoFrota = [number, number, string, string]; // lng, lat, fonte, estado
-export const COR_ESTADO: Record<string, string> = {
-  ON_ROUTE: "#16a34a", UNCERTAIN: "#d97706", OFF_ROUTE: "#dc2626", STALE: "#94a3b8", SEM_TRAJETO: "#104071",
-};
+export { COR_ESTADO };
 
 export default function MonitorMap({ pontos }: { pontos: PontoFrota[] }) {
   const div = useRef<HTMLDivElement>(null);
@@ -37,7 +36,7 @@ export default function MonitorMap({ pontos }: { pontos: PontoFrota[] }) {
             "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, ["match", ["get", "modo"], "BRT", 2.6, 1.6], 14, ["match", ["get", "modo"], "BRT", 6, 4]],
             "circle-color": ["match", ["get", "estado"], "ON_ROUTE", COR_ESTADO.ON_ROUTE, "UNCERTAIN", COR_ESTADO.UNCERTAIN, "OFF_ROUTE", COR_ESTADO.OFF_ROUTE, "STALE", COR_ESTADO.STALE, COR_ESTADO.SEM_TRAJETO],
             "circle-opacity": ["match", ["get", "modo"], "BRT", 0.95, 0.6],
-            "circle-stroke-width": ["match", ["get", "modo"], "BRT", 1, 0], "circle-stroke-color": token("--bg", "#EEF2F3"),
+            "circle-stroke-width": ["match", ["get", "modo"], "BRT", 1, 0], "circle-stroke-color": MAPA[temaAtual()].terra,
           },
         });
         pronto.current = true;

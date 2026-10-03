@@ -175,7 +175,7 @@ function Tempo({ tempo, chuva, local, recarregar }: { tempo: J | null; chuva: J 
           <span className="t-label">Chuva medida agora</span>
           <div className="surface" style={{ padding: 16 }}>
             <div className="row">
-              <Thermometer size={20} aria-hidden style={{ color: "var(--info)" }} />
+              <Thermometer size={20} aria-hidden style={{ color: "var(--accent)" }} />
               <div className="main" style={{ flex: 1 }}>
                 <div className="t-head num">{estPerto.mm.h01 == null ? "Sem medição" : `${dec(estPerto.mm.h01)} mm na última hora`}</div>
                 <div className="t-cap">{estPerto.mm.m15 != null && `${dec(estPerto.mm.m15)} mm em 15 min · `}Pluviômetro {estPerto.nome}, a {fmtDist(estPerto.distanciaM / 1000)}</div>
@@ -212,7 +212,7 @@ function Tempo({ tempo, chuva, local, recarregar }: { tempo: J | null; chuva: J 
                 <div className="day" key={d.data} aria-label={`${diaSemana(d.data)}: ${d.descricao?.texto ?? ""}, mínima ${Math.round(d.minC)}, máxima ${Math.round(d.maxC)}, chance de chuva ${d.probabilidadeChuvaPct ?? "sem dado"}%`}>
                   <span className="t-head">{diaSemana(d.data)}</span>
                   <IconeTempo icone={d.descricao?.icone} />
-                  <span className="t-cap num" style={{ color: "var(--info)", fontWeight: 600 }}>{d.probabilidadeChuvaPct >= 20 ? `${d.probabilidadeChuvaPct}%` : ""}</span>
+                  <span className="t-cap num" style={{ color: "var(--accent)", fontWeight: 600 }}>{d.probabilidadeChuvaPct >= 20 ? `${d.probabilidadeChuvaPct}%` : ""}</span>
                   <span className="range" aria-hidden><i style={{ left: `${ini}%`, right: `${100 - fim}%`, ["--i" as string]: dias.indexOf(d) }} /></span>
                   <span className="t-head num" style={{ textAlign: "right" }}>{Math.round(d.maxC)}°<span className="t-cap"> {Math.round(d.minC)}°</span></span>
                 </div>

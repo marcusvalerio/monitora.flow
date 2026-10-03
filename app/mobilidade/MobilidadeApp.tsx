@@ -9,7 +9,7 @@ import { EmptyState, ErrorState, LastUpdated, Skel } from "../ui/estados";
 import { J, distKm, fmtDist, get, gravar, ha, horaLocal, lembrar, ler, minhaPosicao } from "../ui/util";
 import type { Ponto, VeiculoMapa } from "./TransitMap";
 import { mesmoDestino, type Trajeto } from "../../src/lib/trajeto";
-import { ContaNumero } from "../clima/WeatherHero";
+import { NumeroRolante } from "../ui/Numero";
 import estacoesJson from "../../src/data/estacoes-brt.json";
 
 const ESTACOES = estacoesJson.estacoes;
@@ -169,7 +169,7 @@ export default function MobilidadeApp() {
       <div className="row" style={{ alignItems: "flex-end" }}>
         <div style={{ minWidth: 0, flex: 1 }}>
           {!chegada ? <Skel h={48} w={140} /> : prox ? (
-            <div className="eta appear" aria-live="polite"><span className="n num"><ContaNumero valor={eta(prox.etaMin)} /></span><span className="u">min</span></div>
+            <div className="eta appear" aria-live="polite"><span className="n num"><NumeroRolante valor={eta(prox.etaMin)} /></span><span className="u">min</span></div>
           ) : <div className="t-title" aria-live="polite">Sem estimativa agora</div>}
           <div className="t-cap" style={{ marginTop: 4 }}>{sentidoValido ? <b style={{ fontWeight: 600, color: "var(--text)" }}>→ {sentidoValido} · </b> : null}{prox ? `Chegada estimada em ${ponto.nome}` : `Nenhum veículo ${sentidoValido ? "neste sentido" : "da linha"} se aproximando de ${ponto.nome}`}</div>
         </div>
@@ -275,7 +275,7 @@ export default function MobilidadeApp() {
                 <ul className="list">
                   {lista.map((v): J => ({ ...v, k: distKm(ponto, { lat: v.lat, lng: v.lng }) })).sort((a, b) => a.k - b.k).slice(0, 5).map((v) => (
                     <li key={v.id}><button className="list-item" onClick={() => { setVeiculoSel(v.id); setNivel(1); }} aria-label={`Veículo ${v.veiculo}, a ${fmtDist(v.k)}`}>
-                      <span className="ico" style={{ color: v.fonte === "brt" ? "var(--brt)" : "var(--bus)" }}><BusFront aria-hidden /></span>
+                      <span className="ico" style={{ color: v.fonte === "brt" ? "var(--text)" : "var(--text-2)" }}><BusFront aria-hidden /></span>
                       <span className="main">
                         <div className="t-head num">{fmtDist(v.k)} <span className="t-cap">de {ponto.nome}</span></div>
                         <div className="t-cap">{v.destino ? `Sentido ${v.destino} · ` : ""}Veículo {v.veiculo}</div>
