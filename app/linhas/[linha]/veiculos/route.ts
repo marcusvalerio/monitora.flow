@@ -4,7 +4,8 @@ import type { Leitura } from "../../../../src/lib/fontes";
 import { normalizarFrota } from "../../../../src/lib/veiculo";
 import { linhaBrt, modoDaLinha, CATALOGO_BRT, type TransportMode } from "../../../../src/lib/brt";
 import { casarVeiculo, diagnostico, ROUTE_MATCHING_TOLERANCE_METERS, ROUTE_OFF_THRESHOLD_METERS, HEADING_TOLERANCE_DEG, STALE_AFTER_S } from "../../../../src/lib/matching";
-import { acumulado } from "../../../../src/lib/trajeto";
+import { acumulado, projetar } from "../../../../src/lib/trajeto";
+import { programacao, FONTE_FREQUENCIAS } from "../../../../src/lib/frequencia";
 import { trajetosDaLinha } from "../../../../src/lib/catalogo";
 import { CATALOGO_ONIBUS } from "../../../../src/lib/onibus";
 import { PARAMETROS } from "../../../../src/lib/parametros";
@@ -45,6 +46,31 @@ export function GET(req: Request, ctx: { params: Promise<{ linha: string }> }) {
       return { ...v, modo, ...c, ...(diag ? { diagnostico: diagnostico(v.veiculo, linha, c) } : {}) };
     });
     const conta = (s: string) => frota.filter((v) => v.routeState === s).length;
+
+    // Operação: PROGRAMADO (GTFS frequencies, fonte externa) × OBSERVADO (GPS agora, calculado aqui).
+    // Rodando = ON_ROUTE ou UNCERTAIN casado a um shape daquele sentido (garagem/fora/sem sinal não contam).
+    // Espaçamento = distância média ao longo do trajeto entre veículos consecutivos do mesmo shape (km).
+    const prog = modo === "OUTROS" ? null : programacao(modo, linha, agora);
+    const sentidosIds = [...new Set(trajetos.map((t) => t.sentido))].sort();
+    const operacao = trajetos.length ? {
+      fonteProgramacao: FONTE_FREQUENCIAS,
+      tipoDia: prog?.tipoDia ?? null,
+      sentidos: sentidosIds.map((sid) => {
+        const p = prog?.sentidos.find((x) => x.sentido === sid) ?? null;
+        const tsDoSentido = trajetos.filter((t) => t.sentido === sid);
+        const rodando = frota.filter((v) => (v.routeState === "ON_ROUTE" || v.routeState === "UNCERTAIN") && tsDoSentido.some((t) => t.shapeId === v.shapeId));
+        const gaps: number[] = [];
+        for (const t of tsDoSentido) {
+          const ss = rodando.filter((v) => v.shapeId === t.shapeId).map((v) => projetar(v.lat, v.lng, t.coords, t.acc)?.s).filter((x): x is number => x != null).sort((a, b) => a - b);
+          for (let i = 1; i < ss.length; i++) gaps.push(ss[i] - ss[i - 1]);
+        }
+        return {
+          sentido: sid, destino: tsDoSentido[0]?.destino ?? p?.destino ?? null,
+          programado: p ? { intervaloS: p.intervaloS, partidasPorHora: p.partidasPorHora, faixa: p.faixa, perfil: p.perfil } : null,
+          observado: { rodando: rodando.length, espacamentoMedioKm: gaps.length ? Math.round((gaps.reduce((a, b) => a + b, 0) / gaps.length) / 100) / 10 : null },
+        };
+      }),
+    } : undefined;
     return ok({
       linha, modo, janelaMin: PARAMETROS.JANELA_LINHA_MIN, consultadoEm: agora, fonteAoVivoEm: vivo.consultadoEm,
       nota: "Posições ao vivo da fonte da SMTR somadas às gravadas nos últimos 10 min. rumo: graus, 0 = norte, sentido horário. lat/lng = GPS como veio.",
@@ -58,6 +84,7 @@ export function GET(req: Request, ctx: { params: Promise<{ linha: string }> }) {
         },
         resumo: { ON_ROUTE: conta("ON_ROUTE"), UNCERTAIN: conta("UNCERTAIN"), OFF_ROUTE: conta("OFF_ROUTE"), STALE: conta("STALE") },
       } : {}),
+      operacao,
       observado: frota,
     }, undefined, 5);
   });
