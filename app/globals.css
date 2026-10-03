@@ -570,6 +570,9 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .dial-seg svg { position: absolute; inset: 4px; width: 64px; height: 64px; transform: rotate(-90deg); }
 .dial-seg .trilha { fill: none; stroke: var(--surface-2); stroke-width: 5; }
 .dial-seg .resta { fill: none; stroke: var(--ultramarine); stroke-width: 5; stroke-linecap: round; transition: stroke-dashoffset 1.2s var(--ease-out); }
+.dial-seg .centrar { position: absolute; inset: 0; border-radius: 50%; border: 0; background: transparent; cursor: pointer; }
+.dial-seg b, .dial-seg .km { pointer-events: none; }
+.dial-seg .parar { z-index: 1; }
 .dial-seg b { font: 600 20px/1 var(--font-num); letter-spacing: -.03em; margin-top: -6px; }
 .dial-seg .km { position: absolute; bottom: 15px; font: 600 9.5px var(--font-num); color: var(--text-2); }
 .dial-seg .parar { position: absolute; top: -4px; right: -4px; width: 24px; height: 24px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center;

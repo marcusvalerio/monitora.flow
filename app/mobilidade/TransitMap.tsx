@@ -23,10 +23,13 @@ type TrajetoAcc = Trajeto & { acc: number[] };
 /** Diagnóstico (modo debug): GPS real, projeção no shape e o segmento que os liga. */
 export interface DebugGeo { gps: [number, number]; proj: [number, number] | null; shapeId: string | null }
 
-export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onEstacao, eu, pad, enquadrarChave, trajetos, debug, seguir = false, onSoltar }: {
+const RASTRO: { current: { id: string | null; pts: [number, number][] } } = { current: { id: null, pts: [] } };
+const VOLTA_A_SEGUIR_MS = 5000;
+
+export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onEstacao, eu, pad, enquadrarChave, trajetos, debug, seguir = false, onSoltar, recentrar = 0 }: {
   ponto: Ponto | null; veiculos: VeiculoMapa[]; veiculoSel: string | null; trajetos?: Trajeto[] | null; debug?: DebugGeo | null;
   /** modo acompanhar: a câmera segue o veículo selecionado; arrastar o mapa solta (onSoltar). */
-  seguir?: boolean; onSoltar?: () => void;
+  seguir?: boolean; onSoltar?: () => void; recentrar?: number;
   onVeiculo: (id: string | null) => void; onEstacao: (id: string) => void;
   eu: { lat: number; lng: number } | null; pad: { bottom: number; left: number }; enquadrarChave: string;
 }) {
@@ -40,7 +43,10 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
   const ultimos = useRef({ ponto, veiculos, veiculoSel, eu, pad, onVeiculo, onEstacao, debug, seguir, onSoltar });
   ultimos.current = { ponto, veiculos, veiculoSel, eu, pad, onVeiculo, onEstacao, debug, seguir, onSoltar };
   // rastro do veículo acompanhado: só posições REAIS recebidas do GPS desde que o acompanhamento começou
-  const rastro = useRef<{ id: string | null; pts: [number, number][] }>({ id: null, pts: [] });
+  // (fica fora do componente para sobreviver à troca de aba)
+  const rastro = RASTRO;
+  const pausadoAte = useRef(0); // usuário mexeu no mapa: a câmera para de seguir por alguns segundos e depois volta sozinha
+  const precisaCentrar = useRef(false); // acompanhamento ativo mas o veículo ainda não foi desenhado (ex.: voltando de outra aba)
   const seguirDesde = useRef(0); // durante a aproximação inicial a câmera não é puxada quadro a quadro
   const enquadrado = useRef("");
   // trajeto oficial (GTFS) da linha acompanhada, com comprimentos acumulados para encaixe/animação
@@ -108,18 +114,43 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
     if (fora) map.easeTo({ center: [it.vis.lng, it.vis.lat], ...camera() });
   }, [veiculoSel]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Acompanhar: aproxima no veículo; qualquer arrasto do usuário solta a câmera.
+  // Acompanhar: aproxima no veículo. Mexer no mapa só PAUSA: depois de alguns segundos sem toque a câmera volta ao veículo.
   useEffect(() => {
     const map = mapa.current;
-    rastro.current = { id: seguir ? veiculoSel : null, pts: [] };
+    const id = seguir ? veiculoSel : null;
+    if (rastro.current.id !== id) rastro.current = { id, pts: [] };
     desenharRastro();
-    if (!map || !seguir || !veiculoSel) return;
-    const it = frota.current.get(veiculoSel);
-    if (it) { rastro.current.pts.push([it.lng, it.lat]); seguirDesde.current = performance.now() + 950; map.easeTo({ center: [it.vis.lng, it.vis.lat], zoom: Math.max(map.getZoom(), 15.5), ...camera(900) }); }
-    const soltar = (e: { originalEvent?: unknown }) => { if (e.originalEvent) ultimos.current.onSoltar?.(); };
-    map.on("dragstart", soltar);
-    return () => { map.off("dragstart", soltar); };
+    if (!map || !seguir || !veiculoSel) { precisaCentrar.current = false; return; }
+    if (!centrarNoSeguido()) precisaCentrar.current = true;
+    let volta: ReturnType<typeof setTimeout> | undefined;
+    const tocou = (e: { originalEvent?: unknown }) => {
+      if (!e.originalEvent) return;
+      pausadoAte.current = performance.now() + VOLTA_A_SEGUIR_MS;
+      clearTimeout(volta);
+    };
+    const soltou = (e: { originalEvent?: unknown }) => {
+      if (!e.originalEvent) return;
+      clearTimeout(volta);
+      volta = setTimeout(() => { pausadoAte.current = 0; centrarNoSeguido(); }, VOLTA_A_SEGUIR_MS);
+    };
+    map.on("dragstart", tocou); map.on("zoomstart", tocou); map.on("rotatestart", tocou);
+    map.on("dragend", soltou); map.on("zoomend", soltou);
+    return () => { clearTimeout(volta); map.off("dragstart", tocou); map.off("zoomstart", tocou); map.off("rotatestart", tocou); map.off("dragend", soltou); map.off("zoomend", soltou); };
   }, [seguir, veiculoSel]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // toque no mostrador: volta a centralizar agora
+  useEffect(() => { if (recentrar) { pausadoAte.current = 0; centrarNoSeguido(); } }, [recentrar]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Aproxima a câmera no veículo acompanhado. false = ele ainda não está no mapa. */
+  function centrarNoSeguido(): boolean {
+    const map = mapa.current, u = ultimos.current;
+    const it = u.seguir && u.veiculoSel ? frota.current.get(u.veiculoSel) : null;
+    if (!map || !it) return false;
+    if (!rastro.current.pts.length) rastro.current.pts.push([it.lng, it.lat]);
+    seguirDesde.current = performance.now() + 950;
+    map.easeTo({ center: [it.vis.lng, it.vis.lat], zoom: Math.max(map.getZoom(), 15.5), ...camera(900) });
+    return true;
+  }
 
   function desenharRastro() {
     const map = mapa.current; if (!map || !pronto.current) return;
@@ -138,6 +169,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
     const chave = `${enquadrarChave}|${vs.length > 0}|${rota.current.chave}`;
     if (enquadrado.current === chave) return;
     enquadrado.current = chave;
+    if (ultimos.current.seguir && ultimos.current.veiculoSel) return; // acompanhando: a câmera é do veículo
     if (!p) {
       // linha escolhida sem estação: enquadra o TRAJETO oficial (não os veículos, que podem estar fora dele)
       const tr = rota.current.t;
@@ -201,7 +233,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
 
   function seguirSe(item: ItemVeiculo) {
     const u = ultimos.current, map = mapa.current;
-    if (!map || !u.seguir || !u.veiculoSel || frota.current.get(u.veiculoSel) !== item || performance.now() < seguirDesde.current) return;
+    if (!map || !u.seguir || !u.veiculoSel || frota.current.get(u.veiculoSel) !== item || performance.now() < seguirDesde.current || performance.now() < pausadoAte.current) return;
     map.setCenter([item.vis.lng, item.vis.lat]);
   }
 
@@ -301,6 +333,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
       it.el.setAttribute("aria-label", v.rotulo);
       it.el.style.zIndex = v.id === sel ? "3" : "1";
     }
+    if (precisaCentrar.current && centrarNoSeguido()) { precisaCentrar.current = false; desenharRastro(); }
     for (const [id, it] of frota.current) if (!vistos.has(id)) { if (it.anim) cancelAnimationFrame(it.anim); it.marker.remove(); frota.current.delete(id); }
     enquadrar();
   }
