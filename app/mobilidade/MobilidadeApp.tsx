@@ -143,6 +143,7 @@ export default function MobilidadeApp() {
   const prox: J | null = sentidoValido ? chegadas[0] ?? null : chegada?.calculado?.proxima ?? null;
   const ehBrt = ponto?.fonte === "brt" || lista.some((v) => v.fonte === "brt");
   const sel = lista.find((v) => v.id === veiculoSel) ?? null;
+  const falta = useMemo(() => faltaDoTrajeto(sel, trajetoVisivel), [sel, trajetoVisivel]);
 
   // Contexto de clima: chuva prevista perto do ponto nas próximas 2 h (previsão Open-Meteo).
   const avisoChuva = useMemo(() => {
@@ -204,13 +205,7 @@ export default function MobilidadeApp() {
         enquadrarChave={`${ponto?.id ?? ""}|${linha ?? ""}`}
         seguir={seguindo && !!sel} onSoltar={() => setSeguindo(false)} />
 
-      {seguindo && sel && (
-        <div className="seguindo appear" role="status">
-          <span className="pulso" aria-hidden />
-          <span>Acompanhando <b className="num">{sel.linha}</b> · veículo {sel.veiculo}</span>
-          <button onClick={() => setSeguindo(false)}>Parar</button>
-        </div>
-      )}
+      {seguindo && sel && <DialSeguindo v={sel} falta={falta} onParar={() => setSeguindo(false)} />}
 
       <div className="map-top">
         <button className="map-search" onClick={() => setBuscando(true)} aria-label="Pesquisar estação, terminal ou linha">
@@ -220,7 +215,7 @@ export default function MobilidadeApp() {
       </div>
 
       <BottomSheet resumo={ponto && linha ? 190 : 150} nivel={nivel} setNivel={setNivel} onAltura={setPadB} cabecalho={cabecalho}>
-        {sel && <VeiculoCard v={sel} ponto={ponto} chegada={chegada} trajetos={trajetoVisivel} seguindo={seguindo} onSeguir={() => { setSeguindo((x) => !x); setNivel(0); }} onFechar={() => setVeiculoSel(null)} />}
+        {sel && <VeiculoCard v={sel} ponto={ponto} chegada={chegada} falta={falta} seguindo={seguindo} onSeguir={() => { setSeguindo((x) => !x); setNivel(0); }} onFechar={() => setVeiculoSel(null)} />}
         {sel && debug && <PainelDebug v={sel} />}
 
         {!ponto && linha && (
@@ -437,15 +432,8 @@ function PainelDebug({ v }: { v: J }) {
   );
 }
 
-function VeiculoCard({ v, ponto, chegada, trajetos, seguindo, onSeguir, onFechar }: { v: J; ponto: Ponto | null; chegada: J | null; trajetos: Trajeto[] | null | undefined; seguindo: boolean; onSeguir: () => void; onFechar: () => void }) {
+function VeiculoCard({ v, ponto, chegada, falta, seguindo, onSeguir, onFechar }: { v: J; ponto: Ponto | null; chegada: J | null; falta: Falta | null; seguindo: boolean; onSeguir: () => void; onFechar: () => void }) {
   const c = (chegada?.calculado?.chegadas ?? []).find((x: J) => `${x.fonte}:${x.veiculo}` === v.id);
-  // calculado: quanto falta do trajeto oficial até o fim da viagem (só para veículo casado ao trajeto)
-  const falta = useMemo(() => {
-    const t = (trajetos ?? []).find((x) => x.shapeId && x.shapeId === v.shapeId);
-    if (!t || (v.routeState !== "ON_ROUTE" && v.routeState !== "UNCERTAIN")) return null;
-    const acc = acumulado(t.coords), e = projetar(v.lat, v.lng, t.coords, acc);
-    return e ? { km: (acc[acc.length - 1] - e.s) / 1000, pct: e.s / acc[acc.length - 1], destino: t.destino } : null;
-  }, [trajetos, v.shapeId, v.lat, v.lng, v.routeState]);
   return (
     <div className="surface appear" style={{ padding: 16, marginBottom: 16 }} role="dialog" aria-label={`Veículo da linha ${v.linha}`}>
       <div className="row">
@@ -608,5 +596,31 @@ function Operacao({ op, sentido }: { op: J; sentido: string | null }) {
       })}
       <p className="t-meta" style={{ marginTop: 6 }}>Programado: GTFS da SMTR (frequencies.txt). Rodando: veículos com GPS casados ao trajeto oficial agora — garagem e sem sinal não contam.</p>
     </section>
+  );
+}
+
+interface Falta { km: number; pct: number; destino: string }
+/** Calculado: quanto falta do trajeto oficial até o fim da viagem (só para veículo casado ao trajeto). */
+function faltaDoTrajeto(v: J | null, trajetos: Trajeto[] | null | undefined): Falta | null {
+  if (!v || (v.routeState !== "ON_ROUTE" && v.routeState !== "UNCERTAIN")) return null;
+  const t = (trajetos ?? []).find((x) => x.shapeId && x.shapeId === v.shapeId);
+  if (!t) return null;
+  const acc = acumulado(t.coords), e = projetar(v.lat, v.lng, t.coords, acc);
+  return e ? { km: (acc[acc.length - 1] - e.s) / 1000, pct: e.s / acc[acc.length - 1], destino: t.destino } : null;
+}
+
+/** Mostrador do acompanhamento: número da linha no centro, anel que esvazia até o destino final; bolinha × para parar. */
+function DialSeguindo({ v, falta, onParar }: { v: J; falta: Falta | null; onParar: () => void }) {
+  const R = 25, C = 2 * Math.PI * R, resta = falta ? 1 - falta.pct : null;
+  return (
+    <div className="dial-seg appear" role="status" aria-label={`Acompanhando linha ${v.linha}, veículo ${v.veiculo}${falta ? `; faltam ${dec1(falta.km)} km até ${falta.destino}` : ""}`}>
+      <svg viewBox="0 0 64 64" aria-hidden>
+        <circle cx="32" cy="32" r={R} className="trilha" />
+        {resta != null && <circle cx="32" cy="32" r={R} className="resta" strokeDasharray={C} strokeDashoffset={C * (1 - resta)} />}
+      </svg>
+      <b className="num">{v.linha}</b>
+      {falta && <span className="km num">{dec1(falta.km)} km</span>}
+      <button className="parar" onClick={onParar} aria-label="Parar de acompanhar"><X aria-hidden /></button>
+    </div>
   );
 }
