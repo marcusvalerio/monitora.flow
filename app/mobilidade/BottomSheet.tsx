@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { PAINEL_LATERAL } from "../ui/telas";
 
 /**
  * Bottom sheet com 3 alturas (resumo, meio, cheio). Arrasta pela alça/cabeçalho; solta e encaixa na altura
@@ -21,7 +22,7 @@ export default function BottomSheet({ resumo, children, nivel, setNivel, onAltur
     return () => ro.disconnect();
   }, []);
 
-  const desktop = typeof window !== "undefined" && window.matchMedia?.("(min-width: 960px)").matches;
+  const desktop = typeof window !== "undefined" && window.matchMedia?.(PAINEL_LATERAL).matches;
   // a navegação flutua sobre o painel no celular: a altura recolhida reserva o espaço dela (o essencial fica sempre visível)
   const [reserva, setReserva] = useState(0);
   useEffect(() => {
