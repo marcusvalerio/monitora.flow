@@ -666,3 +666,41 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .proximas li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0 6px 12px; position: relative; font: 500 14px var(--font-ui); }
 .proximas li::before { content: ""; position: absolute; left: -6px; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%; background: var(--surface); box-shadow: inset 0 0 0 2px var(--ultramarine); }
 .proximas li b { font: 600 14px var(--font-num); color: var(--text-2); white-space: nowrap; }
+
+/* ---------- 15. home ---------- */
+.home-marca { display: flex; align-items: center; gap: 9px; color: var(--text); font: 650 18px var(--font-ui); letter-spacing: -.02em; }
+.home-cards { display: grid; gap: 12px; margin-top: 22px; }
+.hc { position: relative; isolation: isolate; overflow: hidden; display: block; border-radius: 24px; padding: 18px 20px; color: var(--text);
+  background: var(--glass-strong); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 0 0 1px var(--hairline), 0 14px 30px -22px rgba(8,10,16,.5);
+  transition: transform var(--dur-interact) var(--spring); }
+.hc:active { transform: scale(.985); }
+.hc:focus-visible { outline: 3px solid var(--ultramarine); outline-offset: 3px; }
+.hc-rot { font: 600 13px var(--font-ui); color: var(--text-2); letter-spacing: .01em; }
+.hc-linha { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+.hc-num { font: 600 56px/.95 var(--font-num); letter-spacing: -.055em; }
+.hc-txt { font: 500 16px/1.3 var(--font-ui); }
+.hc-sem { color: var(--text-2); font-size: 15px; }
+.hc-sub { flex-basis: 100%; font: 450 13.5px var(--font-ui); color: var(--text-2); }
+.hc-ctx { display: inline-block; margin-top: 10px; padding: 5px 10px; border-radius: 999px; font: 600 12.5px var(--font-ui);
+  background: rgba(255,255,255,.18); }
+/* clima: a mesma atmosfera do hero, compacta; texto branco */
+.hc-clima { min-height: 172px; color: #fff; background: radial-gradient(130% 90% at 88% -6%, var(--atm-a) 0%, transparent 62%), linear-gradient(168deg, var(--atm-b) 0%, var(--atm-c) 100%); }
+.hc-clima .atm { position: absolute; inset: 0; z-index: -1; }
+.hc-clima .hc-rot { color: rgba(255,255,255,.82); }
+.hc-corpo { position: relative; display: flex; flex-direction: column; min-height: 136px; }
+.hc-corpo .hc-ctx { align-self: flex-start; margin-top: auto; }
+.hc-mob .hc-topo { display: flex; align-items: center; gap: 10px; }
+.hc-mob .hc-linha { margin: 10px 0 8px; }
+/* convite (sem dado salvo) */
+.hc-convite { display: flex; align-items: center; gap: 14px; min-height: 88px; }
+.hc-convite > svg:first-child { width: 26px; height: 26px; color: var(--ultramarine); flex: none; }
+.hc-convite span { flex: 1; display: grid; gap: 3px; }
+.hc-convite b { font: 600 16.5px var(--font-ui); letter-spacing: -.01em; }
+.hc-convite small { font: 450 13.5px var(--font-ui); color: var(--text-2); }
+.hc-convite .seta { color: var(--text-3); width: 20px; height: 20px; }
+.home-op { display: inline-flex; align-items: center; gap: 4px; margin-top: 18px; padding: 8px 2px; font: 600 14px var(--font-ui); color: var(--text-2); }
+.home-op svg { width: 16px; height: 16px; }
+.home-op:focus-visible { outline: 2px solid var(--ultramarine); outline-offset: 2px; border-radius: 6px; }
+@media (min-width: 960px) { .home-marca { display: none; } .home-cards { margin-top: 0; } }
+@media (min-width: 760px) { .home { max-width: 880px; } .home-cards { grid-template-columns: 1fr 1fr; align-items: stretch; } .home-cards > * { min-height: 188px; } }

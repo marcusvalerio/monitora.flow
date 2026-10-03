@@ -1,13 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3A52D6"/><stop offset="1" stop-color="#2436A8"/></linearGradient>
-  </defs>
-  <rect width="512" height="512" rx="116" fill="url(#f)"/>
-  <!-- mostrador de 24 h (o "relógio do céu"), em gomos; o arco aceso é o tempo que passou -->
-  <circle cx="256" cy="256" r="170" fill="none" stroke="#8997F5" stroke-opacity=".38" stroke-width="30" stroke-dasharray="36.5 8" transform="rotate(-90 256 256)"/>
-  <circle cx="256" cy="256" r="170" fill="none" stroke="#C7C8F5" stroke-width="30" stroke-dasharray="36.5 8 36.5 8 36.5 8 36.5 8 36.5 8 36.5 8 36.5 8 36.5 1000" transform="rotate(-90 256 256)"/>
-  <!-- M: uma linha só, como um trajeto -->
-  <polyline points="178,334 178,192 256,282 334,192 334,334" fill="none" stroke="#F5F5F2" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- agora: o ponto que se move -->
-  <circle cx="256" cy="86" r="22" fill="#F5F5F2"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" rx="27" fill="#2C42C2"/><g fill="#FFFFFF" transform="translate(12 12) scale(0.8)"><path d="M 98 46 C 80 24 40 24 22 46 L 22 54 C 40 36 80 36 98 54Z"/><path d="M 98 74 C 80 96 40 96 22 74 L 22 66 C 40 84 80 84 98 66Z"/><path d="M 76 4 L 91 29 L 79 29 L 70 14Z M 76 116 L 91 91 L 79 91 L 70 106Z M 44 4 L 29 29 L 41 29 L 50 14Z M 44 116 L 29 91 L 41 91 L 50 106Z"/></g></svg>
