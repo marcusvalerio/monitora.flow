@@ -320,26 +320,26 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 @keyframes entraCima { from { transform: translateY(-70%); opacity: 0; } }
 
 /* ---------- 9. objetos do mapa ---------- */
-.veh { --veh-bg: var(--bus-bg); --veh-fg: var(--bus-fg); --veh-line: var(--bus-line); --veh-nose: var(--ink); --veh-edge: var(--porcelain);
-  position: relative; width: 48px; height: 48px; display: grid; place-items: center; cursor: pointer; }
-.veh.brt { --veh-bg: var(--brt-bg); --veh-fg: var(--brt-fg); --veh-line: transparent; }
-@media (prefers-color-scheme: dark) { .veh { --veh-nose: var(--porcelain); --veh-edge: var(--deep-ink); } }
-.veh .ring { position: absolute; inset: 0; transform-origin: 50% 50%; transition: transform 900ms var(--ease-out), opacity var(--dur-interact); }
-.veh .chip-v { position: relative; display: inline-flex; align-items: center; gap: 3px; height: 23px; padding: 0 7px 0 5px; border-radius: 8px;
-  background: var(--veh-bg); color: var(--veh-fg); box-shadow: inset 0 0 0 1.25px var(--veh-line), 0 0 0 1.5px var(--veh-edge), 0 3px 8px -2px rgba(8, 10, 16, .35);
-  font: 600 12px/1 var(--font-num); letter-spacing: -.02em; transition: transform var(--dur-interact) var(--spring), background var(--dur-interact) var(--ease-out), opacity var(--dur-interact); }
-.veh .chip-v .glyph { width: 12px; height: 12px; color: currentColor; flex: none; opacity: .9; --veh-bg-inv: var(--veh-bg); }
-.veh .chip-v b { font-weight: 600; }
-/* ativo (andando): pequena indicação luminosa */
-.veh:not(.parado):not(.velho) .chip-v::after { content: ""; position: absolute; top: -3px; right: -3px; width: 6px; height: 6px; border-radius: 50%;
-  background: var(--periwinkle); box-shadow: 0 0 0 1.5px var(--veh-edge), 0 0 6px var(--periwinkle); }
-.veh:hover .chip-v { transform: scale(1.06); }
-.veh.sel { --veh-bg: var(--ultramarine); --veh-fg: var(--porcelain); --veh-line: transparent; --veh-nose: var(--ultramarine); z-index: 3; }
-.veh.sel .chip-v { transform: scale(1.14); box-shadow: 0 0 0 1.5px var(--veh-edge), 0 0 0 6px color-mix(in srgb, var(--ultramarine) 18%, transparent), 0 6px 14px -4px rgba(48, 71, 199, .55); }
-.veh.parado .ring { opacity: 0 !important; }
-.veh.incerto .chip-v { box-shadow: 0 0 0 1.5px var(--veh-edge), 0 0 0 3px var(--st-unc); }
-.veh.fora { --veh-bg: var(--surface); --veh-fg: var(--text-2); --veh-nose: var(--st-off); }
-.veh.fora .chip-v { outline: 1.5px dashed var(--st-off); outline-offset: 1px; }
+.veh { --veh-bg: var(--ink); --veh-fg: var(--porcelain); --veh-edge: var(--porcelain);
+  position: relative; width: 30px; height: 30px; cursor: pointer; }
+@media (prefers-color-scheme: dark) { .veh { --veh-bg: var(--porcelain); --veh-fg: var(--deep-ink); --veh-edge: var(--deep-ink); } }
+.veh .ring { position: absolute; inset: 0; width: 30px; height: 30px; transform-origin: 50% 50%; overflow: visible;
+  filter: drop-shadow(0 2px 4px rgba(8, 10, 16, .35)); transition: transform 900ms var(--ease-out), opacity var(--dur-interact); }
+.veh .disco { fill: var(--veh-bg); stroke: var(--veh-edge); stroke-width: 2; transition: fill var(--dur-interact); }
+.veh .seta { fill: var(--veh-fg); }
+.veh .ponto { fill: var(--veh-fg); display: none; }
+.veh.parado .seta, .veh[data-sem-rumo] .seta { display: none; }
+.veh.parado .ponto, .veh[data-sem-rumo] .ponto { display: inline; }
+.veh .rot { position: absolute; left: 24px; top: -6px; height: 17px; padding: 0 5px; border-radius: 6px; display: grid; place-items: center;
+  background: var(--surface); color: var(--text); box-shadow: 0 0 0 1px var(--line, rgba(17,19,24,.12)), 0 2px 6px -2px rgba(8,10,16,.3);
+  font: 600 11px/1 var(--font-num); letter-spacing: -.02em; white-space: nowrap; pointer-events: none; }
+.veh:hover .disco { stroke-width: 3; }
+.veh.sel { --veh-bg: var(--ultramarine); --veh-fg: #fff; z-index: 3; }
+.veh.sel .ring { filter: drop-shadow(0 0 0 transparent) drop-shadow(0 4px 10px rgba(48, 71, 199, .55)); }
+.veh.sel .rot { background: var(--ultramarine); color: #fff; box-shadow: none; }
+.veh.incerto .disco { stroke: var(--st-unc); stroke-width: 2.5; }
+.veh.fora .disco { fill: var(--surface); stroke: var(--st-off); stroke-dasharray: 3 2; }
+.veh.fora .seta { fill: var(--st-off); }
 .veh.velho { opacity: .42; filter: grayscale(.8); }
 .me-dot { width: 16px; height: 16px; border-radius: 50%; background: var(--ultramarine); border: 3px solid #fff; box-shadow: 0 0 0 7px rgba(48, 71, 199, .16), 0 1px 4px rgba(0, 0, 0, .3); }
 .st-sel { display: grid; justify-items: center; pointer-events: none; animation: assenta var(--dur-space) var(--spring) both; }

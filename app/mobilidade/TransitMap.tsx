@@ -172,8 +172,8 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
 
   /** Gira o anel pelo menor caminho; ignora tremidas < 4°; sem rumo → anel some (estado neutro). */
   function girar(item: ItemVeiculo, rumo: number | null) {
-    if (rumo === null) { item.anel.style.opacity = "0"; return; }
-    item.anel.style.opacity = "";
+    if (rumo === null) { item.el.dataset.semRumo = ""; return; }
+    delete item.el.dataset.semRumo;
     const novo = proximaRotacao(item.angulo, rumo);
     if (novo === item.angulo) return;
     item.anel.style.transition = item.angulo === null ? "none" : "";
@@ -233,6 +233,9 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
     // Exibição: posição encaixada no trajeto oficial quando o GPS está a até 60 m dele (src/lib/trajeto.ts).
     const vistos = new Set<string>();
     for (const v0 of vs) {
+      // Fora do trajeto (> 300 m, ex.: garagem): não desenha no mapa — continua listado no painel.
+      // Aparece só no modo debug ou se o usuário selecionou esse veículo na lista.
+      if (v0.estado === "OFF_ROUTE" && !ultimos.current.debug && v0.id !== sel) continue;
       // Só encaixa o que é compatível com o trajeto; UNCERTAIN/OFF_ROUTE ficam na posição GPS real.
       // Só ON_ROUTE é desenhado sobre a via, e só no shape que o servidor validou (shapeId).
       const enc = v0.estado === "ON_ROUTE" ? encaixarNoShape(v0) : null;
@@ -241,10 +244,11 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
       let it = frota.current.get(v.id);
       if (!it) {
         const el = document.createElement("div");
-        // Marcador próprio: "nariz" de direção (gira com o rumo real) + cápsula com silhueta de ônibus e número da linha.
+        // Marcador próprio: o corpo (seta) gira inteiro com o rumo real e aponta ao longo da via;
+        // o número da linha fica numa etiqueta fixa ao lado, sempre legível.
         el.innerHTML =
-          `<svg class="ring" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 2.5 L30.5 12.5 Q24 9.6 17.5 12.5 Z" fill="var(--veh-nose)" stroke="var(--veh-edge)" stroke-width="1.6" stroke-linejoin="round"/></svg>` +
-          `<div class="chip-v"><svg class="glyph" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="1.5" width="10" height="11" rx="2.6" fill="currentColor"/><rect x="4.6" y="3.3" width="6.8" height="3.6" rx="1" fill="var(--veh-bg)"/><circle cx="5.6" cy="10" r=".9" fill="var(--veh-bg)"/><circle cx="10.4" cy="10" r=".9" fill="var(--veh-bg)"/><rect x="4" y="12.5" width="2" height="2" rx=".6" fill="currentColor"/><rect x="10" y="12.5" width="2" height="2" rx=".6" fill="currentColor"/></svg><b></b></div>`;
+          `<svg class="ring" viewBox="0 0 32 32" aria-hidden="true"><circle class="disco" cx="16" cy="16" r="11"/><path class="seta" d="M16 8.5 L21.5 21 L16 18.2 L10.5 21 Z"/><circle class="ponto" cx="16" cy="16" r="3.6"/></svg>` +
+          `<span class="rot"></span>`;
         el.tabIndex = 0; el.setAttribute("role", "button");
         el.addEventListener("click", (ev) => { ev.stopPropagation(); ultimos.current.onVeiculo(v.id); });
         el.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); ultimos.current.onVeiculo(v.id); } });
@@ -257,7 +261,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
       }
       girar(it, v.rumo);
       it.el.className = `veh ${v.fonte}${v.parado ? " parado" : ""}${v.idadeS > 180 || v.estado === "STALE" ? " velho" : ""}${v.estado === "OFF_ROUTE" ? " fora" : v.estado === "UNCERTAIN" ? " incerto" : ""}${v.id === sel ? " sel" : ""}`;
-      (it.el.querySelector(".chip-v b") as HTMLElement).textContent = v.linha ?? "";
+      (it.el.querySelector(".rot") as HTMLElement).textContent = v.linha ?? "";
       it.el.setAttribute("aria-label", v.rotulo);
       it.el.style.zIndex = v.id === sel ? "3" : "1";
     }
