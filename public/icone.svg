@@ -1,1 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0b6bcb"/><path d="M14 44 C24 20, 40 44, 50 20" stroke="#fff" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="14" cy="44" r="5" fill="#fff"/><circle cx="50" cy="20" r="5" fill="#fff"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3A52D6"/><stop offset="1" stop-color="#2436A8"/></linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#f)"/>
+  <!-- mostrador de 24 h (o "relógio do céu"), em gomos; o arco aceso é o tempo que passou -->
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#8997F5" stroke-opacity=".38" stroke-width="30" stroke-dasharray="36.5 8" transform="rotate(-90 256 256)"/>
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#C7C8F5" stroke-width="30" stroke-dasharray="36.5 8 36.5 8 36.5 8 36.5 8 36.5 8 36.5 8 36.5 8 36.5 1000" transform="rotate(-90 256 256)"/>
+  <!-- M: uma linha só, como um trajeto -->
+  <polyline points="178,334 178,192 256,282 334,192 334,334" fill="none" stroke="#F5F5F2" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- agora: o ponto que se move -->
+  <circle cx="256" cy="86" r="22" fill="#F5F5F2"/>
+</svg>

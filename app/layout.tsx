@@ -5,7 +5,7 @@ export const metadata = {
   title: "Monitora — mobilidade e clima no Rio",
   description: "Onde está o seu BRT e ônibus, quanto falta para chegar e como está o tempo. Dados abertos da Prefeitura do Rio.",
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/icone.svg", apple: "/icone.svg" },
+  icons: { icon: [{ url: "/icone.svg", type: "image/svg+xml" }, { url: "/favicon-32.png", sizes: "32x32", type: "image/png" }], apple: "/apple-touch-icon.png" },
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Monitora" },
 };
 export const viewport = {
