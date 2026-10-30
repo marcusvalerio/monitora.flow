@@ -761,3 +761,19 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .alertas .card-aviso { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--hairline); }
 .alertas .card-aviso svg { width: 20px; height: 20px; flex: none; color: var(--stale); margin-top: 2px; }
 .alertas .card-aviso .t-cap { margin-top: 4px; }
+/* mapa: o veículo que vai te pegar em destaque, os outros recuam */
+.veh.apagado { opacity: .38 !important; filter: saturate(.3); transition: opacity var(--dur-interact) var(--ease-out); }
+/* "Saia em N min" logo abaixo da chegada */
+.saia { margin-top: 6px; font: 500 14px var(--font-ui); color: var(--accent); }
+.saia.ja { color: var(--coral); font-weight: 600; }
+/* favoritos: estrela no cabeçalho e "Seus trajetos" no início */
+.cab-dir { display: flex; align-items: center; gap: 8px; }
+.fav { width: 40px; height: 40px; border-radius: 999px; border: 0; background: var(--surface-2); color: var(--text-3); display: grid; place-items: center; cursor: pointer; }
+.fav svg { width: 19px; height: 19px; }
+.fav.on { color: #E8A317; } .fav.on svg { fill: currentColor; }
+.favoritos { margin-bottom: 18px; }
+.fav-lista { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 10px -22px 0; padding: 2px 22px 4px; }
+.fav-item { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 14px 10px 10px; border-radius: var(--r-md); border: 1px solid var(--hairline); background: var(--surface); cursor: pointer; text-align: left; font-family: inherit; color: inherit; max-width: 240px; }
+.fav-item span:last-child { display: grid; min-width: 0; }
+.fav-item b { font: 600 14px var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fav-item small { font: 400 12px var(--font-ui); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

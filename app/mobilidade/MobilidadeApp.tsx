@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Orbita } from "../ui/Geometria";
-import { TriangleAlert, Search, LocateFixed, TrainFront, Warehouse, BusFront, MapPin, X, Clock, CloudRain, Gauge, ChevronRight, Info, Navigation } from "lucide-react";
+import { Star, TriangleAlert, Search, LocateFixed, TrainFront, Warehouse, BusFront, MapPin, X, Clock, CloudRain, Gauge, ChevronRight, Info, Navigation } from "lucide-react";
 import BottomSheet from "./BottomSheet";
 import { PAINEL_LATERAL, PAISAGEM } from "../ui/telas";
 import SearchSheet from "../ui/SearchSheet";
@@ -28,6 +28,9 @@ const eta = (min: number) => Math.max(1, Math.round(min));
 const M: Partial<{ ponto: Ponto | null; linha: string | null; nivel: 0 | 1 | 2; info: J | null; chegada: J | null; veiculos: J | null; veiculoSel: string | null;
   seguindo: boolean; trajeto: Trajeto[] | null; sentido: string | null; modoLinha: "BRT" | "BUS" | null; linhaSemPonto: boolean; salvo: boolean; trajetoDe: string; desce: string | null; paradasLinha: J | null }> = {};
 const K_MODO = "monitora:mob:modo";
+const K_FAVORITOS = "monitora:mob:favoritos";
+/** Trajeto do dia a dia salvo no aparelho: abre com um toque já com sentido e descida escolhidos. */
+type Favorito = { id: string; ponto: Ponto; linha: string; sentido: string | null; desce: string | null; modo: "BRT" | "BUS" | null };
 
 export default function MobilidadeApp() {
   const [jaRestaurado] = useState(() => !!M.salvo);
@@ -95,6 +98,24 @@ export default function MobilidadeApp() {
     setLinha(l); gravar(K_LINHA, l); setSentido(null);
     if (!ponto) { linhaSemPonto.current = true; setNivel(1); } else setNivel(0);
   };
+  // favoritos (só no aparelho)
+  const desceFavorito = useRef<string | null>(null);
+  const [favoritos, setFavoritos] = useState<Favorito[]>([]);
+  useEffect(() => { setFavoritos(ler<Favorito[]>(K_FAVORITOS, [])); }, []);
+  const idFav = ponto && linha ? `${ponto.id}|${linha}|${sentido ?? ""}` : null;
+  const ehFavorito = !!idFav && favoritos.some((f) => f.id === idFav);
+  const alternarFavorito = () => {
+    if (!idFav || !ponto || !linha) return;
+    const lista = ehFavorito ? favoritos.filter((f) => f.id !== idFav)
+      : [{ id: idFav, ponto, linha, sentido: sentido ?? null, desce, modo: modoLinha }, ...favoritos].slice(0, 6);
+    setFavoritos(lista); gravar(K_FAVORITOS, lista);
+  };
+  const abrirFavorito = (f: Favorito) => {
+    linhaSemPonto.current = false; desceFavorito.current = f.desce;
+    setPonto(f.ponto); gravar(K_PONTO, f.ponto); setInfo(null); setModoLinha(f.modo);
+    setSentidoS(f.sentido); gravar(K_SENTIDO, f.sentido); setLinha(f.linha); gravar(K_LINHA, f.linha);
+    setChegada(null); setVeiculos(null); setVeiculoSel(null); setNivel(0);
+  };
   const limpar = () => { linhaSemPonto.current = false; setPonto(null); setLinha(null); gravar(K_PONTO, null); gravar(K_LINHA, null); setInfo(null); setVeiculos(null); setChegada(null); setNivel(1); };
 
   // estação/parada: linhas e próximos veículos (20 s)
@@ -132,7 +153,7 @@ export default function MobilidadeApp() {
   }, [linha, modoLinha]); // eslint-disable-line react-hooks/exhaustive-deps
   // trocar estação, linha ou sentido zera o destino
   const chaveDesce = useRef(`${ponto?.id}|${linha}|${sentido}`);
-  useEffect(() => { const k = `${ponto?.id}|${linha}|${sentido}`; if (chaveDesce.current !== k) { chaveDesce.current = k; setDesce(null); } }, [ponto, linha, sentido]);
+  useEffect(() => { const k = `${ponto?.id}|${linha}|${sentido}`; if (chaveDesce.current !== k) { chaveDesce.current = k; setDesce(desceFavorito.current); desceFavorito.current = null; } }, [ponto, linha, sentido]);
 
   // acompanhamento de linha: veículos + chegada (10 s)
   useEffect(() => {
@@ -180,12 +201,22 @@ export default function MobilidadeApp() {
   // usa a sequência de paradas. A estimativa em linha reta da /chegada fica só para quem não tem trajeto.
   const chegadas: J[] = useMemo(() => mesclarChegadas(ponto, lista, trajetoVisivel, chegadasLinhaReta), [ponto, lista, trajetoVisivel, chegada]); // eslint-disable-line react-hooks/exhaustive-deps
   const prox: J | null = chegadas[0] ?? null;
+  // no mapa, só o veículo que vai te pegar (ou o selecionado) fica em destaque; os outros ficam apagados
+  const destaqueId = veiculoSel ?? (prox ? `${prox.fonte}:${prox.veiculo}` : null);
+  const veiculosMapaVis = useMemo(() => veiculosMapa.map((v) => ({ ...v, apagado: !!destaqueId && v.id !== destaqueId })), [veiculosMapa, destaqueId]);
   const ehBrt = ponto?.fonte === "brt" || lista.some((v) => v.fonte === "brt");
   const viagem = useMemo(() => viagemAte(ponto, sentidoValido, paradasLinha, desce), [ponto, sentidoValido, paradasLinha, desce]);
   // espera no ponto de embarque: chegada do próximo ônibus ou, no terminal de origem, a próxima saída
   const saida = useMemo(() => ponto && linha ? proximaSaida(ponto, trajetoVisivel, todos, veiculos?.operacao) : null, [ponto, linha, trajetoVisivel, todos, veiculos]);
   const esperaDest: number | null = prox ? prox.etaMin ?? null : saida?.proximaMin ?? null;
   const sel = lista.find((v) => v.id === veiculoSel) ?? null;
+  const caminhadaMin = eu && ponto ? (distKm(eu, ponto) * 1000 * 1.3) / 80 : null;
+  // se não dá tempo de pegar o próximo a pé, aponta o primeiro que dá (chegadas do sentido escolhido)
+  const alcancavel = caminhadaMin != null && caminhadaMin >= 1 && caminhadaMin <= 30
+    ? (esperaDest != null && esperaDest >= caminhadaMin ? { espera: esperaDest, proximo: false }
+      : (() => { const c = chegadas.find((x: J) => x.etaMin != null && x.etaMin >= caminhadaMin); return c ? { espera: c.etaMin as number, proximo: true } : null; })())
+    : null;
+  const saiaEm = alcancavel && caminhadaMin != null ? alcancavel.espera - caminhadaMin : null;
   // ritmo pelo GPS: progresso real do veículo ao longo do trajeto (s) entre leituras distintas, últimos 10 min
   const amostras = useRef<{ id: string; pts: { t: number; s: number; odo: number | null }[] }>({ id: "", pts: [] });
   const falta = useMemo(() => {
@@ -233,7 +264,7 @@ export default function MobilidadeApp() {
           {etaFinal(falta) != null ? (
             <div className="eta appear" aria-live="polite"><span className="n num"><NumeroRolante valor={eta(etaFinal(falta)!)} /></span><span className="u">min</span></div>
           ) : <div className="t-title" aria-live="polite">{dec1(falta.km)} km</div>}
-          <div className="t-cap" style={{ marginTop: 4 }}><b style={{ fontWeight: 600, color: "var(--text)" }}>Até {falta.destino}</b> · {falta.etaGpsMin != null ? "pelo ritmo atual (GPS)" : falta.etaProgMin != null ? (falta.porParadas ? "pelas paradas programadas da viagem" : "pelo ritmo programado da linha") : "sem ritmo para estimar ainda"} · veículo {sel.veiculo}</div>
+          <div className="t-head" style={{ marginTop: 4 }}>{etaFinal(falta) != null ? `Chega em ${falta.destino} às ${horaChegada(etaFinal(falta)!)}` : `Até ${falta.destino}`}</div>
         </div>
         <span className={`line-badge lg${ehBrt ? " brt" : ""}`} aria-label={`Linha ${linha}`}>{linha}</span>
       </div>
@@ -266,9 +297,14 @@ export default function MobilidadeApp() {
           ) : saida?.intervaloMin != null ? (
             <div className="t-title" aria-live="polite">Sai a cada {Math.round(saida.intervaloMin)} min</div>
           ) : <div className="t-title" aria-live="polite">Sem estimativa agora</div>}
-          <div className="t-cap" style={{ marginTop: 4 }}>{esperaDest != null && viagem?.escolhida ? <><b style={{ fontWeight: 600, color: "var(--text)" }}>Até {viagem.escolhida.nome}</b> · chega {horaChegada(esperaDest + viagem.escolhida.min)} · ônibus em {eta(esperaDest)} min em {ponto.nome}</> : <>{sentidoValido ? <b style={{ fontWeight: 600, color: "var(--text)" }}>→ {sentidoValido} · </b> : null}{prox ? `Chegada estimada em ${ponto.nome}${viagem?.escolhida ? ` · em ${viagem.escolhida.nome} às ${horaChegada((prox.etaMin ?? 0) + viagem.escolhida.min)}` : ""}` : saida ? textoSaida(saida, ponto.nome) : `Nenhum veículo ${sentidoValido ? "neste sentido" : "da linha"} se aproximando de ${ponto.nome}`}</>}</div>
+          <div className="t-head" style={{ marginTop: 4 }}>{esperaDest != null && viagem?.escolhida ? `Chega em ${viagem.escolhida.nome} às ${horaChegada(esperaDest + viagem.escolhida.min)}`
+            : prox ? `Chega em ${ponto.nome}${sentidoValido ? ` → ${sentidoValido}` : ""}` : saida ? textoSaida(saida, ponto.nome) : `Nenhum veículo ${sentidoValido ? "neste sentido" : "da linha"} se aproximando de ${ponto.nome}`}</div>
+          {saiaEm != null && <div className={`saia${saiaEm <= 1 ? " ja" : ""}`}>{alcancavel?.proximo ? "Não dá tempo para este. " : ""}{saiaEm <= 1 ? "Saia agora" : `Saia em ${eta(saiaEm)} min`}{alcancavel?.proximo ? ` para pegar o de ${eta(alcancavel.espera)} min` : ""} · {eta(caminhadaMin!)} min a pé</div>}
         </div>
-        <span className={`line-badge lg${ehBrt ? " brt" : ""}`} aria-label={`Linha ${linha}`}>{linha}</span>
+        <div className="cab-dir">
+          <button className={`fav${ehFavorito ? " on" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={alternarFavorito} aria-pressed={ehFavorito} aria-label={ehFavorito ? "Remover dos favoritos" : "Salvar trajeto nos favoritos"}><Star aria-hidden /></button>
+          <span className={`line-badge lg${ehBrt ? " brt" : ""}`} aria-label={`Linha ${linha}`}>{linha}</span>
+        </div>
       </div>
       <div style={{ marginTop: 8 }}><LastUpdated em={veiculos?.em} fonte="GPS SMTR" velhoS={45} /></div>
       <AvisarChegada linha={linha} ponto={ponto} sentido={sentidoValido ?? null} etaMin={prox?.etaMin ?? null} />
@@ -286,7 +322,7 @@ export default function MobilidadeApp() {
 
   return (
     <div className="mob">
-      <TransitMap ponto={ponto} veiculos={veiculosMapa} veiculoSel={veiculoSel} eu={eu}
+      <TransitMap ponto={ponto} veiculos={veiculosMapaVis} veiculoSel={veiculoSel} eu={eu}
         onVeiculo={(id) => { setVeiculoSel(id); if (id) setNivel((n) => (n === 0 ? 1 : n)); }}
         onEstacao={(id) => {
           const e = ESTACOES.find((x) => x.id === id);
@@ -325,6 +361,19 @@ export default function MobilidadeApp() {
           </>
         )}
 
+        {!ponto && !linha && favoritos.length > 0 && (
+          <div className="favoritos">
+            <span className="t-label">Seus trajetos</span>
+            <div className="fav-lista">
+              {favoritos.map((f) => (
+                <button key={f.id} className="fav-item" onClick={() => abrirFavorito(f)}>
+                  <span className={`line-badge${f.modo === "BRT" ? " brt" : ""}`}>{f.linha}</span>
+                  <span><b>{f.ponto.nome}</b>{f.sentido && <small>→ {f.sentido}</small>}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {!ponto && !linha && (
           <>
             <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => setBuscando(true)}><Search aria-hidden /> Pesquisar estação ou terminal</button>
@@ -811,14 +860,7 @@ function Destino({ v, valor, onChange, espera }: { v: Viagem; valor: string | nu
           {v.opcoes.map((o) => <option key={o.id} value={o.id}>{o.nome}{o.min != null ? ` · ${Math.max(1, Math.round(o.min))} min` : ""}</option>)}
         </select>
       </div>
-      {e && (
-        <div className="destino-res appear" aria-live="polite">
-          {espera != null && <div><span className="num">{Math.max(1, Math.round(espera))}</span><small>min de espera</small></div>}
-          <div><span className="num">{Math.max(1, Math.round(e.min))}</span><small>min de viagem</small></div>
-          <div><span className="num">{horaChegada((espera ?? 0) + e.min)}</span><small>chega em {e.nome}</small></div>
-        </div>
-      )}
-      {e && <p className="t-meta" style={{ margin: "6px 2px 0" }}>Viagem no ritmo programado da linha (GTFS){espera == null ? "; sem estimativa de espera agora" : ""}.</p>}
+      {e && <p className="t-meta" style={{ margin: "6px 2px 0" }}>{espera != null ? `${Math.max(1, Math.round(espera))} min de espera + ${Math.max(1, Math.round(e.min))} min de viagem (ritmo programado)` : "Sem estimativa de espera agora"}.</p>}
     </div>
   );
 }
