@@ -34,6 +34,8 @@ export const PARAMETROS = {
   HABITUAL_DIAS_PADRAO: 28,
   /** EXPERIMENTAL / ESCOLHA DO SISTEMA — nº mínimo de dias para comparar com o habitual (abaixo disso: sem_dado). */
   HABITUAL_DIAS_MIN: 3,
+  /** ESCOLHA DO SISTEMA — coleta sob demanda: no máximo uma a cada N min, e só enquanto alguém usa o app. */
+  COLETA_SOB_DEMANDA_MIN: 10,
   /** EXPERIMENTAL / ESCOLHA DO SISTEMA — janela de posições usada em /linhas e /chegada (min). */
   JANELA_LINHA_MIN: 10,
   /** EXPERIMENTAL / ESCOLHA DO SISTEMA — intervalo mínimo entre as duas leituras usadas na chegada (s). */

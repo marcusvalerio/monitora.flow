@@ -88,3 +88,19 @@ export async function lerPosicoesLinha(linha: string, desde: Date): Promise<Leit
     lat: r.lat, lng: r.lng, velocidade: r.velocidade, ts: new Date(r.ts),
   }));
 }
+
+/**
+ * Coleta SOB DEMANDA: em vez do agendador a cada 10 min o dia todo, a coleta roda só enquanto alguém usa o app.
+ * Quem chama (veículos da linha, chegada, Monitor) dispara isto em segundo plano; no máximo uma coleta a cada
+ * COLETA_SOB_DEMANDA_MIN por instância, e o banco confere a última coleta para não repetir entre instâncias.
+ * Sem uso → nenhuma consulta → o Neon suspende o banco e para de contar horas.
+ */
+let ultimaTentativa = 0;
+export async function coletarSobDemanda(agora = new Date()) {
+  if (!process.env.DATABASE_URL) return null;
+  if (agora.getTime() - ultimaTentativa < PARAMETROS.COLETA_SOB_DEMANDA_MIN * MIN) return null;
+  ultimaTentativa = agora.getTime();
+  const [ult] = await sql()`select max(fim) as fim from coletas`;
+  if (ult?.fim && agora.getTime() - new Date(ult.fim).getTime() < PARAMETROS.COLETA_SOB_DEMANDA_MIN * MIN) return null;
+  return coletar(agora);
+}

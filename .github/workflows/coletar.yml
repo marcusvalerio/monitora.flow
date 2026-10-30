@@ -3,9 +3,10 @@
 # (CRON_SECRET igual ao da Vercel). O GitHub pode atrasar execuções agendadas em alguns minutos;
 # a janela do SPPO continua de onde a última coleta parou (até 20 min).
 name: coletar
+# DESLIGADO o agendamento a cada 10 min: a coleta agora roda sob demanda, só enquanto alguém usa o app
+# (src/lib/coletor.ts, coletarSobDemanda). Assim o banco Neon pode dormir e não gasta horas sem uso.
+# Continua disponível para rodar à mão (Actions → coletar → Run workflow).
 on:
-  schedule:
-    - cron: "*/10 * * * *"
   workflow_dispatch:
 jobs:
   coletar:

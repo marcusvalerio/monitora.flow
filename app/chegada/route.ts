@@ -1,4 +1,5 @@
-import { lerPosicoesLinha } from "../../src/lib/coletor";
+import { after } from "next/server";
+import { coletarSobDemanda, lerPosicoesLinha } from "../../src/lib/coletor";
 import { linhaAoVivo } from "../../src/lib/aoVivo";
 import type { Leitura } from "../../src/lib/fontes";
 import { estimarChegadas } from "../../src/lib/chegada";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 /** GET /chegada?linha=&lat=&lng= — estimativa EXPERIMENTAL de chegada dos veículos da linha. */
 export function GET(req: Request) {
   return tratar(async () => {
+    after(() => coletarSobDemanda().catch((e) => console.error("coleta sob demanda", e))); // só coleta enquanto há uso
     const q = new URL(req.url).searchParams;
     const linha = (q.get("linha") ?? "").trim().toUpperCase();
     if (!/^[A-Z0-9 -]{1,20}$/.test(linha)) throw new ErroParametro("parâmetro 'linha' obrigatório");

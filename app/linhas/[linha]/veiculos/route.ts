@@ -1,4 +1,5 @@
-import { lerPosicoesLinha } from "../../../../src/lib/coletor";
+import { after } from "next/server";
+import { coletarSobDemanda, lerPosicoesLinha } from "../../../../src/lib/coletor";
 import { linhaAoVivo } from "../../../../src/lib/aoVivo";
 import type { Leitura } from "../../../../src/lib/fontes";
 import { normalizarFrota } from "../../../../src/lib/veiculo";
@@ -25,6 +26,7 @@ export const dynamic = "force-dynamic";
  */
 export function GET(req: Request, ctx: { params: Promise<{ linha: string }> }) {
   return tratar(async () => {
+    after(() => coletarSobDemanda().catch((e) => console.error("coleta sob demanda", e))); // só coleta enquanto há uso
     const u = new URL(req.url);
     const linha = decodeURIComponent((await ctx.params).linha).trim().toUpperCase();
     if (!/^[A-Z0-9 -]{1,20}$/.test(linha)) throw new ErroParametro("linha inválida");
