@@ -71,3 +71,4 @@ button[aria-expanded="true"] .nv-chev { transform: rotate(180deg); }
 .nv-ficha b { font: 600 22px var(--font-num); letter-spacing: -.02em; }
 .nv-ficha small { font: 400 12px/1.3 var(--font-ui); color: var(--text-2); }
 .nv-ficha .rc-med i { transform: none; }
+.nv-oc-tit { margin: 6px 0 0; font: 600 22px/1.15 var(--font-num); letter-spacing: -.03em; }

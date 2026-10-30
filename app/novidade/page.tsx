@@ -1,5 +1,6 @@
 import "./novidade.css";
 import TempoNovo from "./TempoNovo";
+import OcorrenciasPerto from "./OcorrenciasPerto";
 
 export const metadata = { title: "Novidades — Monitora" };
 
@@ -26,6 +27,7 @@ export default function Novidade() {
       </details>
 
       <TempoNovo />
+      <OcorrenciasPerto />
     </main>
   );
 }

@@ -121,7 +121,7 @@ function arco(i: number, n: number, r1: number, r2: number, folga = 0.9) {
   return `M${p(r2, a0)} A${r2},${r2} 0 0 1 ${p(r2, a1)} L${p(r1, a1)} A${r1},${r1} 0 0 0 ${p(r1, a0)} Z`;
 }
 
-function Relogio({ horas, agora, hoje }: { horas: J[]; agora: J | null | undefined; hoje: J | null | undefined }) {
+export function Relogio({ horas, agora, hoje }: { horas: J[]; agora: J | null | undefined; hoje: J | null | undefined }) {
   const [foco, setFoco] = useState<number | null>(null);
   const svg = useRef<SVGSVGElement>(null);
   const n = Math.max(1, horas.length);

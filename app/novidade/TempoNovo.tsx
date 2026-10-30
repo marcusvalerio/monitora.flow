@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ChevronDown, CloudSun, Droplets, Sun, Wind, Gauge, Leaf, Umbrella, Thermometer, Clock } from "lucide-react";
 import { ErrorState, IconeTempo, LastUpdated, Skel } from "../ui/estados";
+import { Relogio } from "../clima/TempoView";
 import { J, coord, dec, diaSemana, get, gravarCache, horaLocal, ler, lerCache } from "../ui/util";
 
 const hh = (iso: string) => horaLocal(iso);
@@ -56,6 +57,9 @@ export default function TempoNovo() {
       </div>
 
       <ChuvaCurta ch={c.chuva2h} />
+
+      {/* o arco interativo do Clima continua sendo o centro da tela: arraste pelo anel para ver cada hora */}
+      <div className="nv-sec"><Relogio horas={c.horas.slice(0, 24)} agora={a} hoje={c.dias[0]} /></div>
 
       <section className="nv-hero nv-sec" aria-label="Agora">
         <div className="nv-hero-l">
