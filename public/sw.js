@@ -1,7 +1,7 @@
 // Service worker mínimo: guarda a "casca" de cada tela para abrir rápido; dados da API sempre pela rede.
 // Cada página fica na sua própria entrada (antes tudo ia para "/" e, sem rede, /clima abria a Home).
 const CACHE = "monitora-v5";
-const TELAS = ["/", "/clima", "/mobilidade", "/monitor", "/mais"];
+const TELAS = ["/", "/clima", "/mobilidade", "/alertas", "/monitor", "/mais"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["/icone.svg", "/manifest.webmanifest"]))); self.skipWaiting(); });
 self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k))))); self.clients.claim(); });
 self.addEventListener("fetch", (e) => {

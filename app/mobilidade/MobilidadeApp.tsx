@@ -369,14 +369,13 @@ export default function MobilidadeApp() {
                   <div className="t-cap">Por volta das {avisoChuva.hora}{avisoChuva.p != null ? ` · ${avisoChuva.p}% de chance` : ""} · previsão Open-Meteo</div></div>
               </div>
             )}
-            {veiculos?.operacao && <Operacao op={veiculos.operacao} sentido={sentidoValido} />}
             <span className="t-label">Veículos da linha</span>
             {!veiculos ? <div style={{ display: "grid", gap: 12, marginTop: 10 }}><Skel h={52} /><Skel h={52} /></div>
               : veiculos.erro ? <ErrorState texto="Não foi possível obter dados atualizados desta linha." />
               : !lista.length ? <EmptyState icone={BusFront} titulo="Nenhum veículo desta linha com GPS agora." texto="A localização pode voltar em instantes." />
               : (
                 <ul className="list">
-                  {lista.map((v): J => ({ ...v, k: distKm(ponto, { lat: v.lat, lng: v.lng }) })).sort((a, b) => a.k - b.k).slice(0, 5).map((v) => (
+                  {lista.map((v): J => ({ ...v, k: distKm(ponto, { lat: v.lat, lng: v.lng }) })).sort((a, b) => a.k - b.k).slice(0, 3).map((v) => (
                     <li key={v.id}><button className="list-item" onClick={() => { setVeiculoSel(v.id); setNivel(1); }} aria-label={`Veículo ${v.veiculo}, a ${fmtDist(v.k)}`}>
                       <span className="ico" style={{ color: v.fonte === "brt" ? "var(--text)" : "var(--text-2)" }}><BusFront aria-hidden /></span>
                       <span className="main">
@@ -397,27 +396,24 @@ export default function MobilidadeApp() {
                   veiculos.resumo.OFF_ROUTE && `${veiculos.resumo.OFF_ROUTE} fora do trajeto`,
                   veiculos.resumo.UNCERTAIN && `${veiculos.resumo.UNCERTAIN} com posição incerta`,
                   veiculos.resumo.STALE && `${veiculos.resumo.STALE} sem atualização recente`,
-                ].filter(Boolean).join(" · ")}. Eles aparecem no mapa onde o GPS informou, com contorno tracejado.
+                ].filter(Boolean).join(" · ")}.
               </p>
             )}
-            <div className="section">
-              <span className="t-label">No caminho</span>
-              <div className="row" style={{ alignItems: "flex-start" }}>
-                <TriangleAlert size={20} aria-hidden style={{ color: "var(--text-3)", flex: "none", marginTop: 2 }} />
-                <div><div className="t-head">Ocorrências indisponíveis</div>
-                  <div className="t-cap">Acidentes e interdições dependem da fonte aberta do COR, que não está respondendo. Quando voltar, mostramos as que ficarem a até 800 m do trajeto.</div></div>
+            {/* o que é secundário fica recolhido: o painel abre só com chegada, sentido e veículos */}
+            <details className="mais-linha">
+              <summary>Mais sobre a linha</summary>
+              {veiculos?.operacao && <Operacao op={veiculos.operacao} sentido={sentidoValido} />}
+              <div className="section">
+                <span className="t-label">Velocidade na região</span>
+                <Rua rua={rua} />
               </div>
-            </div>
-            <div className="section">
-              <span className="t-label">Na região</span>
-              <Rua rua={rua} />
-            </div>
+            </details>
             <div className="row" style={{ marginTop: 20, gap: 10 }}>
               <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => acompanhar(null)}>Trocar linha</button>
               <button className="btn btn-ghost" style={{ flex: 1 }} onClick={limpar}>Encerrar</button>
             </div>
             <p className="t-meta" style={{ marginTop: 16 }}>
-              <Info size={12} aria-hidden style={{ verticalAlign: "-2px" }} /> A chegada é uma estimativa calculada pelo Monitora com base nos dados disponíveis e não representa um horário oficial da operação. <a href="/mais" style={{ textDecoration: "underline" }}>Metodologia</a>
+              <Info size={12} aria-hidden style={{ verticalAlign: "-2px" }} /> Chegada estimada pelo Monitora, não é horário oficial. <a href="/mais" style={{ textDecoration: "underline" }}>Como calculamos</a>
             </p>
           </>
         )}
@@ -431,15 +427,13 @@ export default function MobilidadeApp() {
 function SeletorSentido({ sentidos, valor, onChange }: { sentidos: string[]; valor: string | null; onChange: (s: string | null) => void }) {
   return (
     <div style={{ marginBottom: 16 }}>
-      <span className="t-label">Sentido</span>
-      <div className="sentidos" role="radiogroup" aria-label="Sentido da linha">
+      <div className="sentidos sentidos-pill" role="radiogroup" aria-label="Sentido da linha">
         {sentidos.map((d) => (
           <button key={d} role="radio" aria-checked={valor === d} className={`sentido${valor === d ? " on" : ""}`} onClick={() => onChange(valor === d ? null : d)}>
             <span aria-hidden>→</span> {d}
           </button>
         ))}
       </div>
-      {!valor && <p className="t-meta" style={{ margin: "6px 2px 0" }}>Mostrando os dois sentidos. Toque para escolher.</p>}
     </div>
   );
 }

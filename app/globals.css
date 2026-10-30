@@ -60,7 +60,7 @@
 
   /* camadas e layout */
   --z-map: 0; --z-overlay: 5; --z-sheet: 10; --z-nav: 50; --z-modal: 80;
-  --nav-h: 60px;
+  --nav-h: 54px;
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
   color-scheme: light;
@@ -145,21 +145,36 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 @keyframes sobeLeve { from { transform: translateY(10px); } to { transform: none; } }
 
 .nav {
-  position: fixed; z-index: var(--z-nav); left: 14px; right: 14px; bottom: calc(var(--safe-b) + 12px); height: var(--nav-h);
-  display: flex; padding: 5px; border-radius: 22px;
+  position: fixed; z-index: var(--z-nav); left: 50%; transform: translateX(-50%); bottom: calc(var(--safe-b) + 12px); height: var(--nav-h);
+  width: min(calc(100% - 40px), 340px); display: flex; padding: 4px; border-radius: 999px;
 }
-.nav a {
+.nav a, .nav .nav-menu {
   position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  font-size: 11px; font-weight: 550; letter-spacing: .005em; color: var(--text-2); border-radius: 17px;
+  font-size: 10px; font-weight: 550; letter-spacing: .005em; color: var(--text-2); border-radius: 999px;
   transition: color var(--dur-interact) var(--ease-out);
 }
-.nav a svg { width: 21px; height: 21px; }
-.nav a[aria-current="page"] { color: #fff; }
-@media (prefers-color-scheme: dark) { .nav a[aria-current="page"] { color: var(--deep-ink); } }
+.nav .nav-menu { background: none; border: 0; padding: 0; font-family: inherit; cursor: pointer; }
+.nav a svg, .nav .nav-menu svg { width: 19px; height: 19px; }
+.nav a[aria-current="page"], .nav .nav-menu[aria-current="page"] { color: #fff; }
+@media (prefers-color-scheme: dark) { .nav a[aria-current="page"], .nav .nav-menu[aria-current="page"] { color: var(--deep-ink); } }
+/* menu ☰: cartão de vidro que sobe da barra */
+.nav-veu { position: fixed; inset: 0; z-index: calc(var(--z-nav) - 1); background: rgba(8, 10, 16, .18); animation: aparece var(--dur-interact) var(--ease-out); }
+.nav-pop { position: fixed; z-index: var(--z-nav); left: 50%; transform: translateX(-50%); bottom: calc(var(--safe-b) + var(--nav-h) + 22px);
+  width: min(calc(100% - 40px), 340px); display: grid; gap: 2px; padding: 6px; border-radius: var(--r-lg);
+  background: var(--glass-strong); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-hair); box-shadow: var(--shadow-float); animation: sobe var(--dur-interact) var(--spring); }
+.nav-pop a { display: flex; gap: 12px; align-items: center; padding: 11px 12px; border-radius: 18px; }
+.nav-pop a:hover, .nav-pop a[aria-current="page"] { background: var(--accent-soft); }
+.nav-pop svg { width: 20px; height: 20px; color: var(--accent); flex: none; }
+.nav-pop span { display: grid; gap: 1px; }
+.nav-pop b { font: 600 15px var(--font-ui); }
+.nav-pop small { font: 400 12px var(--font-ui); color: var(--text-3); }
+@keyframes aparece { from { opacity: 0; } }
+@keyframes sobe { from { opacity: 0; transform: translate(-50%, 10px) scale(.97); } }
 /* indicador único que desliza (continuidade entre abas) */
 .nav-ind {
-  position: absolute; z-index: 0; top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / var(--n));
-  border-radius: 17px; background: var(--accent);
+  position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / var(--n));
+  border-radius: 999px; background: var(--accent);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 6px 16px -6px color-mix(in srgb, var(--accent) 70%, transparent);
   transform: translateX(calc(var(--i) * 100%)); transition: transform var(--dur-space) var(--spring), opacity var(--dur-interact) var(--ease-out);
 }
@@ -627,9 +642,10 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 @media (orientation: landscape) and (max-height: 540px) {
   :root { --nav-h: 0px; }
   .shell { padding-bottom: 0; }
-  .nav { left: auto; right: calc(env(safe-area-inset-right) + 10px); top: 50%; bottom: auto; transform: translateY(-50%); width: 64px; height: auto; flex-direction: column; padding: 5px; }
-  .nav a { flex: none; height: 54px; font-size: 9.5px; }
-  .nav-ind { left: 5px; right: 5px; top: 5px; bottom: auto; width: auto; height: 54px; transform: translateY(calc(var(--i) * 100%)); }
+  .nav { left: auto; right: calc(env(safe-area-inset-right) + 10px); top: 50%; bottom: auto; transform: translateY(-50%); width: 64px; height: auto; flex-direction: column; padding: 4px; border-radius: 32px; }
+  .nav a, .nav .nav-menu { flex: none; height: 54px; font-size: 9.5px; }
+  .nav-ind { left: 4px; right: 4px; top: 4px; bottom: auto; width: auto; height: 54px; transform: translateY(calc(var(--i) * 100%)); }
+  .nav-pop { left: auto; right: 84px; bottom: 10px; transform: none; animation: none; }
   .mob { right: 84px; }
   .map-top { left: calc(env(safe-area-inset-left) + 12px); right: auto; width: 348px; top: 10px; }
   .sheet { left: calc(env(safe-area-inset-left) + 12px); right: auto; bottom: 10px; top: 70px; width: 348px; height: auto !important; border-radius: var(--r-lg); transform: none !important; padding-top: 10px;
@@ -705,3 +721,10 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 @media (min-width: 960px) { .home-marca { display: none; } .home-cards { margin-top: 0; } }
 @media (min-width: 760px) { .home { max-width: 880px; } .home-cards { grid-template-columns: 1fr 1fr; align-items: stretch; } .home-cards > * { min-height: 188px; } }
 .aviso-chegada { margin-top: 12px; width: 100%; } .aviso-chegada-nota { margin: 10px 0 0; }
+/* painel da linha enxuto: sentido em pílulas, detalhes recolhidos */
+.sentidos-pill { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-top: 0; }
+.sentidos-pill .sentido { flex: none; min-height: 36px; padding: 0 14px; border-radius: 999px; font-size: 14px; white-space: nowrap; }
+.mais-linha { margin-top: 18px; border-top: 1px solid var(--hairline); padding-top: 12px; }
+.mais-linha summary { cursor: pointer; font: 600 14px var(--font-ui); color: var(--text-2); list-style: none; display: flex; justify-content: space-between; }
+.mais-linha summary::after { content: "+"; font-size: 18px; line-height: 1; color: var(--text-3); }
+.mais-linha[open] summary::after { content: "–"; }

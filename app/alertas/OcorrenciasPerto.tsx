@@ -20,11 +20,10 @@ export default function OcorrenciasPerto() {
   const usarGps = async () => { const p = await minhaPosicao(); if (!("erro" in p)) setPos({ ...p, nome: "sua localização" }); };
 
   return (
-    <section className="nv-tempo" aria-label="Ocorrências perto de você">
-      <span className="t-label">Prévia · Ocorrências do COR</span>
-      <h2 className="nv-oc-tit">Até 10 km de {pos?.nome ?? "você"}</h2>
+    <section aria-label="Ocorrências perto de você">
+      <p className="t-body muted" style={{ margin: 0 }}>Acidentes, interdições e bolsões d'água a até 10 km de {pos?.nome ?? "você"}. Fonte: COR / Prefeitura do Rio.</p>
       <button className="btn btn-ghost nv-sec" onClick={usarGps}><LocateFixed aria-hidden /> Usar minha localização</button>
-      {!pos ? null : !d ? <div className="nv-sec"><Skel h={60} r={14} /></div>
+      {!pos ? <p className="t-cap nv-sec">Use sua localização (ou escolha um local na aba Clima) para ver o que acontece perto de você.</p> : !d ? <div className="nv-sec"><Skel h={60} r={14} /></div>
         : d.erro || !d.disponivel ? (
           <div className="notice nv-sec"><TriangleAlert className="sev-atencao" aria-hidden />
             <div><div className="t-head">Fonte do COR fora do ar agora</div>
