@@ -2,10 +2,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CloudSun, BusFront, Menu, Activity, Info, X } from "lucide-react";
+import { House, CloudSun, BusFront, Menu, Activity, Info, X } from "lucide-react";
 import { MarcaMonitora } from "./Geometria";
 
 const ITENS = [
+  { href: "/", rotulo: "Início", Icone: House },
   { href: "/clima", rotulo: "Clima", Icone: CloudSun },
   { href: "/mobilidade", rotulo: "Mobilidade", Icone: BusFront },
 ];
@@ -17,7 +18,7 @@ const MENU = [
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const p = usePathname();
-  const ativo = (h: string) => p === h || p.startsWith(`${h}/`);
+  const ativo = (h: string) => p === h || (h !== "/" && p.startsWith(`${h}/`));
   const [menu, setMenu] = useState(false);
   useEffect(() => setMenu(false), [p]);
   const noMenu = MENU.some((x) => ativo(x.href));
@@ -43,7 +44,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <div className="shell">
       <header className="topnav" aria-label="Navegação principal">
         <Link href="/" className="marca"><MarcaMonitora size={22} /> Monitora</Link>
-        {[...ITENS, ...MENU.slice(0, 1)].map(({ href, rotulo }) => (
+        {[...ITENS.slice(1), ...MENU.slice(0, 1)].map(({ href, rotulo }) => (
           <Link key={href} href={href} className="item" aria-current={ativo(href) ? "page" : undefined}>{rotulo === "Monitor da cidade" ? "Monitor" : rotulo}</Link>
         ))}
         <Link href="/mais" className="item" aria-current={ativo("/mais") ? "page" : undefined}>Mais</Link>
