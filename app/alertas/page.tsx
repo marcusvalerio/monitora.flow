@@ -5,8 +5,8 @@ export const metadata = { title: "Ocorrências — Monitora" };
 
 export default function Alertas() {
   return (
-    <main className="page">
-      <h1 className="t-hero" style={{ margin: "8px 0 8px" }}>Ocorrências</h1>
+    <main className="page alertas">
+      <h1 className="t-hero">Ocorrências</h1>
       <OcorrenciasPerto />
     </main>
   );

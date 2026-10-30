@@ -20,18 +20,18 @@ export default function OcorrenciasPerto() {
   const usarGps = async () => { const p = await minhaPosicao(); if (!("erro" in p)) setPos({ ...p, nome: "sua localização" }); };
 
   return (
-    <section aria-label="Ocorrências perto de você">
-      <p className="t-body muted" style={{ margin: 0 }}>Acidentes, interdições e bolsões d'água a até 10 km de {pos?.nome ?? "você"}. Fonte: COR / Prefeitura do Rio.</p>
-      <button className="btn btn-ghost nv-sec" onClick={usarGps}><LocateFixed aria-hidden /> Usar minha localização</button>
-      {!pos ? <p className="t-cap nv-sec">Use sua localização (ou escolha um local na aba Clima) para ver o que acontece perto de você.</p> : !d ? <div className="nv-sec"><Skel h={60} r={14} /></div>
+    <section aria-label="Ocorrências perto de você" style={{ display: "grid", gap: 16 }}>
+      <p className="t-body muted" style={{ margin: 0, textWrap: "pretty" }}>Acidentes, interdições e bolsões d'água a até 10 km {pos ? `de ${pos.nome}` : "de você"}. Fonte: COR / Prefeitura do Rio.</p>
+      <button className="btn btn-ghost" onClick={usarGps}><LocateFixed aria-hidden /> Usar minha localização</button>
+      {!pos ? <p className="t-cap" style={{ margin: 0 }}>Use sua localização (ou escolha um local na aba Clima) para ver o que acontece perto de você.</p> : !d ? <Skel h={76} r={18} />
         : d.erro || !d.disponivel ? (
-          <div className="notice nv-sec"><TriangleAlert className="sev-atencao" aria-hidden />
+          <div className="card-aviso"><TriangleAlert aria-hidden />
             <div><div className="t-head">Fonte do COR fora do ar agora</div>
               <div className="t-cap">A API pública de ocorrências da Prefeitura não está respondendo. Quando voltar, os avisos aparecem aqui sozinhos — nunca mostramos ocorrência inventada.</div></div></div>
         ) : !d.observado?.length ? (
-          <p className="t-body muted nv-sec">Nenhuma ocorrência aberta num raio de 10 km.</p>
+          <p className="t-body muted" style={{ margin: 0 }}>Nenhuma ocorrência aberta num raio de 10 km.</p>
         ) : (
-          <ul className="nv-avisos nv-sec">
+          <ul className="nv-avisos" style={{ margin: 0 }}>
             {d.observado.map((o: J) => (
               <li key={o.id}><TriangleAlert aria-hidden />
                 <span><b>{o.titulo}</b>{o.bairro && ` · ${o.bairro}`}<br /><small className="t-cap">a {fmtDist(o.distanciaM / 1000)}{o.inicio && ` · ${ha(o.inicio)}`}{o.gravidade && ` · ${o.gravidade}`}</small></span></li>
