@@ -2,21 +2,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CloudSun, BusFront, TriangleAlert, Menu, Activity, Sparkles, Info, Code2, X, FlaskConical } from "lucide-react";
+import { CloudSun, BusFront, Menu, Activity, Info, X } from "lucide-react";
 import { MarcaMonitora } from "./Geometria";
 
 const ITENS = [
   { href: "/clima", rotulo: "Clima", Icone: CloudSun },
   { href: "/mobilidade", rotulo: "Mobilidade", Icone: BusFront },
-  { href: "/alertas", rotulo: "Ocorrências", Icone: TriangleAlert },
 ];
 /** O que sai da barra e vai para o menu ☰ (o menu fica "ativo" quando a tela atual é uma destas). */
 const MENU = [
   { href: "/monitor", rotulo: "Monitor da cidade", nota: "Frota, chuva e qualidade dos dados agora", Icone: Activity },
-  { href: "/novidade", rotulo: "Novidades", nota: "O que está em avaliação", Icone: Sparkles },
-  { href: "/novidade/teste", rotulo: "Teste do sistema", nota: "Cada fonte testada agora, com tempo", Icone: FlaskConical },
   { href: "/mais", rotulo: "Sobre os dados", nota: "Fontes, metodologia e privacidade", Icone: Info },
-  { href: "/docs", rotulo: "API", nota: "Endpoints para desenvolvedores", Icone: Code2 },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {

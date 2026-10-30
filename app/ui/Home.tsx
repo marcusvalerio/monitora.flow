@@ -54,7 +54,7 @@ export default function Home() {
           </>
         )}
       </div>
-      <Link href="/alertas" className="home-op">Ocorrências perto de você <ChevronRight aria-hidden /></Link>
+      <Link href="/monitor" className="home-op">Operação da cidade <ChevronRight aria-hidden /></Link>
     </main>
   );
 }

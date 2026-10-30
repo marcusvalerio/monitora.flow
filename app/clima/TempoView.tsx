@@ -280,7 +280,7 @@ function Sol({ nascer, por }: { nascer: string; por: string }) {
  * StandBy: celular deitado (paisagem baixa) vira um relógio de mesa — hora grande à esquerda,
  * relógio do céu à direita. Só CSS decide quando aparece (globals.css, seção 14); fora disso fica oculto.
  */
-function Standby({ horas, agora, hoje, local }: { horas: J[]; agora: J | null | undefined; hoje: J | null | undefined; local: string }) {
+export function Standby({ horas, agora, hoje, local }: { horas: J[]; agora: J | null | undefined; hoje: J | null | undefined; local: string }) {
   const [t, setT] = useState<Date | null>(null);
   useEffect(() => { setT(new Date()); const i = setInterval(() => setT(new Date()), 10_000); return () => clearInterval(i); }, []);
   const hm = t ? t.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }) : "--:--";

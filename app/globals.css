@@ -327,7 +327,8 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .eta { display: flex; align-items: baseline; gap: 8px; }
 .eta .n { font: 600 72px/0.9 var(--font-num); letter-spacing: -.06em; }
 .eta .u { font: 500 20px/1 var(--font-ui); color: var(--text-2); letter-spacing: -.01em; }
-.rolante { position: relative; display: inline-grid; overflow: hidden; vertical-align: bottom; }
+/* folga em volta do corte: com line-height < 1 e letter-spacing negativo, o overflow comia a ponta de 5, 4, 7… */
+.rolante { position: relative; display: inline-grid; overflow: hidden; vertical-align: bottom; padding: .14em .06em .06em; margin: -.14em -.06em -.06em; }
 .rolante > span { grid-area: 1 / 1; }
 .rolante.sobe .sai { animation: saiCima 380ms var(--ease-out) both; }
 .rolante.sobe .entra { animation: entraBaixo 420ms var(--spring) both; }
@@ -725,7 +726,7 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 @media (min-width: 760px) { .home { max-width: 880px; } .home-cards { grid-template-columns: 1fr 1fr; align-items: stretch; } .home-cards > * { min-height: 188px; } }
 .aviso-chegada { margin-top: 12px; width: 100%; } .aviso-chegada-nota { margin: 10px 0 0; }
 /* painel da linha enxuto: sentido em pílulas, detalhes recolhidos */
-.sentidos-pill { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-top: 0; }
+.sentidos-pill { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: -4px -22px 0; padding: 4px 22px; }
 .sentidos-pill .sentido { flex: none; min-height: 36px; padding: 0 14px; border-radius: 999px; font-size: 14px; white-space: nowrap; }
 .mais-linha { margin-top: 18px; border-top: 1px solid var(--hairline); padding-top: 12px; }
 .mais-linha summary { cursor: pointer; font: 600 14px var(--font-ui); color: var(--text-2); list-style: none; display: flex; justify-content: space-between; }
@@ -760,3 +761,19 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .alertas .card-aviso { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--hairline); }
 .alertas .card-aviso svg { width: 20px; height: 20px; flex: none; color: var(--stale); margin-top: 2px; }
 .alertas .card-aviso .t-cap { margin-top: 4px; }
+/* mapa: o veículo que vai te pegar em destaque, os outros recuam */
+.veh.apagado { opacity: .38 !important; filter: saturate(.3); transition: opacity var(--dur-interact) var(--ease-out); }
+/* "Saia em N min" logo abaixo da chegada */
+.saia { margin-top: 6px; font: 500 14px var(--font-ui); color: var(--accent); }
+.saia.ja { color: var(--coral); font-weight: 600; }
+/* favoritos: estrela no cabeçalho e "Seus trajetos" no início */
+.cab-dir { display: flex; align-items: center; gap: 8px; }
+.fav { width: 40px; height: 40px; border-radius: 999px; border: 0; background: var(--surface-2); color: var(--text-3); display: grid; place-items: center; cursor: pointer; }
+.fav svg { width: 19px; height: 19px; }
+.fav.on { color: #E8A317; } .fav.on svg { fill: currentColor; }
+.favoritos { margin-bottom: 18px; }
+.fav-lista { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 10px -22px 0; padding: 2px 22px 4px; }
+.fav-item { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 14px 10px 10px; border-radius: var(--r-md); border: 1px solid var(--hairline); background: var(--surface); cursor: pointer; text-align: left; font-family: inherit; color: inherit; max-width: 240px; }
+.fav-item span:last-child { display: grid; min-width: 0; }
+.fav-item b { font: 600 14px var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fav-item small { font: 400 12px var(--font-ui); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

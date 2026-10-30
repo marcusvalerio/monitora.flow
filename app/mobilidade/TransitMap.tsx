@@ -10,7 +10,7 @@ import { criarMapa } from "../map/engine";
 import { camadasDiagnostico, camadasEstacoes, camadasRota } from "../map/transporte";
 
 export interface Ponto { id: string; nome: string; tipo: "estacao" | "terminal" | "parada"; fonte: "brt" | "sppo"; lat: number; lng: number; corredor?: string | null; bairro?: string | null; rua?: string | null }
-export interface VeiculoMapa { id: string; fonte: "brt" | "sppo"; linha: string | null; lat: number; lng: number; rumo: number | null; parado: boolean; idadeS: number; rotulo: string; destino?: string | null; estado?: "ON_ROUTE" | "UNCERTAIN" | "OFF_ROUTE" | "STALE" | null; shapeId?: string | null }
+export interface VeiculoMapa { id: string; fonte: "brt" | "sppo"; linha: string | null; lat: number; lng: number; rumo: number | null; parado: boolean; idadeS: number; rotulo: string; destino?: string | null; estado?: "ON_ROUTE" | "UNCERTAIN" | "OFF_ROUTE" | "STALE" | null; shapeId?: string | null; apagado?: boolean }
 
 const ESTACOES = estacoesJson.estacoes as { id: string; nome: string; tipo: string; lat: number; lng: number }[];
 
@@ -337,7 +337,7 @@ export default function TransitMap({ ponto, veiculos, veiculoSel, onVeiculo, onE
         if (rastro.current.id === v.id) { rastro.current.pts.push([v0.lng, v0.lat]); desenharRastro(); }
       }
       girar(it, v.rumo);
-      it.el.className = `veh ${v.fonte}${v.parado ? " parado" : ""}${v.idadeS > 180 || v.estado === "STALE" ? " velho" : ""}${v.estado === "OFF_ROUTE" ? " fora" : v.estado === "UNCERTAIN" ? " incerto" : ""}${v.id === sel ? " sel" : ""}`;
+      it.el.className = `veh ${v.fonte}${v.parado ? " parado" : ""}${v.idadeS > 180 || v.estado === "STALE" ? " velho" : ""}${v.estado === "OFF_ROUTE" ? " fora" : v.estado === "UNCERTAIN" ? " incerto" : ""}${v.id === sel ? " sel" : ""}${v.apagado && v.id !== sel ? " apagado" : ""}`;
       (it.el.querySelector(".rot") as HTMLElement).textContent = v.linha ?? "";
       it.el.setAttribute("aria-label", v.rotulo);
       it.el.style.zIndex = v.id === sel ? "3" : "1";

@@ -1,7 +1,7 @@
 "use client";
 /**
- * Prévia "Tempo 2.0" (/novidade). Mesmas regras de dado do Clima: só o que veio da previsão; campo ausente some.
- * Novidades em relação à aba Clima: chuva nos próximos 15–120 min, comparação com ontem, avisos (UV, rajada,
+ * Tela do Clima. Regras de dado: só o que veio da previsão; campo ausente some.
+ * Mostra: chuva nos próximos 15–120 min, comparação com ontem, avisos (UV, rajada,
  * calor, chuva forte), melhor janela para sair, gráfico de 36 h (temperatura + chuva), semana que abre por dia,
  * índice UV, rajadas, pressão e qualidade do ar.
  */
@@ -9,70 +9,52 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ChevronDown, CloudSun, Droplets, Sun, Wind, Gauge, Leaf, Umbrella, Thermometer, Clock } from "lucide-react";
 import { ErrorState, IconeTempo, LastUpdated, Skel } from "../ui/estados";
-import { Relogio } from "../clima/TempoView";
-import { J, coord, dec, diaSemana, get, gravarCache, horaLocal, ler, lerCache } from "../ui/util";
+import { Relogio, Standby } from "./TempoView";
+import type { Local } from "./ClimaApp";
+import { J, coord, dec, diaSemana, distKm, fmtDist, get, gravarCache, horaLocal, lerCache } from "../ui/util";
 
 const hh = (iso: string) => horaLocal(iso);
 
-export default function TempoNovo() {
-  const [local, setLocal] = useState<J | null | undefined>(undefined);
+export default function TempoNovo({ local }: { local: Local }) {
   const [d, setD] = useState<J | null>(null);
   const [em, setEm] = useState<number | null>(null);
+  const [chuva, setChuva] = useState<J | null>(null);
+  const chave = `monitora:clima:cache2:${coord(local.lat)},${coord(local.lng)}`;
 
-  useEffect(() => { setLocal(ler<J | null>("monitora:clima:local", null)); }, []);
-  const chave = local ? `monitora:novidade:tempo:${coord(local.lat)},${coord(local.lng)}` : "";
-
+  // Atualização em segundo plano: mantém o que já está na tela; se a rede falhar, segue com a previsão anterior.
   const carregar = useCallback(async () => {
-    if (!local) return;
-    const r = await get(`/tempo/completo?lat=${coord(local.lat)}&lng=${coord(local.lng)}`);
+    const [r, ch] = await Promise.all([get(`/tempo/completo?lat=${coord(local.lat)}&lng=${coord(local.lng)}`), get(`/chuva?lat=${local.lat}&lng=${local.lng}&k=1`)]);
     if (!r.erro) { gravarCache(chave, r); setEm(Date.now()); }
     setD((ant) => (r.erro && ant && !ant.erro ? ant : r));
+    setChuva((ant) => (ch.erro && ant ? ant : ch));
   }, [local, chave]);
 
   useEffect(() => {
-    if (!local) return;
-    const c = lerCache(chave, 3 * 3600_000);
-    if (c) { setD(c.dado); setEm(c.em); }
+    const c = lerCache(chave, 3 * 3600_000); // abre na hora com a última previsão deste local
+    setD(c?.dado ?? null); setEm(c?.em ?? null); setChuva(null);
     carregar();
     const t = setInterval(() => { if (!document.hidden) carregar(); }, 10 * 60_000);
     return () => clearInterval(t);
-  }, [local, chave, carregar]);
+  }, [chave, carregar]);
 
-  if (local === undefined) return null;
-  if (!local) return (
-    <Link href="/clima" className="hc hc-convite nv-sec" aria-label="Escolher um local na aba Clima">
-      <CloudSun aria-hidden /><span><b>Escolha um local na aba Clima</b><small>A prévia usa o mesmo local salvo</small></span>
-    </Link>
-  );
-  if (!d) return <div className="nv-sec" style={{ display: "grid", gap: 12 }} aria-busy="true"><Skel h={64} r={18} /><Skel h={120} r={18} /><Skel h={180} r={18} /></div>;
-  if (d.erro) return <div className="nv-sec"><ErrorState texto="Não foi possível carregar a prévia agora." tentar={carregar} /></div>;
+  if (!d) return <div className="nv-sec" style={{ display: "grid", gap: 12, justifyItems: "center" }} aria-busy="true"><Skel h={300} w={300} r={150} /><Skel h={64} r={18} /><Skel h={180} r={18} /></div>;
+  if (d.erro) return <div className="nv-sec"><ErrorState texto="Não foi possível atualizar o clima agora." tentar={carregar} /></div>;
 
   const c = d.calculado;
   const a = c.agora;
+  const est = chuva?.observado?.[0];
+  const estPerto = est && distKm(local, est) <= 15 ? est : null;
   return (
     <div className="nv-tempo">
-      <div className="nv-cab">
-        <span className="t-label">Prévia · Tempo 2.0</span>
-        <h2>{local.nome}</h2>
+      {/* o arco interativo é o centro da tela: arraste pelo anel para ver cada hora */}
+      <Relogio horas={c.horas.slice(0, 24)} agora={a} hoje={c.dias[0]} />
+
+      <div className="nv-resumo">
+        {a.sensacaoC != null && <span>Sensação <b>{Math.round(a.sensacaoC)}°</b></span>}
+        {c.comparacao && <span className="nv-comp">{frasesOntem(c.comparacao.difC)}</span>}
       </div>
 
       <ChuvaCurta ch={c.chuva2h} />
-
-      {/* o arco interativo do Clima continua sendo o centro da tela: arraste pelo anel para ver cada hora */}
-      <div className="nv-sec"><Relogio horas={c.horas.slice(0, 24)} agora={a} hoje={c.dias[0]} /></div>
-
-      <section className="nv-hero nv-sec" aria-label="Agora">
-        <div className="nv-hero-l">
-          <span className="nv-temp num">{a.temperaturaC == null ? "—" : Math.round(a.temperaturaC)}<sup>°</sup></span>
-          <span className="nv-cond"><IconeTempo icone={a.descricao?.icone} dia={a.dia} size={20} /> {a.descricao?.texto ?? "—"}</span>
-        </div>
-        <div className="nv-hero-r">
-          {a.sensacaoC != null && <span>Sensação <b>{Math.round(a.sensacaoC)}°</b></span>}
-          {c.dias[0]?.maxC != null && <span>Máx <b>{Math.round(c.dias[0].maxC)}°</b> · Mín <b>{Math.round(c.dias[0].minC)}°</b></span>}
-          {c.comparacao && <span className="nv-comp">{frasesOntem(c.comparacao.difC)}</span>}
-        </div>
-      </section>
-
       <Avisos c={c} />
 
       {c.melhorJanela && c.horas.some((h: J) => (h.probabilidadeChuvaPct ?? 0) >= 40) && (
@@ -83,9 +65,19 @@ export default function TempoNovo() {
       {c.dias.length > 0 && <SemanaAberta dias={c.dias} />}
       <Ficha a={a} ar={c.ar} hoje={c.dias[0]} />
 
+      {estPerto && (
+        <section className="nv-sec" aria-label="Chuva medida agora">
+          <h3 className="rc-tit">Chuva medida agora</h3>
+          <p className="nv-medida"><b className="num">{estPerto.mm.h01 == null ? "—" : dec(estPerto.mm.h01)}</b> mm na última hora</p>
+          <p className="t-cap" style={{ margin: "4px 0 0" }}>{estPerto.mm.m15 != null && `${dec(estPerto.mm.m15)} mm em 15 min · `}Pluviômetro {estPerto.nome}, a {fmtDist(estPerto.distanciaM / 1000)} · Alerta Rio</p>
+        </section>
+      )}
+
+      <Standby horas={c.horas.slice(0, 24)} agora={a} hoje={c.dias[0]} local={local.nome} />
+
       <p className="rc-fonte" style={{ marginTop: 18 }}>
         <LastUpdated em={em} fonte="Open-Meteo" velhoS={1800} /><br />
-        Previsão de modelo numérico e qualidade do ar (Open-Meteo, CC BY 4.0). Experimental.
+        Previsão de modelo numérico e qualidade do ar (Open-Meteo, CC BY 4.0). Chuva medida: Alerta Rio. <Link href="/mais">Sobre os dados</Link>
       </p>
     </div>
   );

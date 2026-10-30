@@ -1,5 +1,5 @@
 /**
- * Previsão COMPLETA para a prévia em /novidade — FONTE EXTERNA: Open-Meteo (previsão + qualidade do ar), CC BY 4.0.
+ * Previsão COMPLETA usada pela tela Clima — FONTE EXTERNA: Open-Meteo (previsão + qualidade do ar), CC BY 4.0.
  * Acrescenta ao /tempo: chuva em passos de 15 min (próximas 2 h), 48 h, índice UV, rajadas, pressão,
  * ontem (para comparar) e qualidade do ar. É modelo numérico, não medição.
  */
