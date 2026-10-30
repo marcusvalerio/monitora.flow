@@ -35,8 +35,8 @@
   --st-on: var(--ultramarine); --st-unc: var(--periwinkle); --st-off: var(--coral); --st-stale: #A4A8AE;
 
   /* tipografia */
-  --font-ui: "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
-  --font-num: "Sora", "Geist", -apple-system, system-ui, sans-serif;
+  --font-ui: var(--fonte-geist), "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --font-num: var(--fonte-sora), "Sora", var(--fonte-geist), -apple-system, system-ui, sans-serif;
 
   /* forma e espaço */
   --r-xs: 8px; --r-sm: 12px; --r-md: 18px; --r-lg: 26px; --r-xl: 32px;

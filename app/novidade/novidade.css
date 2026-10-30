@@ -1,0 +1,73 @@
+/* /novidade — prévia "Tempo 2.0". Usa os tokens do app (globals.css). */
+.nv-sec { margin-top: 18px; }
+.nv-mudancas { margin-top: 16px; background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 12px 16px; }
+.nv-mudancas summary { cursor: pointer; font: 600 14px var(--font-ui); }
+.nv-mudancas ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+.nv-mudancas li { display: grid; gap: 2px; font: 400 13px/1.4 var(--font-ui); color: var(--text-2); }
+.nv-mudancas li b { color: var(--text); font-weight: 600; }
+
+.nv-tempo { margin-top: 26px; padding-top: 18px; border-top: 1.5px solid var(--text); }
+.nv-cab h2 { margin: 6px 0 0; font: 600 24px/1.1 var(--font-num); letter-spacing: -.03em; }
+
+.nv-curta { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 14px 16px 10px; }
+.nv-curta.molhado { background: var(--accent-soft); border-color: transparent; }
+.nv-curta-t { display: flex; gap: 10px; align-items: flex-start; font: 500 15px/1.35 var(--font-ui); }
+.nv-curta-t svg { width: 20px; height: 20px; flex: none; color: var(--accent); margin-top: 1px; }
+.nv-curta-t small { color: var(--text-3); font-size: 13px; }
+.nv-curta-b { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; height: 52px; margin-top: 10px; }
+.nv-curta-b span { display: grid; grid-template-rows: 1fr auto; align-items: end; justify-items: center; }
+.nv-curta-b i { width: 100%; border-radius: 4px 4px 2px 2px; background: var(--ultramarine); }
+.nv-curta-b em { font: 500 10px var(--font-ui); font-style: normal; color: var(--text-3); margin-top: 3px; }
+
+.nv-hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.nv-hero-l { display: grid; gap: 4px; }
+.nv-temp { font: 600 clamp(72px, 22vw, 96px)/.9 var(--font-num); letter-spacing: -.06em; }
+.nv-temp sup { font-size: .4em; vertical-align: top; position: relative; top: .25em; }
+.nv-cond { display: inline-flex; gap: 6px; align-items: center; font: 500 16px var(--font-ui); }
+.nv-hero-r { display: grid; gap: 4px; justify-items: end; font: 400 14px var(--font-ui); color: var(--text-2); text-align: right; }
+.nv-hero-r b { color: var(--text); font-family: var(--font-num); }
+.nv-comp { color: var(--accent); font-weight: 500; }
+
+.nv-avisos { list-style: none; padding: 0; display: grid; gap: 8px; }
+.nv-avisos li { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; border-radius: var(--r-sm); background: rgba(255, 112, 88, .12); font: 500 14px/1.35 var(--font-ui); }
+.nv-avisos svg { width: 18px; height: 18px; flex: none; color: var(--coral); margin-top: 1px; }
+
+.nv-chip { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 14px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--hairline); font: 400 14px var(--font-ui); }
+.nv-chip svg { width: 16px; height: 16px; color: var(--accent); }
+
+.nv-foco { margin: 8px 0 6px; font: 400 14px/1.4 var(--font-ui); color: var(--text-2); min-height: 40px; }
+.nv-foco b { color: var(--text); }
+.nv-graf { overflow-x: auto; scrollbar-width: none; margin: 0 -20px; padding: 0 20px; }
+.nv-graf svg { display: block; overflow: visible; }
+.nv-col { fill: transparent; cursor: pointer; }
+g.foco .nv-col { fill: var(--accent-soft); }
+.nv-meia { stroke: var(--hairline-strong); stroke-dasharray: 3 3; }
+.nv-prob { fill: var(--periwinkle); opacity: .45; }
+.nv-mm { fill: var(--ultramarine); }
+.nv-hh { font: 500 10px var(--font-ui); fill: var(--text-3); }
+.nv-linha { fill: none; stroke: var(--text); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.nv-tt { font: 600 11px var(--font-num); fill: var(--text-2); }
+.nv-tt.foco { fill: var(--accent); }
+
+.nv-semana { list-style: none; margin: 8px 0 0; padding: 0; }
+.nv-semana li { border-bottom: 1px solid var(--hairline); }
+.nv-semana button { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; display: grid; grid-template-columns: 44px 22px 36px 30px 1fr 30px 18px; gap: 6px; align-items: center; min-height: 48px; font: 500 15px var(--font-ui); }
+.nv-semana button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.nv-p { font: 600 12px var(--font-ui); color: var(--accent); }
+.nv-min { color: var(--text-3); text-align: right; }
+.nv-regua { position: relative; height: 6px; border-radius: 3px; background: var(--surface-2); }
+.nv-regua i { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: linear-gradient(90deg, var(--periwinkle), var(--coral)); }
+.nv-chev { width: 16px; height: 16px; color: var(--text-3); transition: transform var(--dur-interact) var(--ease-out); }
+button[aria-expanded="true"] .nv-chev { transform: rotate(180deg); }
+.nv-det { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 0 0 12px; padding: 12px 14px; border-radius: var(--r-sm); background: var(--surface); }
+.nv-det dt { font: 500 11px var(--font-ui); letter-spacing: .05em; text-transform: uppercase; color: var(--text-3); }
+.nv-det dd { margin: 2px 0 0; font: 500 14px var(--font-ui); }
+
+.nv-ficha { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 0; }
+.nv-ficha > div { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 12px 14px; }
+.nv-ficha dt { display: flex; gap: 6px; align-items: center; font: 500 11px var(--font-ui); letter-spacing: .05em; text-transform: uppercase; color: var(--text-3); }
+.nv-ficha dt svg { width: 14px; height: 14px; }
+.nv-ficha dd { margin: 6px 0 0; display: grid; gap: 6px; }
+.nv-ficha b { font: 600 22px var(--font-num); letter-spacing: -.02em; }
+.nv-ficha small { font: 400 12px/1.3 var(--font-ui); color: var(--text-2); }
+.nv-ficha .rc-med i { transform: none; }

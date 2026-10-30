@@ -1,5 +1,10 @@
 import "./globals.css";
+import { Geist, Sora } from "next/font/google";
 import AppShell from "./ui/AppShell";
+
+// Fontes variáveis servidas pelo próprio app (next/font): sem CSS bloqueante do Google nem conexões extras ao abrir.
+const geist = Geist({ subsets: ["latin"], variable: "--fonte-geist", display: "swap" });
+const sora = Sora({ subsets: ["latin"], variable: "--fonte-sora", display: "swap" });
 
 export const metadata = {
   title: "Monitora — mobilidade e clima no Rio",
@@ -15,13 +20,7 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        {/* Geist: interface, rótulos, corpo, controles. Sora 600: números grandes, ETA, temperatura, títulos de impacto. */}
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;450;500;600;700&family=Sora:wght@400;600&display=swap" />
-      </head>
+    <html lang="pt-BR" className={`${geist.variable} ${sora.variable}`}>
       <body><AppShell>{children}</AppShell></body>
     </html>
   );

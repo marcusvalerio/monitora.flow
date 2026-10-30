@@ -105,7 +105,7 @@ export default function MobilidadeApp() {
       if (vivo) setInfo({ ...r, em: Date.now() });
     };
     carregar();
-    get(`/tempo?lat=${ponto.lat}&lng=${ponto.lng}`).then((r) => vivo && setClima(r));
+    get(`/tempo?lat=${ponto.lat.toFixed(2)}&lng=${ponto.lng.toFixed(2)}`).then((r) => vivo && setClima(r));
     get(`/agora?lat=${ponto.lat}&lng=${ponto.lng}`).then((r) => vivo && setRua(r));
     const t = setInterval(() => { if (!document.hidden && !linha) carregar(); }, 20_000);
     return () => { vivo = false; clearInterval(t); };

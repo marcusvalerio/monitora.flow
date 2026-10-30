@@ -138,7 +138,7 @@ function Relogio({ horas, agora, hoje }: { horas: J[]; agora: J | null | undefin
     setFoco(Math.min(n - 1, Math.floor((ang / (2 * Math.PI)) * n)));
   };
   // marcações a cada 6 h (rótulo da hora local)
-  const marcas = horas.map((x, i) => ({ i, x })).filter(({ i }) => i > 0 && i % 6 === 0);
+  const marcas = horas.map((x, i) => ({ i, x })).filter(({ i }) => i > 0 && i % 6 === 0 && i !== 12); // a marca de baixo colidia com a máx/mín do centro
 
   return (
     <section className="rc-relogio" aria-label="Agora e as próximas 24 horas">
@@ -198,7 +198,7 @@ function resumoHoras(h: J[]): string {
 /* ---------- fita das horas: temperatura como relevo ---------- */
 function Fita({ horas }: { horas: J[] }) {
   const ts = horas.map((x) => x.temperaturaC as number | null).filter((x): x is number => x != null);
-  const min = Math.min(...ts), max = Math.max(...ts);
+  const min = ts.length ? Math.min(...ts) : 0, max = ts.length ? Math.max(...ts) : 0;
   const alt = (v: number | null) => v == null ? 0 : 18 + (max === min ? 30 : ((v - min) / (max - min)) * 52);
   return (
     <div className="rc-fita" role="list">
@@ -218,7 +218,8 @@ function Fita({ horas }: { horas: J[] }) {
 
 /* ---------- semana: todas as faixas na mesma régua ---------- */
 function Semana({ dias, agora }: { dias: J[]; agora: number | null | undefined }) {
-  const min = Math.min(...dias.map((d) => d.minC ?? 99)), max = Math.max(...dias.map((d) => d.maxC ?? -99));
+  const mins = dias.map((d) => d.minC).filter((v): v is number => v != null), maxs = dias.map((d) => d.maxC).filter((v): v is number => v != null);
+  const min = mins.length ? Math.min(...mins) : 0, max = maxs.length ? Math.max(...maxs) : 1;
   const pos = (v: number) => ((v - min) / Math.max(1, max - min)) * 100;
   return (
     <ol className="rc-semana">

@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import { BusFront, ChevronRight, CloudSun } from "lucide-react";
 import { MarcaMonitora } from "./Geometria";
 import { ErrorState, LastUpdated, Skel } from "./estados";
-import { J, get, horaLocal, ler } from "./util";
+import { J, coord, get, gravarCache, horaLocal, ler, lerCache } from "./util";
 import WeatherAtmosphere, { atmosferaDe } from "../clima/atmosfera/WeatherAtmosphere";
 import { mesmoDestino } from "../../src/lib/trajeto";
 
@@ -53,8 +53,15 @@ export default function Home() {
 }
 
 function CartaoClima({ local }: { local: J }) {
+  const chave = `monitora:clima:cache:${coord(local.lat)},${coord(local.lng)}`;
   const [t, setT] = useState<J | null>(null);
-  useEffect(() => { get(`/tempo?lat=${local.lat}&lng=${local.lng}`, AbortSignal.timeout(15_000)).then(setT); }, [local]);
+  useEffect(() => {
+    setT(lerCache(chave, 3 * 3600_000)?.dado ?? null); // mesmo cache da tela Clima: o cartão aparece sem esperar a rede
+    get(`/tempo?lat=${coord(local.lat)}&lng=${coord(local.lng)}`, AbortSignal.timeout(15_000)).then((r) => {
+      if (!r.erro) gravarCache(chave, r);
+      setT((ant) => (r.erro && ant && !ant.erro ? ant : r));
+    });
+  }, [local, chave]);
   if (!t) return <Skel h={188} r={24} />;
   if (t.erro) return <div className="hc"><ErrorState texto="Clima indisponível agora." /></div>;
   const a = t.calculado?.agora, temp = a?.temperaturaC;
