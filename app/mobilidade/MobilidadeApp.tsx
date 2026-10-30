@@ -9,6 +9,7 @@ import SearchSheet from "../ui/SearchSheet";
 import { EmptyState, ErrorState, LastUpdated, Skel } from "../ui/estados";
 import { J, distKm, fmtDist, get, gravar, ha, horaLocal, lembrar, ler, minhaPosicao } from "../ui/util";
 import type { Ponto, VeiculoMapa } from "./TransitMap";
+import AvisarChegada from "./AvisarChegada";
 import { acumulado, mesmoDestino, projetar, type Trajeto } from "../../src/lib/trajeto";
 import { NumeroRolante } from "../ui/Numero";
 import estacoesJson from "../../src/data/estacoes-brt.json";
@@ -263,13 +264,14 @@ export default function MobilidadeApp() {
           ) : saida?.proximaMin != null ? (
             <div className="eta appear" aria-live="polite"><span className="n num"><NumeroRolante valor={Math.max(0, Math.round(saida.proximaMin))} /></span><span className="u">min</span></div>
           ) : saida?.intervaloMin != null ? (
-            <div className="t-title" aria-live="polite">Sai a cada ~{Math.round(saida.intervaloMin)} min</div>
+            <div className="t-title" aria-live="polite">Sai a cada {Math.round(saida.intervaloMin)} min</div>
           ) : <div className="t-title" aria-live="polite">Sem estimativa agora</div>}
-          <div className="t-cap" style={{ marginTop: 4 }}>{esperaDest != null && viagem?.escolhida ? <><b style={{ fontWeight: 600, color: "var(--text)" }}>Até {viagem.escolhida.nome}</b> · chega ~{horaChegada(esperaDest + viagem.escolhida.min)} · ônibus em {eta(esperaDest)} min em {ponto.nome}</> : <>{sentidoValido ? <b style={{ fontWeight: 600, color: "var(--text)" }}>→ {sentidoValido} · </b> : null}{prox ? `Chegada estimada em ${ponto.nome}${viagem?.escolhida ? ` · em ${viagem.escolhida.nome} às ~${horaChegada((prox.etaMin ?? 0) + viagem.escolhida.min)}` : ""}` : saida ? textoSaida(saida, ponto.nome) : `Nenhum veículo ${sentidoValido ? "neste sentido" : "da linha"} se aproximando de ${ponto.nome}`}</>}</div>
+          <div className="t-cap" style={{ marginTop: 4 }}>{esperaDest != null && viagem?.escolhida ? <><b style={{ fontWeight: 600, color: "var(--text)" }}>Até {viagem.escolhida.nome}</b> · chega {horaChegada(esperaDest + viagem.escolhida.min)} · ônibus em {eta(esperaDest)} min em {ponto.nome}</> : <>{sentidoValido ? <b style={{ fontWeight: 600, color: "var(--text)" }}>→ {sentidoValido} · </b> : null}{prox ? `Chegada estimada em ${ponto.nome}${viagem?.escolhida ? ` · em ${viagem.escolhida.nome} às ${horaChegada((prox.etaMin ?? 0) + viagem.escolhida.min)}` : ""}` : saida ? textoSaida(saida, ponto.nome) : `Nenhum veículo ${sentidoValido ? "neste sentido" : "da linha"} se aproximando de ${ponto.nome}`}</>}</div>
         </div>
         <span className={`line-badge lg${ehBrt ? " brt" : ""}`} aria-label={`Linha ${linha}`}>{linha}</span>
       </div>
       <div style={{ marginTop: 8 }}><LastUpdated em={veiculos?.em} fonte="GPS SMTR" velhoS={45} /></div>
+      <AvisarChegada linha={linha} ponto={ponto} sentido={sentidoValido ?? null} etaMin={prox?.etaMin ?? null} />
     </div>
   ) : (
     <div className="list-item" style={{ padding: "0 20px 12px", border: 0, minHeight: 0, gap: 12 }}>
@@ -357,7 +359,7 @@ export default function MobilidadeApp() {
             {viagem && <Destino v={viagem} valor={desce} onChange={setDesce} espera={prox ? prox.etaMin : saida?.proximaMin ?? null} />}
             {chegadas.length > 1 && (
               <div className="t-cap" style={{ marginBottom: 12 }}>
-                Depois: {chegadas.slice(1, 3).map((c: J) => `~${eta(c.etaMin)} min`).join(" · ")}
+                Depois: {chegadas.slice(1, 3).map((c: J) => `${eta(c.etaMin)} min`).join(" · ")}
               </div>
             )}
             {avisoChuva && (
@@ -548,8 +550,8 @@ function VeiculoCard({ v, ponto, chegada, falta, seguindo, onSeguir, onFechar }:
           <div className="t-cap">Faltam <b className="num">{dec1(falta.km)} km</b> até {falta.destino} · {Math.round(falta.pct * 100)}% do trajeto</div>
           {(falta.etaGpsMin != null || falta.etaProgMin != null) && (
             <div className="t-cap">Chegada ao terminal: {[
-              falta.etaGpsMin != null && <span key="g"><b className="num">~{eta(falta.etaGpsMin)} min</b> pelo ritmo atual (GPS)</span>,
-              falta.etaProgMin != null && <span key="p"><b className="num">~{eta(falta.etaProgMin)} min</b> pelo programado</span>,
+              falta.etaGpsMin != null && <span key="g"><b className="num">{eta(falta.etaGpsMin)} min</b> pelo ritmo atual (GPS)</span>,
+              falta.etaProgMin != null && <span key="p"><b className="num">{eta(falta.etaProgMin)} min</b> pelo programado</span>,
             ].filter(Boolean).reduce((acc: React.ReactNode[], x, i) => (i ? [...acc, " · ", x] : [x]), [])}</div>
           )}
         </div>
@@ -559,7 +561,7 @@ function VeiculoCard({ v, ponto, chegada, falta, seguindo, onSeguir, onFechar }:
           <div className="t-label">Próximas estações</div>
           <ol>
             {(v.viagem.proximas as J[]).slice(0, 5).map((p, i) => (
-              <li key={`${p.nome}${i}`}><span>{p.nome}</span><b className="num">~{Math.max(1, Math.round(p.min))} min</b></li>
+              <li key={`${p.nome}${i}`}><span>{p.nome}</span><b className="num">{Math.max(1, Math.round(p.min))} min</b></li>
             ))}
           </ol>
           <p className="t-meta" style={{ margin: "4px 0 0" }}>Viagem oficial pelo GTFS-Realtime{v.viagem.inicio ? ` (saiu ${v.viagem.inicio.slice(0, 5)})` : ""}; tempos programados entre paradas.</p>
@@ -738,7 +740,7 @@ function DialSeguindo({ v, falta, onParar, onCentrar }: { v: J; falta: Falta | n
       <button className="centrar" onClick={onCentrar} aria-label="Centralizar no veículo" />
       <b className="num">{v.linha}</b>
       {v.idadeS > (v.fonte === "sppo" ? 60 : 90) ? <span className="km num sinal">sem sinal {Math.round(v.idadeS / 60)} min</span>
-        : falta && <span className="km num">{etaFinal(falta) != null ? `~${eta(etaFinal(falta)!)} min` : `${dec1(falta.km)} km`}</span>}
+        : falta && <span className="km num">{etaFinal(falta) != null ? `${eta(etaFinal(falta)!)} min` : `${dec1(falta.km)} km`}</span>}
       <button className="parar" onClick={onParar} aria-label="Parar de acompanhar"><X aria-hidden /></button>
     </div>
   );
@@ -775,8 +777,8 @@ function proximaSaida(ponto: Ponto, trajetos: Trajeto[] | null | undefined, frot
 }
 function textoSaida(s: Saida, nome: string) {
   const partes = [s.proximaMin != null ? `Próxima saída estimada de ${nome}` : `Saída de ${nome}`];
-  if (s.desdeMin != null) partes.push(`último saiu há ~${Math.max(1, Math.round(s.desdeMin))} min`);
-  if (s.intervaloMin != null && s.proximaMin != null) partes.push(`a cada ~${Math.round(s.intervaloMin)} min (programado)`);
+  if (s.desdeMin != null) partes.push(`último saiu há ${Math.max(1, Math.round(s.desdeMin))} min`);
+  if (s.intervaloMin != null && s.proximaMin != null) partes.push(`a cada ${Math.round(s.intervaloMin)} min (programado)`);
   if (s.aguardando) partes.push(`${s.aguardando} ${s.aguardando === 1 ? "veículo aguardando" : "veículos aguardando"} no terminal`);
   return partes.join(" · ");
 }
@@ -812,7 +814,7 @@ function Destino({ v, valor, onChange, espera }: { v: Viagem; valor: string | nu
       <div className="destino-sel">
         <select id="desce" value={valor ?? ""} onChange={(ev) => onChange(ev.target.value || null)}>
           <option value="">Escolha a estação de descida</option>
-          {v.opcoes.map((o) => <option key={o.id} value={o.id}>{o.nome}{o.min != null ? ` · ~${Math.max(1, Math.round(o.min))} min` : ""}</option>)}
+          {v.opcoes.map((o) => <option key={o.id} value={o.id}>{o.nome}{o.min != null ? ` · ${Math.max(1, Math.round(o.min))} min` : ""}</option>)}
         </select>
       </div>
       {e && (

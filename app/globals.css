@@ -704,3 +704,4 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .home-op:focus-visible { outline: 2px solid var(--ultramarine); outline-offset: 2px; border-radius: 6px; }
 @media (min-width: 960px) { .home-marca { display: none; } .home-cards { margin-top: 0; } }
 @media (min-width: 760px) { .home { max-width: 880px; } .home-cards { grid-template-columns: 1fr 1fr; align-items: stretch; } .home-cards > * { min-height: 188px; } }
+.aviso-chegada { margin-top: 12px; width: 100%; } .aviso-chegada-nota { margin: 10px 0 0; }

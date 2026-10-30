@@ -50,3 +50,24 @@ create table if not exists coletas (
   erros        jsonb   not null default '[]'
 );
 create index if not exists coletas_fim on coletas (fim);
+
+-- Avisos de "ônibus chegando" (notificação no celular). Sem dado pessoal além da assinatura de push
+-- do navegador (endpoint opaco). Expira sozinho em 90 min; linhas antigas são apagadas pelo vigia.
+create table if not exists avisos (
+  id          text        primary key,
+  assinatura  jsonb       not null,             -- PushSubscription do navegador
+  linha       text        not null,
+  lat         double precision not null,
+  lng         double precision not null,
+  ponto_nome  text        not null,
+  sentido     text,
+  etapa       smallint    not null default 0,   -- 0 criado, 1 acompanhando, 2 ≤ 5 min, 3 chegando (fim)
+  ultimo_eta  real,
+  criado_em   timestamptz not null default now(),
+  expira_em   timestamptz not null default now() + interval '90 minutes',
+  ativo       boolean     not null default true
+);
+create index if not exists avisos_ativos on avisos (ativo, expira_em);
+-- Um único vigia por vez confere os avisos (lease de ~5 min).
+create table if not exists avisos_vigia (id smallint primary key default 1, ate timestamptz not null default 'epoch');
+insert into avisos_vigia (id) values (1) on conflict do nothing;

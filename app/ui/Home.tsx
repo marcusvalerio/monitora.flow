@@ -76,7 +76,7 @@ function CartaoClima({ local }: { local: J }) {
       <div className="hc-corpo">
         <span className="hc-rot">{local.nome}</span>
         <div className="hc-linha"><span className="hc-num num">{temp == null ? "—" : `${Math.round(temp)}°`}</span>{texto && <span className="hc-txt">{texto}</span>}</div>
-        {chuva && <span className="hc-ctx">Chuva prevista ~{horaLocal(chuva.inicio).slice(0, 2)}h · {chuva.probabilidadeChuvaPct}%</span>}
+        {chuva && <span className="hc-ctx">Chuva prevista às {horaLocal(chuva.inicio).slice(0, 2)}h · {chuva.probabilidadeChuvaPct}%</span>}
       </div>
     </Link>
   );
