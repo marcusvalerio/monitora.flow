@@ -1,10 +1,11 @@
 "use client";
-import TempoView from "./TempoView";
-import { useCallback, useEffect, useRef, useState } from "react";
+import "./clima2.css";
+import TempoNovo from "./TempoNovo";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, LocateFixed, Search, MapPin, Clock, Navigation } from "lucide-react";
 import SearchSheet from "../ui/SearchSheet";
 import { EmptyState, ErrorState, Skel } from "../ui/estados";
-import { J, coord, get, gravar, gravarCache, lembrar, ler, lerCache, minhaPosicao } from "../ui/util";
+import { J, get, gravar, lembrar, ler, minhaPosicao } from "../ui/util";
 
 export interface Local { id: string; nome: string; detalhe?: string; lat: number; lng: number; gps?: boolean }
 const CHAVE_LOCAL = "monitora:clima:local";
@@ -13,29 +14,9 @@ const CHAVE_RECENTES = "monitora:clima:recentes";
 
 export default function ClimaApp() {
   const [local, setLocal] = useState<Local | null | undefined>(undefined); // undefined = lendo armazenamento
-  const [tempo, setTempo] = useState<J | null>(null);
-  const [chuva, setChuva] = useState<J | null>(null);
   const [escolhendo, setEscolhendo] = useState(false);
 
   useEffect(() => { setLocal(ler<Local | null>(CHAVE_LOCAL, null)); }, []);
-
-  // Atualização em segundo plano: mantém o que já está na tela (antes a cada 10 min tudo voltava ao esqueleto).
-  // Se a rede falhar e já houver previsão na tela, continua mostrando a anterior em vez de trocar por erro.
-  const carregar = useCallback(async (l: Local) => {
-    const chave = `monitora:clima:cache:${coord(l.lat)},${coord(l.lng)}`;
-    const [t, c] = await Promise.all([get(`/tempo?lat=${coord(l.lat)}&lng=${coord(l.lng)}`), get(`/chuva?lat=${l.lat}&lng=${l.lng}&k=1`)]);
-    if (!t.erro) gravarCache(chave, t);
-    setTempo((ant) => (t.erro && ant && !ant.erro ? ant : t)); setChuva((ant) => (c.erro && ant ? ant : c));
-  }, []);
-
-  useEffect(() => {
-    if (!local) return;
-    // abre na hora com a última previsão deste local (até 3 h), e atualiza em seguida
-    setTempo(lerCache(`monitora:clima:cache:${coord(local.lat)},${coord(local.lng)}`, 3 * 3600_000)?.dado ?? null); setChuva(null);
-    carregar(local);
-    const t = setInterval(() => { if (!document.hidden) carregar(local); }, 10 * 60_000);
-    return () => clearInterval(t);
-  }, [local, carregar]);
 
   const escolher = (l: Local) => {
     setLocal(l); gravar(CHAVE_LOCAL, l);
@@ -64,7 +45,7 @@ export default function ClimaApp() {
             {local.nome}<ChevronDown aria-hidden />
           </button>
           {local.detalhe && <div className="t-cap" style={{ marginTop: -6 }}>{local.detalhe}</div>}
-          <Tempo tempo={tempo} chuva={chuva} local={local} recarregar={() => carregar(local)} />
+          <TempoNovo key={local.id + local.lat} local={local} />
         </>
       )}
       {escolhendo && <LocationPicker onEscolher={escolher} onFechar={() => setEscolhendo(false)} />}
@@ -143,15 +124,5 @@ export function LocationPicker({ onEscolher, onFechar }: { onEscolher: (l: Local
       )}
     </SearchSheet>
   );
-}
-
-function Tempo({ tempo, chuva, local, recarregar }: { tempo: J | null; chuva: J | null; local: Local; recarregar: () => void }) {
-  if (!tempo) return (
-    <div style={{ marginTop: 24, display: "grid", gap: 12 }} aria-busy="true">
-      <Skel h={88} w={180} /><Skel h={22} w={200} /><Skel h={160} r={16} /><Skel h={110} r={16} />
-    </div>
-  );
-  if (tempo.erro) return <ErrorState texto="Não foi possível atualizar o clima agora." tentar={recarregar} />;
-  return <TempoView tempo={tempo} chuva={chuva} local={local} />;
 }
 

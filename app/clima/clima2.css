@@ -89,3 +89,8 @@ button[aria-expanded="true"] .nv-chev { transform: rotate(180deg); }
 .teste-links { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 6px; }
 .teste-links a { display: flex; justify-content: space-between; padding: 12px 14px; border-radius: var(--r-sm); background: var(--surface); font: 500 14px var(--font-ui); }
 .teste-links a span { color: var(--text-3); font-size: 12px; }
+.nv-tempo { margin-top: 4px; padding-top: 0; border-top: 0; }
+.nv-resumo { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-top: 10px; font: 400 14px var(--font-ui); color: var(--text-2); }
+.nv-resumo b { color: var(--text); font-family: var(--font-num); }
+.nv-medida { margin: 8px 0 0; font: 400 14px var(--font-ui); color: var(--text-2); }
+.nv-medida b { font: 600 32px var(--font-num); color: var(--text); margin-right: 4px; }

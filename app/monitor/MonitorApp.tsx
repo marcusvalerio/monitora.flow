@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Orbita } from "../ui/Geometria";
-import { CloudRain, TriangleAlert } from "lucide-react";
+import { CloudRain } from "lucide-react";
 import { ErrorState, LastUpdated, Skel } from "../ui/estados";
 import { J, dec, get } from "../ui/util";
 import type { PontoFrota } from "./MonitorMap";
@@ -89,11 +89,6 @@ export default function MonitorApp() {
                     <div className="t-cap">{d.chuva.maior ? `Maior: ${d.chuva.maior.nome}, ${dec(d.chuva.maior.mmH01)} mm na última hora` : ""}</div>
                     <div style={{ marginTop: 4 }}><LastUpdated em={d.chuva.geradoEm} fonte="Alerta Rio" velhoS={1800} /></div></div>
                 ) : <div className="t-cap">Chuva medida indisponível agora.</div>}
-              </div>
-              <div className="m-line">
-                <TriangleAlert aria-hidden />
-                <div><div className="t-head">Ocorrências indisponíveis</div>
-                  <div className="t-cap">Acidentes, interdições e alagamentos dependem de fonte aberta do COR, que não está respondendo. Não mostramos números sem fonte.</div></div>
               </div>
             </section>
           </>

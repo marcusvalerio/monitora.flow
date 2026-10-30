@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Code2, Database, ShieldCheck, Sparkles, TriangleAlert, Info } from "lucide-react";
+import { ChevronRight, Code2, Database, ShieldCheck, Info } from "lucide-react";
 
 export const metadata = { title: "Mais — Monitora" };
 
@@ -19,14 +19,6 @@ export default function Mais() {
       <h1 className="t-hero" style={{ margin: "8px 0 4px" }}>Mais</h1>
       <p className="t-body muted" style={{ margin: 0 }}>Transparência sobre os dados e como os números são calculados.</p>
 
-      <section className="section" aria-labelledby="ocor">
-        <span className="t-label" id="ocor">Ocorrências</span>
-        <div className="notice">
-          <TriangleAlert className="sev-atencao" aria-hidden />
-          <div><div className="t-head">Ainda sem fonte aberta ao vivo</div>
-            <div className="t-cap">A API pública de ocorrências do COR está fora do ar. Preferimos não mostrar nada a inventar dados. A área está pronta para receber a fonte quando ela estiver disponível.</div></div>
-        </div>
-      </section>
 
       <section className="section" aria-labelledby="sobre">
         <span className="t-label" id="sobre">Sobre os dados</span>
@@ -53,8 +45,6 @@ export default function Mais() {
 
       <section className="section">
         <ul className="list surface" style={{ padding: "0 16px" }}>
-          <li><Link className="list-item" href="/novidade"><span className="ico"><Sparkles aria-hidden /></span>
-            <span className="main"><div className="t-head">Novidades em avaliação</div><div className="t-cap">Correções recentes e a prévia da nova página do tempo</div></span><ChevronRight aria-hidden /></Link></li>
           <li><Link className="list-item" href="/docs"><span className="ico"><Code2 aria-hidden /></span>
             <span className="main"><div className="t-head">API e metodologia completa</div><div className="t-cap">Endpoints, fórmulas e limitações</div></span><ChevronRight aria-hidden /></Link></li>
           <li><div className="list-item"><span className="ico"><ShieldCheck aria-hidden /></span>
