@@ -1,8 +1,10 @@
 import "./globals.css";
-import { Geist, Sora } from "next/font/google";
+import { Geist, Inter, Sora } from "next/font/google";
 import AppShell from "./ui/AppShell";
 
 // Fontes variáveis servidas pelo próprio app (next/font): sem CSS bloqueante do Google nem conexões extras ao abrir.
+// Inter: fonte principal (texto, títulos, controles). Geist: secundária (legendas, rótulos, metadados). Sora: números.
+const inter = Inter({ subsets: ["latin"], variable: "--fonte-inter", display: "swap" });
 const geist = Geist({ subsets: ["latin"], variable: "--fonte-geist", display: "swap" });
 const sora = Sora({ subsets: ["latin"], variable: "--fonte-sora", display: "swap" });
 
@@ -20,7 +22,7 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${geist.variable} ${sora.variable}`}>
+    <html lang="pt-BR" className={`${inter.variable} ${geist.variable} ${sora.variable}`}>
       <body><AppShell>{children}</AppShell></body>
     </html>
   );
