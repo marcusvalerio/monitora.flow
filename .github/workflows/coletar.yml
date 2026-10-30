@@ -3,9 +3,10 @@
 # (CRON_SECRET igual ao da Vercel). O GitHub pode atrasar execuções agendadas em alguns minutos;
 # a janela do SPPO continua de onde a última coleta parou (até 20 min).
 name: coletar
+# DESLIGADO o agendamento a cada 10 min: a coleta agora roda sob demanda, só enquanto alguém usa o app
+# (src/lib/coletor.ts, coletarSobDemanda). Assim o banco Neon pode dormir e não gasta horas sem uso.
+# Continua disponível para rodar à mão (Actions → coletar → Run workflow).
 on:
-  schedule:
-    - cron: "*/10 * * * *"
   workflow_dispatch:
 jobs:
   coletar:
@@ -25,3 +26,12 @@ jobs:
           echo "$resp" | head -c 600; echo
           # Só conta como sucesso se a API devolveu o resumo da coleta.
           echo "$resp" | grep -q '"inicio"' 
+      - name: Acorda o vigia dos avisos de chegada (rede de segurança)
+        if: always()
+        env:
+          COLETOR_URL: ${{ secrets.COLETOR_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          base="${COLETOR_URL%/}"
+          case "$base" in http://*|https://*) ;; *) base="https://$base" ;; esac
+          curl -sS --max-time 10 -X POST -H "Authorization: Bearer $CRON_SECRET" "$base/avisos/vigiar" -o /dev/null || true

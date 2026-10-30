@@ -13,8 +13,8 @@ Coletor + banco + API + app (PWA) com dados abertos do Rio de Janeiro: **GPS dos
 
 ## Arquitetura
 ```
-GitHub Actions (cron */10, UTC)
-   └─► POST /api/coletar (Vercel, com Bearer CRON_SECRET)
+Uso do app (sob demanda, no máx. 1×/10 min)
+   └─► coletarSobDemanda() (Vercel, com Bearer CRON_SECRET)
                                                  │ GPS BRT + SPPO: valida (zod), descarta placa, filtra
                                                  ▼
                                 Postgres Neon (projeto monitora-flow, us-east-1)
@@ -44,6 +44,6 @@ npm test                     # testes com fixtures reais
 ## Implantação atual
 - **Banco:** Neon, projeto `monitora-flow` (us-east-1). Esquema em `db/schema.sql`.
 - **Web/API:** Vercel, região `iad1` (mesma do banco, ver `vercel.json`), com `DATABASE_URL` e `CRON_SECRET` nas variáveis do projeto.
-- **Agendador:** `.github/workflows/coletar.yml` (GitHub Actions, `*/10 * * * *`), com os secrets `COLETOR_URL` e `CRON_SECRET`.
+- **Coleta:** sob demanda — roda em segundo plano quando alguém consulta veículos, chegada ou o Monitor (no máx. 1×/10 min). Sem uso, o banco dorme. O habitual se forma nos horários em que o app é usado. `.github/workflows/coletar.yml` ficou só manual.
 - **Alternativa guardada:** `functions/disparador.ts` (Neon Function + Function Trigger). Foi trocada pelo GitHub porque
   o painel do Neon não permite definir o `CRON_SECRET` da função sem passar o segredo pela API.

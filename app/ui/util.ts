@@ -60,3 +60,16 @@ export function minhaPosicao(): Promise<{ lat: number; lng: number } | { erro: s
     );
   });
 }
+
+/** Coordenada arredondada (~1 km) para a URL: mesma previsão, e o cache do servidor passa a ser reaproveitado entre pessoas. */
+export const coord = (v: number) => v.toFixed(2);
+
+/**
+ * Último resultado bom guardado no aparelho (stale-while-revalidate): a tela abre na hora com o dado anterior
+ * e troca quando a rede responder. `maxIdadeMs` evita mostrar algo velho demais.
+ */
+export function lerCache(chave: string, maxIdadeMs: number): { em: number; dado: J } | null {
+  const c = ler<{ em: number; dado: J } | null>(chave, null);
+  return c && Date.now() - c.em < maxIdadeMs ? c : null;
+}
+export function gravarCache(chave: string, dado: J) { if (!dado.erro) gravar(chave, { em: Date.now(), dado }); }

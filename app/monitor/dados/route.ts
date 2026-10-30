@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { coletarSobDemanda } from "../../../src/lib/coletor";
 import { posicoesAoVivo } from "../../../src/lib/aoVivo";
 import { buscarChuvas } from "../../../src/lib/chuva";
 import { retrato, RECENTE_S } from "../../../src/lib/monitor";
@@ -11,6 +13,7 @@ export const dynamic = "force-dynamic";
  */
 export function GET() {
   return tratar(async () => {
+    after(() => coletarSobDemanda().catch((e) => console.error("coleta sob demanda", e))); // só coleta enquanto há uso
     const agora = new Date();
     const [vivo, chuva] = await Promise.all([posicoesAoVivo(), buscarChuvas().catch(() => null)]);
     const r = retrato(vivo.leituras, agora);

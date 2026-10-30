@@ -44,10 +44,26 @@ export function estacoesProximas(es: EstacaoChuva[], lat: number, lng: number, k
     .sort((a, b) => a.distanciaM - b.distanciaM).slice(0, k);
 }
 
-export async function buscarChuvas() {
+async function lerAlertaRio() {
   const r = await fetch(URL_CHUVA, { next: { revalidate: 120 }, signal: AbortSignal.timeout(15_000) });
   if (!r.ok) throw new Error(`Alerta Rio respondeu HTTP ${r.status}`);
   const t = await r.text();
   if (!t.includes("<estacoes")) throw new Error("Alerta Rio: resposta fora do formato esperado");
   return parseChuvas(t);
+}
+
+/**
+ * A fonte às vezes devolve um corpo incompleto. Tenta de novo uma vez e, se ainda falhar, usa a última
+ * leitura boa desta instância (até 30 min; o `geradoEm` continua sendo o da medição, então a idade aparece).
+ */
+let ultimaBoa: { em: number; dado: ReturnType<typeof parseChuvas> } | null = null;
+export async function buscarChuvas() {
+  try {
+    const d = await lerAlertaRio().catch(() => lerAlertaRio());
+    ultimaBoa = { em: Date.now(), dado: d };
+    return d;
+  } catch (e) {
+    if (ultimaBoa && Date.now() - ultimaBoa.em < 30 * 60_000) return ultimaBoa.dado;
+    throw e;
+  }
 }

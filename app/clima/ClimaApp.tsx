@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, LocateFixed, Search, MapPin, Clock, Navigation } from "lucide-react";
 import SearchSheet from "../ui/SearchSheet";
 import { EmptyState, ErrorState, Skel } from "../ui/estados";
-import { J, get, gravar, lembrar, ler, minhaPosicao } from "../ui/util";
+import { J, coord, get, gravar, gravarCache, lembrar, ler, lerCache, minhaPosicao } from "../ui/util";
 
 export interface Local { id: string; nome: string; detalhe?: string; lat: number; lng: number; gps?: boolean }
 const CHAVE_LOCAL = "monitora:clima:local";
@@ -19,14 +19,19 @@ export default function ClimaApp() {
 
   useEffect(() => { setLocal(ler<Local | null>(CHAVE_LOCAL, null)); }, []);
 
+  // Atualização em segundo plano: mantém o que já está na tela (antes a cada 10 min tudo voltava ao esqueleto).
+  // Se a rede falhar e já houver previsão na tela, continua mostrando a anterior em vez de trocar por erro.
   const carregar = useCallback(async (l: Local) => {
-    setTempo(null); setChuva(null);
-    const [t, c] = await Promise.all([get(`/tempo?lat=${l.lat}&lng=${l.lng}`), get(`/chuva?lat=${l.lat}&lng=${l.lng}&k=1`)]);
-    setTempo(t); setChuva(c);
+    const chave = `monitora:clima:cache:${coord(l.lat)},${coord(l.lng)}`;
+    const [t, c] = await Promise.all([get(`/tempo?lat=${coord(l.lat)}&lng=${coord(l.lng)}`), get(`/chuva?lat=${l.lat}&lng=${l.lng}&k=1`)]);
+    if (!t.erro) gravarCache(chave, t);
+    setTempo((ant) => (t.erro && ant && !ant.erro ? ant : t)); setChuva((ant) => (c.erro && ant ? ant : c));
   }, []);
 
   useEffect(() => {
     if (!local) return;
+    // abre na hora com a última previsão deste local (até 3 h), e atualiza em seguida
+    setTempo(lerCache(`monitora:clima:cache:${coord(local.lat)},${coord(local.lng)}`, 3 * 3600_000)?.dado ?? null); setChuva(null);
     carregar(local);
     const t = setInterval(() => { if (!document.hidden) carregar(local); }, 10 * 60_000);
     return () => clearInterval(t);

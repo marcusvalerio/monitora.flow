@@ -70,7 +70,7 @@ Ainda **não** integrado a este projeto.
 - Estilo `https://tiles.openfreemap.org/styles/liberty`, sem chave. Atribuição "© OpenStreetMap" obrigatória (exibida). Renderização com MapLibre GL JS.
 
 ## 8. Ocorrências do COR — SEM FONTE ABERTA AO VIVO
-- `https://api.dados.rio/v2/adm_cor_comando/ocorrencias_abertas/`: HTTP 503 em 02/10/2026.
+- `https://api.dados.rio/v2/adm_cor_comando/ocorrencias_abertas/`: HTTP 503 em 02/10 e 30/10/2026. O leitor (`src/lib/ocorrencias.ts`) já está pronto: `/ocorrencias?lat=&lng=&raio=` filtra por distância (padrão 10 km) e liga sozinho quando a API voltar.
 - Histórico: `datario.adm_cor_comando.ocorrencias` (BigQuery, exige conta Google) — não integrado. `/ocorrencias` responde `disponivel: false`.
 
 ## 9. Radares CET-Rio / CIVITAS / PIT — NÃO USADOS

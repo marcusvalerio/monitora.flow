@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Code2, Database, ShieldCheck, TriangleAlert, Info } from "lucide-react";
+import { ChevronRight, Code2, Database, ShieldCheck, Sparkles, TriangleAlert, Info } from "lucide-react";
 
 export const metadata = { title: "Mais — Monitora" };
 
@@ -53,6 +53,8 @@ export default function Mais() {
 
       <section className="section">
         <ul className="list surface" style={{ padding: "0 16px" }}>
+          <li><Link className="list-item" href="/novidade"><span className="ico"><Sparkles aria-hidden /></span>
+            <span className="main"><div className="t-head">Novidades em avaliação</div><div className="t-cap">Correções recentes e a prévia da nova página do tempo</div></span><ChevronRight aria-hidden /></Link></li>
           <li><Link className="list-item" href="/docs"><span className="ico"><Code2 aria-hidden /></span>
             <span className="main"><div className="t-head">API e metodologia completa</div><div className="t-cap">Endpoints, fórmulas e limitações</div></span><ChevronRight aria-hidden /></Link></li>
           <li><div className="list-item"><span className="ico"><ShieldCheck aria-hidden /></span>
