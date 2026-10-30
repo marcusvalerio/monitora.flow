@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CloudSun, BusFront, TriangleAlert, Menu, Activity, Sparkles, Info, Code2, X } from "lucide-react";
+import { CloudSun, BusFront, TriangleAlert, Menu, Activity, Sparkles, Info, Code2, X, FlaskConical } from "lucide-react";
 import { MarcaMonitora } from "./Geometria";
 
 const ITENS = [
@@ -14,6 +14,7 @@ const ITENS = [
 const MENU = [
   { href: "/monitor", rotulo: "Monitor da cidade", nota: "Frota, chuva e qualidade dos dados agora", Icone: Activity },
   { href: "/novidade", rotulo: "Novidades", nota: "O que está em avaliação", Icone: Sparkles },
+  { href: "/novidade/teste", rotulo: "Teste do sistema", nota: "Cada fonte testada agora, com tempo", Icone: FlaskConical },
   { href: "/mais", rotulo: "Sobre os dados", nota: "Fontes, metodologia e privacidade", Icone: Info },
   { href: "/docs", rotulo: "API", nota: "Endpoints para desenvolvedores", Icone: Code2 },
 ];
