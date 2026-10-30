@@ -728,3 +728,24 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .mais-linha summary { cursor: pointer; font: 600 14px var(--font-ui); color: var(--text-2); list-style: none; display: flex; justify-content: space-between; }
 .mais-linha summary::after { content: "+"; font-size: 18px; line-height: 1; color: var(--text-3); }
 .mais-linha[open] summary::after { content: "–"; }
+/* Home "Seu dia": uma mensagem principal no topo; cor só quando importa */
+.dia { display: grid; gap: 10px; }
+.dia-head { display: flex; gap: 12px; align-items: flex-start; padding: 16px 18px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--hairline); }
+.dia-head > svg { width: 26px; height: 26px; flex: none; color: var(--accent); margin-top: 1px; }
+.dia-head div { display: grid; gap: 3px; }
+.dia-head b { font: 600 19px/1.2 var(--font-num); letter-spacing: -.02em; }
+.dia-head span { font: 400 14px/1.4 var(--font-ui); color: var(--text-2); }
+.dia-head.nv-critico { background: var(--coral); border-color: transparent; color: #1a0d0a; }
+.dia-head.nv-critico > svg, .dia-head.nv-critico span { color: #1a0d0a; }
+.dia-head.nv-atencao { background: rgba(255, 112, 88, .14); border-color: transparent; }
+.dia-head.nv-atencao > svg { color: var(--coral); }
+.dia-head.nv-ok > svg { color: var(--live); }
+.dia-clima { min-height: 150px; }
+.dia-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.dia-chips span { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font: 600 12px var(--font-ui);
+  background: rgba(255, 255, 255, .22); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.dia-chips svg { width: 13px; height: 13px; }
+.dia-dicas { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.dia-dicas li { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; border-radius: var(--r-sm); background: var(--surface); font: 400 14px/1.35 var(--font-ui); color: var(--text-2); }
+.dia-dicas li b { color: var(--text); font-weight: 600; }
+.dia-dicas svg { width: 17px; height: 17px; flex: none; color: var(--accent); margin-top: 1px; }

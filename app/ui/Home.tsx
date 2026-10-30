@@ -7,10 +7,11 @@
  */
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { BusFront, ChevronRight, CloudSun } from "lucide-react";
+import { BusFront, ChevronRight, CloudSun, CloudLightning, Droplets, Info, ShieldAlert, Smile, Sun, Thermometer, Umbrella } from "lucide-react";
 import { MarcaMonitora } from "./Geometria";
 import { ErrorState, LastUpdated, Skel } from "./estados";
-import { J, coord, get, gravarCache, horaLocal, ler, lerCache } from "./util";
+import { J, coord, distKm, get, gravarCache, horaLocal, ler, lerCache, minhaPosicao } from "./util";
+import { resumoDoDia } from "../../src/lib/resumoDia";
 import WeatherAtmosphere, { atmosferaDe } from "../clima/atmosfera/WeatherAtmosphere";
 import { mesmoDestino } from "../../src/lib/trajeto";
 
@@ -20,12 +21,18 @@ export default function Home() {
   const [mob, setMob] = useState<{ ponto: J | null; linha: string | null; sentido: string | null; modo: string | null }>({ ponto: null, linha: null, sentido: null, modo: null });
 
   useEffect(() => {
-    setLocal(ler<J | null>("monitora:clima:local", null));
+    const salvo = ler<J | null>("monitora:clima:local", null);
+    setLocal(salvo);
     setMob({
       ponto: ler<J | null>("monitora:mob:ponto", null), linha: ler<string | null>("monitora:mob:linha", null),
       sentido: ler<string | null>("monitora:mob:sentido", null), modo: ler<string | null>("monitora:mob:modo", null),
     });
     setPronto(true);
+    // Localização já liberada antes? Usa onde a pessoa está agora (sem pedir permissão de novo).
+    navigator.permissions?.query({ name: "geolocation" as PermissionName }).then((st) => {
+      if (st.state !== "granted") return;
+      minhaPosicao().then((p) => { if (!("erro" in p) && (!salvo || distKm(salvo as { lat: number; lng: number }, p) > 2)) setLocal({ nome: "Perto de você", lat: p.lat, lng: p.lng }); });
+    }).catch(() => {});
   }, []);
 
   return (
@@ -34,9 +41,9 @@ export default function Home() {
       <div className="home-cards">
         {!pronto ? <><Skel h={188} r={24} /><Skel h={150} r={24} /></> : (
           <>
-            {local ? <CartaoClima local={local} /> : (
+            {local ? <SeuDia local={local} /> : (
               <Link href="/clima" className="hc hc-convite appear" aria-label="Ver o clima perto de você">
-                <CloudSun aria-hidden /><span><b>Ver o clima perto de você</b><small>Agora, próximas horas e a semana</small></span><ChevronRight aria-hidden className="seta" />
+                <CloudSun aria-hidden /><span><b>Como vai ser seu dia?</b><small>Escolha um local para ver avisos, clima e chuva</small></span><ChevronRight aria-hidden className="seta" />
               </Link>
             )}
             {mob.ponto && mob.linha ? <CartaoTransporte {...mob} ponto={mob.ponto} linha={mob.linha} /> : (
@@ -47,38 +54,60 @@ export default function Home() {
           </>
         )}
       </div>
-      <Link href="/monitor" className="home-op">Operação da cidade <ChevronRight aria-hidden /></Link>
+      <Link href="/alertas" className="home-op">Ocorrências perto de você <ChevronRight aria-hidden /></Link>
     </main>
   );
 }
 
-function CartaoClima({ local }: { local: J }) {
-  const chave = `monitora:clima:cache:${coord(local.lat)},${coord(local.lng)}`;
+const ICONE_DESTAQUE: Record<string, React.ElementType> = { estagio: ShieldAlert, calor: Thermometer, tempestade: CloudLightning, chuva: Umbrella, uv: Sun, sensacao: Droplets, ok: Smile };
+
+/**
+ * "Seu dia": o topo é UMA mensagem (estágio da cidade, calor, chuva, protetor…), escolhida por prioridade
+ * em src/lib/resumoDia.ts. Abaixo, uma linha com o essencial do clima. Nada daqui usa o banco.
+ */
+function SeuDia({ local }: { local: J }) {
+  const chave = `monitora:home:dia:${coord(local.lat)},${coord(local.lng)}`;
   const [t, setT] = useState<J | null>(null);
+  const [c, setC] = useState<J | null>(null);
   useEffect(() => {
-    setT(lerCache(chave, 3 * 3600_000)?.dado ?? null); // mesmo cache da tela Clima: o cartão aparece sem esperar a rede
-    get(`/tempo?lat=${coord(local.lat)}&lng=${coord(local.lng)}`, AbortSignal.timeout(15_000)).then((r) => {
+    setT(lerCache(chave, 3 * 3600_000)?.dado ?? null); // abre na hora com o último resultado
+    get(`/tempo/completo?lat=${coord(local.lat)}&lng=${coord(local.lng)}`, AbortSignal.timeout(15_000)).then((r) => {
       if (!r.erro) gravarCache(chave, r);
       setT((ant) => (r.erro && ant && !ant.erro ? ant : r));
     });
+    get("/cidade", AbortSignal.timeout(10_000)).then(setC);
   }, [local, chave]);
   if (!t) return <Skel h={188} r={24} />;
-  if (t.erro) return <div className="hc"><ErrorState texto="Clima indisponível agora." /></div>;
-  const a = t.calculado?.agora, temp = a?.temperaturaC;
+  if (t.erro) return <div className="hc"><ErrorState texto="Não foi possível montar o resumo do dia agora." /></div>;
+  const k = t.calculado, a = k?.agora, hoje = k?.dias?.[0];
+  const cid = c?.observado;
+  const { destaque, dicas } = resumoDoDia({ estagio: cid?.estagio, calor: cid?.calor, hoje, horas: k?.horas, hora: (s) => horaLocal(s).slice(0, 2) + "h" });
+  const Ic = ICONE_DESTAQUE[destaque.tipo] ?? Info;
   const tipo = atmosferaDe(a?.descricao?.icone, a?.dia);
-  // contexto curto: só se a previsão trouxer chuva provável nas próximas 12 h
-  const chuva = (t.calculado?.proximasHoras ?? []).slice(1, 13).find((h: J) => (h.probabilidadeChuvaPct ?? 0) >= 50);
-  const texto = a?.descricao?.texto ?? null;
+  const pChuva = Math.max(0, ...((k?.horas ?? []) as J[]).slice(0, 12).map((h) => h.probabilidadeChuvaPct ?? 0));
   return (
-    <Link href="/clima" className={`hc hc-clima on-${tipo} appear`}
-      aria-label={`Clima em ${local.nome}${temp != null ? `, ${Math.round(temp)} graus` : ""}${texto ? `, ${texto.toLowerCase()}` : ""}${chuva ? `, chuva prevista por volta das ${horaLocal(chuva.inicio).slice(0, 2)} horas` : ""}`}>
-      <WeatherAtmosphere tipo={tipo} />
-      <div className="hc-corpo">
-        <span className="hc-rot">{local.nome}</span>
-        <div className="hc-linha"><span className="hc-num num">{temp == null ? "—" : `${Math.round(temp)}°`}</span>{texto && <span className="hc-txt">{texto}</span>}</div>
-        {chuva && <span className="hc-ctx">Chuva prevista às {horaLocal(chuva.inicio).slice(0, 2)}h · {chuva.probabilidadeChuvaPct}%</span>}
+    <section className="dia appear" aria-label={`Seu dia em ${local.nome}`}>
+      <div className={`dia-head nv-${destaque.nivel}`} role={destaque.nivel === "critico" ? "alert" : undefined}>
+        <Ic aria-hidden />
+        <div><b>{destaque.titulo}</b><span>{destaque.texto}</span></div>
       </div>
-    </Link>
+      <Link href="/clima" className={`hc hc-clima on-${tipo} dia-clima`} aria-label={`Clima em ${local.nome}: ${a?.temperaturaC != null ? Math.round(a.temperaturaC) + " graus" : "sem dado"}`}>
+        <WeatherAtmosphere tipo={tipo} />
+        <div className="hc-corpo">
+          <span className="hc-rot">{local.nome}</span>
+          <div className="hc-linha"><span className="hc-num num">{a?.temperaturaC == null ? "—" : `${Math.round(a.temperaturaC)}°`}</span>{a?.descricao?.texto && <span className="hc-txt">{a.descricao.texto}</span>}</div>
+          <div className="dia-chips">
+            {hoje?.maxC != null && <span>↑{Math.round(hoje.maxC)}° ↓{Math.round(hoje.minC)}°</span>}
+            <span><Umbrella aria-hidden />{pChuva}%</span>
+            {hoje?.uvMax != null && <span><Sun aria-hidden />UV {Math.round(hoje.uvMax)}</span>}
+            {cid?.estagio && <span>Estágio {cid.estagio.nivel}</span>}
+          </div>
+        </div>
+      </Link>
+      {dicas.length > 0 && (
+        <ul className="dia-dicas">{dicas.map((d) => { const I = ICONE_DESTAQUE[d.tipo] ?? Info; return <li key={d.tipo}><I aria-hidden /><span><b>{d.titulo}.</b> {d.texto}</span></li>; })}</ul>
+      )}
+    </section>
   );
 }
 
