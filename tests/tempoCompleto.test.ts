@@ -14,8 +14,22 @@ describe("tempo completo", () => {
   });
   it("sem passos futuros → null", () => { expect(chuvaCurta([passo(-60, 1)], t0)).toBeNull(); });
   it("melhor janela de 2 h", () => {
-    const h = [80, 70, 20, 10, 60].map((p, i) => ({ inicio: String(i), probabilidadeChuvaPct: p }));
-    expect(melhorJanela(h)).toEqual({ inicio: "2", pct: 20 });
+    const agora = Date.parse("2026-10-30T12:00:00Z");
+    const h = [80, 70, 20, 10, 60].map((p, i) => ({ inicio: new Date(agora + i * 3600_000).toISOString(), probabilidadeChuvaPct: p }));
+    expect(melhorJanela(h, agora)).toEqual({ inicio: new Date(agora + 2 * 3600_000).toISOString(), pct: 20 });
+  });
+  it("não sugere a hora atual nem uma janela que já começou", () => {
+    const agora = Date.parse("2026-10-30T12:24:00Z");
+    const h = [1, 5, 10, 15].map((min, i) => ({ inicio: new Date(agora - min * 60_000).toISOString(), probabilidadeChuvaPct: i }));
+    h.push({ inicio: new Date(agora + 3600_000).toISOString(), probabilidadeChuvaPct: 30 });
+    h.push({ inicio: new Date(agora + 2 * 3600_000).toISOString(), probabilidadeChuvaPct: 20 });
+    h.push({ inicio: new Date(agora + 3 * 3600_000).toISOString(), probabilidadeChuvaPct: 10 });
+    expect(melhorJanela(h, agora)).toEqual({ inicio: new Date(agora + 2 * 3600_000).toISOString(), pct: 20 });
+  });
+  it("não retorna janela sem duas horas futuras com probabilidade conhecida", () => {
+    const agora = Date.parse("2026-10-30T12:00:00Z");
+    const h = [{ inicio: new Date(agora + 3600_000).toISOString(), probabilidadeChuvaPct: 10 }];
+    expect(melhorJanela(h, agora)).toBeNull();
   });
   it("faixas de UV e ar", () => {
     expect(nivelUv(0)).toBe("baixo"); expect(nivelUv(9)).toBe("muito alto"); expect(nivelUv(null)).toBeNull();
