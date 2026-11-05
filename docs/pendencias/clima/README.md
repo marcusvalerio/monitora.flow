@@ -19,7 +19,7 @@
 | INMET — avisos | Público no portal; integração técnica pendente | O portal oficial publica avisos por dia em horizonte de até cinco dias. Validar feed/endereço oficial, formato, abrangência municipal, severidade, início/fim e cancelamento antes de integrar. |
 | INMET — observações de estações | Pendente | Serviço oficial informa dados horários e janela recente de 90 dias. Avaliar cobertura de estações no município, atraso, UTC, qualidade e forma de acesso autorizada. |
 | Google Weather API | Em espera | Não integrar em produção até esclarecer condições de uso para produto que inclui informações meteorológicas. |
-| Radar/satélite municipal | Em investigação | Avaliar produtos oficiais da Plataforma Clima/COR, disponibilidade, resolução, atualização e condições de reutilização. |
+| Radar meteorológico municipal | Fonte pública identificada; integração pendente | O COR informa imagens do radar do Sumaré atualizadas a cada 2 minutos. Avaliar endpoint/formato, licença, resolução, cobertura e robustez antes de integrar. |
 
 ## Problemas já identificados
 1. **Melhor horário para sair:** a seleção atual podia escolher a hora em andamento, mesmo que ela já tivesse começado. A lógica deve escolher apenas janelas de duas horas cujo início seja futuro e cujas duas horas estejam representadas.
@@ -40,7 +40,7 @@
 - [ ] Validar acesso automatizado e estável aos avisos INMET (fonte oficial).
 - [ ] Definir normalização de área afetada, severidade, fenômeno, validade, atualização e cancelamento.
 - [ ] Avaliar dados horários do INMET e cobertura no município do Rio.
-- [ ] Avaliar radar/satélite público da Prefeitura/COR.
+- [ ] Avaliar radar/satélite público da Prefeitura/COR; o COR informa atualização do radar a cada 2 minutos.\n- [ ] Resolver divergência documental de cadência: página institucional do Alerta Rio menciona envio a cada 5 min, enquanto FAQ do COR menciona 15 min. Medir o timestamp real de cada feed antes de definir SLA.
 
 ### Prioridade 3 — validação e operação
 - [ ] Criar fixtures anonimizadas/reproduzíveis das fontes.
@@ -51,7 +51,7 @@
 
 ## Referências técnicas
 - Alerta Rio — rede e descrição das estações: https://www.sistema-alerta-rio.com.br/institucional/quem-somos/
-- COR.Rio — FAQ da rede: https://cor.rio/faq/
+- COR.Rio — FAQ da rede: https://cor.rio/faq/\n- COR.Rio — radar meteorológico: https://cor.rio/previsao-do-tempo/\n- Plataforma Clima municipal: https://plataforma-clima.dados.rio/sobre
 - Prefeitura — camada geográfica das estações: https://pgeo3.rio.rj.gov.br/arcgis/rest/services/Geotecnia/Estacoes_AlertaRio/FeatureServer/0
 - INMET — avisos oficiais: https://alertas2.inmet.gov.br/
 - INMET — serviço de estações automáticas: https://portal.inmet.gov.br/servicos/esta%C3%A7%C3%B5es-autom%C3%A1ticas
