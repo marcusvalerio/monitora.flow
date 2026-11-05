@@ -71,9 +71,11 @@ export function chuvaCurta(passos: { inicio: string; mm: number | null }[], agor
   return { chovendo, mudaEm: troca > 0 ? fut[troca].inicio : null, totalMm: Math.round(totalMm * 10) / 10 };
 }
 
-/** Janela de 2 h com menor chance de chuva nas próximas 12 h (para "melhor hora para sair"). */
-export function melhorJanela(horas: { inicio: string; probabilidadeChuvaPct: number | null }[]) {
-  const h = horas.slice(0, 12);
+/** Janela futura de 2 h com menor chance de chuva nas próximas 12 h. */
+export function melhorJanela(horas: { inicio: string; probabilidadeChuvaPct: number | null }[], agora = Date.now()) {
+  // Não sugerir uma hora que já começou: as duas horas precisam iniciar no futuro
+  // e estar representadas na série recebida.
+  const h = horas.filter((x) => Date.parse(x.inicio) > agora).slice(0, 12);
   let melhor: { inicio: string; pct: number } | null = null;
   for (let i = 0; i + 1 < h.length; i++) {
     const a = h[i].probabilidadeChuvaPct, b = h[i + 1].probabilidadeChuvaPct;
@@ -123,7 +125,7 @@ export function normalizarCompleta(j: OMC, ar: { current?: Record<string, number
     chuva2h: { passos, resumo: chuvaCurta(passos, agora) },
     horas, dias,
     comparacao: ontem && hoje && ontem.maxC != null && hoje.maxC != null ? { ontemMaxC: ontem.maxC, hojeMaxC: hoje.maxC, difC: Math.round((hoje.maxC - ontem.maxC) * 10) / 10 } : null,
-    melhorJanela: melhorJanela(horas),
+    melhorJanela: melhorJanela(horas, agora),
     ar: aqi == null ? null : { usAqi: aqi, nivel: nivelAr(aqi), pm25: n(ar?.current?.pm2_5), pm10: n(ar?.current?.pm10) },
   };
 }
