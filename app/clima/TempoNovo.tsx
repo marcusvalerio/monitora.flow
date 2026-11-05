@@ -8,10 +8,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ChevronDown, CloudSun, Droplets, Sun, Wind, Gauge, Leaf, Umbrella, Thermometer, Clock } from "lucide-react";
-import { ErrorState, IconeTempo, LastUpdated, Skel } from "../ui/estados";
+import { ErrorState, IconeTempo, Skel } from "../ui/estados";
 import { Relogio, Standby } from "./TempoView";
 import type { Local } from "./ClimaApp";
-import { J, coord, dec, diaSemana, distKm, fmtDist, get, gravarCache, horaLocal, lerCache } from "../ui/util";
+import { J, coord, dec, diaSemana, distKm, fmtDist, get, gravarCache, ha, horaLocal, lerCache } from "../ui/util";
 
 const hh = (iso: string) => horaLocal(iso);
 
@@ -70,14 +70,17 @@ export default function TempoNovo({ local }: { local: Local }) {
           <h3 className="rc-tit">Chuva medida agora</h3>
           <p className="nv-medida"><b className="num">{estPerto.mm.h01 == null ? "—" : dec(estPerto.mm.h01)}</b> mm na última hora</p>
           <p className="t-cap" style={{ margin: "4px 0 0" }}>{estPerto.mm.m15 != null && `${dec(estPerto.mm.m15)} mm em 15 min · `}Pluviômetro {estPerto.nome}, a {fmtDist(estPerto.distanciaM / 1000)} · Alerta Rio</p>
+          <p className="t-meta" style={{ margin: "8px 0 0" }}>
+            {estPerto.medidoEm ? `Medição da estação ${ha(estPerto.medidoEm)} · ${new Date(estPerto.medidoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}` : "Horário da medição não informado pela estação"}
+          </p>
         </section>
       )}
 
       <Standby horas={c.horas.slice(0, 24)} agora={a} hoje={c.dias[0]} local={local.nome} />
 
       <p className="rc-fonte" style={{ marginTop: 18 }}>
-        <LastUpdated em={em} fonte="Open-Meteo" velhoS={1800} /><br />
-        Previsão de modelo numérico e qualidade do ar (Open-Meteo, CC BY 4.0). Chuva medida: Alerta Rio. <Link href="/mais">Sobre os dados</Link>
+        <span className="t-meta">Previsão consultada {em ? ha(em) : "—"} · Open-Meteo</span><br />
+        A previsão representa a localização selecionada e vem de modelo numérico. A chuva observada é uma leitura independente do pluviômetro Alerta Rio mais próximo exibido acima; ela não representa necessariamente o volume no seu ponto exato. Qualidade do ar: Open-Meteo (CC BY 4.0). <Link href="/mais">Sobre os dados</Link>
       </p>
     </div>
   );
@@ -98,7 +101,7 @@ function ChuvaCurta({ ch }: { ch: J }) {
   const max = Math.max(1, ...passos.map((p) => p.mm ?? 0));
   return (
     <section className={`nv-curta nv-sec${r.chovendo || r.mudaEm ? " molhado" : ""}`} aria-label="Chuva nas próximas 2 horas">
-      <div className="nv-curta-t"><Umbrella aria-hidden /> <span>{texto}{r.totalMm > 0 && <small> ≈ {dec(r.totalMm)} mm no total</small>}</span></div>
+      <div className="nv-curta-t"><Umbrella aria-hidden /> <span>{texto}{r.totalMm > 0 && <small> ≈ {dec(r.totalMm)} mm no total</small>}<small>Previsão para a localização selecionada · Open-Meteo</small></span></div>
       <div className="nv-curta-b" aria-hidden>
         {passos.map((p) => (
           <span key={p.inicio}><i style={{ height: `${Math.max(3, ((p.mm ?? 0) / max) * 100)}%`, opacity: (p.mm ?? 0) >= 0.1 ? 1 : 0.25 }} /><em>{hh(p.inicio).replace(":00", "h")}</em></span>
