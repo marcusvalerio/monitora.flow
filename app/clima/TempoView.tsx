@@ -17,7 +17,7 @@ import type { Local } from "./ClimaApp";
 const pontoCardeal = (g: number) => ["N", "NE", "L", "SE", "S", "SO", "O", "NO"][Math.round(g / 45) % 8];
 
 /** Tom do céu por condição (paleta Monitora: Sea Mist, Periwinkle, Lilac, Ultramarine, Ink). */
-function tomDoCeu(icone: string | null | undefined, dia: boolean | null | undefined): string {
+export function tomDoCeu(icone: string | null | undefined, dia: boolean | null | undefined): string {
   const noite = dia === false;
   switch (icone) {
     case "sol": return noite ? "#2E3566" : "#F1D488";

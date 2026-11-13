@@ -778,3 +778,29 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .fav-item span:last-child { display: grid; min-width: 0; }
 .fav-item b { font: 600 14px var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fav-item small { font: 400 12px var(--font-ui); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- 15. Início: saudação, luz ambiente e entrada em cascata ---------- */
+.home { position: relative; }
+.home::before { content: ""; position: absolute; z-index: -1; left: -30%; right: -30%; top: -120px; height: 420px; pointer-events: none;
+  background: radial-gradient(50% 50% at 30% 40%, color-mix(in srgb, var(--lilac) 55%, transparent), transparent 70%),
+              radial-gradient(40% 45% at 80% 30%, color-mix(in srgb, var(--periwinkle) 30%, transparent), transparent 70%);
+  filter: blur(10px); opacity: .55; animation: homeLuz 22s ease-in-out infinite alternate; }
+@keyframes homeLuz { to { transform: translate3d(6%, 3%, 0) scale(1.08); } }
+.home-cab { display: grid; gap: 2px; }
+.home-ola { margin: 18px 0 0; font: 600 clamp(34px, 10vw, 44px)/1.02 var(--font-num); letter-spacing: -.045em; animation: clSobeH .8s var(--ease-out) both .05s; }
+.home-data { margin: 0; font: 500 15px var(--font-ui); color: var(--text-2); animation: clSobeH .8s var(--ease-out) both .15s; }
+.home-data::first-letter { text-transform: uppercase; }
+.home-cards > * { animation: clSobeH .7s var(--ease-out) both; }
+.home-cards > :nth-child(1) { animation-delay: .2s; } .home-cards > :nth-child(2) { animation-delay: .32s; }
+.hc { transition: transform var(--dur-interact) var(--spring), box-shadow var(--dur-interact) var(--ease-out); }
+@media (hover: hover) { .hc:hover { transform: translateY(-2px); } }
+@keyframes clSobeH { from { opacity: 0; transform: translateY(14px); } }
+@media (min-width: 960px) { .home-cab .home-marca { display: none; } .home-ola { margin-top: 0; } .home-cards { margin-top: 22px; } }
+
+/* paisagem: conteúdo não passa por baixo do trilho de navegação; Início em duas colunas */
+@media (orientation: landscape) and (max-height: 540px) {
+  .page:not(.page-clima) { max-width: none; padding-right: calc(env(safe-area-inset-right) + 96px); padding-left: calc(env(safe-area-inset-left) + 24px); padding-top: 16px; }
+  .home-ola { margin-top: 8px; font-size: 32px; }
+  .home-cards { grid-template-columns: 1fr 1fr; align-items: start; margin-top: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .home::before, .home-ola, .home-data, .home-cards > * { animation: none; } }

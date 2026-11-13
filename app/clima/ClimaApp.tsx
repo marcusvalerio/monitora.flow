@@ -1,8 +1,9 @@
 "use client";
 import "./clima2.css";
+import "./clima3.css";
 import TempoNovo from "./TempoNovo";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, LocateFixed, Search, MapPin, Clock, Navigation } from "lucide-react";
+import { LocateFixed, Search, MapPin, Clock } from "lucide-react";
 import SearchSheet from "../ui/SearchSheet";
 import { EmptyState, ErrorState, Skel } from "../ui/estados";
 import { J, get, gravar, lembrar, ler, minhaPosicao } from "../ui/util";
@@ -27,26 +28,19 @@ export default function ClimaApp() {
   if (local === undefined) return <main className="page"><Skel h={28} w={160} /></main>;
 
   return (
-    <main className="page">
+    <main className={local ? "page page-clima" : "page"}>
       {!local ? (
         <section className="appear" style={{ paddingTop: 24 }}>
           <div className="t-label">Clima</div>
           <h1 className="t-hero" style={{ margin: "10px 0 8px" }}>Onde você está?</h1>
-          <p className="muted t-body" style={{ margin: 0 }}>Veja o tempo agora, as próximas horas e os próximos dias.</p>
+          <p className="muted t-body" style={{ margin: 0 }}>Veja o tempo agora, as próximas horas, os próximos dias e o satélite.</p>
           <div style={{ display: "grid", gap: 10, marginTop: 28 }}>
             <UsarLocalizacao onLocal={escolher} />
             <button className="btn btn-ghost" onClick={() => setEscolhendo(true)}><Search aria-hidden /> Pesquisar local</button>
           </div>
         </section>
       ) : (
-        <>
-          <button className="loc-btn" onClick={() => setEscolhendo(true)} aria-label={`Local: ${local.nome}. Trocar local`}>
-            {local.gps && <Navigation size={16} aria-hidden style={{ color: "var(--accent)" }} />}
-            {local.nome}<ChevronDown aria-hidden />
-          </button>
-          {local.detalhe && <div className="t-cap" style={{ marginTop: -6 }}>{local.detalhe}</div>}
-          <TempoNovo key={local.id + local.lat} local={local} />
-        </>
+        <TempoNovo key={local.id + local.lat} local={local} onTrocar={() => setEscolhendo(true)} />
       )}
       {escolhendo && <LocationPicker onEscolher={escolher} onFechar={() => setEscolhendo(false)} />}
     </main>

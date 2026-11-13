@@ -35,9 +35,23 @@ export default function Home() {
     }).catch(() => {});
   }, []);
 
+  const [ola, setOla] = useState<{ t: string; d: string } | null>(null);
+  useEffect(() => {
+    const f = () => {
+      const h = Number(new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", hour12: false, timeZone: "America/Sao_Paulo" }).slice(0, 2));
+      const d = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", timeZone: "America/Sao_Paulo" });
+      setOla({ t: h < 5 ? "Boa noite" : h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite", d });
+    };
+    f(); const i = setInterval(f, 60_000); return () => clearInterval(i);
+  }, []);
+
   return (
     <main className="page home">
-      <div className="home-marca"><MarcaMonitora size={26} /><span>Monitora</span></div>
+      <header className="home-cab">
+        <div className="home-marca"><MarcaMonitora size={26} /><span>Monitora</span></div>
+        <h1 className="home-ola">{ola?.t ?? "\u00a0"}</h1>
+        <p className="home-data">{ola?.d ?? "\u00a0"}</p>
+      </header>
       <div className="home-cards">
         {!pronto ? <><Skel h={188} r={24} /><Skel h={150} r={24} /></> : (
           <>
