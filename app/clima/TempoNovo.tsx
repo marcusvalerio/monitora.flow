@@ -162,6 +162,7 @@ function Ceu({ local, onTrocar, a, hoje, c, tipo, horas }: { local: Local; onTro
           {dif != null && <span>{Math.abs(dif) < 1 ? "Parecido com ontem" : `${r0(Math.abs(dif))}° ${dif > 0 ? "mais quente" : "mais fresco"} que ontem`}</span>}
         </div>
       </div>
+      <Painel c={c} horas={horas} />
     </section>
   );
 }
@@ -411,5 +412,39 @@ function SolLua({ hoje, amanha }: { hoje: J; amanha: J | undefined }) {
         <span className="cl-nota">{r0(lua.ilum * 100)}% iluminada</span>
       </div>
     </section>
+  );
+}
+
+/* ---------- celular deitado: só o tempo agora (o painel aparece apenas em paisagem; clima3.css) ---------- */
+function Painel({ c, horas }: { c: J; horas: J[] }) {
+  const passos: J[] = c.chuva2h?.passos ?? [];
+  const total = passos.reduce((s, p) => s + (p.mm ?? 0), 0);
+  const max = Math.max(1, ...passos.map((p) => p.mm ?? 0));
+  const prox = horas.slice(0, 8);
+  return (
+    <div className="cl-painel" aria-hidden>
+      {passos.length > 0 && (
+        <div className="cl-painel-chuva">
+          <div className="cl-painel-cab"><span><Umbrella /> Chuva · próximas 2 h</span><b className="num">{total > 0 ? `${dec(total)} mm` : "Sem chuva"}</b></div>
+          <div className="cl-painel-barras">
+            {passos.map((p, i) => <span key={p.inicio} style={{ ["--i" as string]: i }}><i style={{ height: `${Math.max(6, ((p.mm ?? 0) / max) * 100)}%`, opacity: (p.mm ?? 0) >= 0.1 ? 1 : 0.3 }} /></span>)}
+          </div>
+          <div className="cl-painel-eixo"><span>agora</span><span>{hh(passos[passos.length - 1].inicio)}</span></div>
+        </div>
+      )}
+      <div className="cl-painel-horas">
+        {prox.map((h, i) => {
+          const p = h.probabilidadeChuvaPct ?? 0;
+          return (
+            <div key={h.inicio} style={{ ["--i" as string]: i }}>
+              <span className="cl-h">{i === 0 ? "Agora" : h2(h.inicio)}</span>
+              <IconeTempo icone={h.descricao?.icone} dia={h.dia} size={24} />
+              <b className="num">{h.temperaturaC == null ? "—" : `${r0(h.temperaturaC)}°`}</b>
+              <span className="cl-p">{p >= 10 ? `${p}%` : ""}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

@@ -263,25 +263,45 @@ button[aria-expanded="true"] .cl-chev { transform: rotate(180deg); }
   .cl-detalhes { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
-/* celular deitado: mesma ideia, mais compacta; o trilho de navegação fica à direita */
+.cl-painel { display: none; }
+
+/* celular deitado: só o tempo agora — o céu ocupa a tela; à direita, chuva em 2 h e próximas horas em vidro */
 @media (orientation: landscape) and (max-height: 540px) {
-  .cl { display: grid; grid-template-columns: minmax(260px, 36%) minmax(0, 1fr); align-items: start; }
-  .cl-ceu { position: sticky; top: 0; height: 100dvh; min-height: 0; }
+  .cl-corpo { display: none; }
+  .cl-ceu { min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 20px; align-items: center;
+    padding: 0 calc(env(safe-area-inset-right) + 96px) 0 calc(env(safe-area-inset-left) + 24px); }
   .cl-ceu::after { display: none; }
-  .cl-ceu-c { height: 100%; padding: 14px 20px 18px calc(env(safe-area-inset-left) + 20px); gap: 2px; }
-  .cl-temp { margin-top: 8px; font-size: clamp(76px, 26vh, 112px); }
-  .cl-cond { font-size: 17px; margin-top: 6px; }
-  .cl-frase { font-size: 13.5px; }
-  .cl-chips { margin-top: auto; }
+  .cl-ceu-c { margin: 0; max-width: none; padding: 16px 0; gap: 2px; }
+  .cl-local { max-width: 100%; }
+  .cl-temp { margin-top: 10px; font-size: clamp(84px, 30vh, 128px); }
+  .cl-cond { font-size: 18px; margin-top: 6px; }
+  .cl-frase { font-size: 14px; }
+  .cl-chips { margin-top: 12px; }
   .cl-chips span { padding: 5px 10px; font-size: 12px; }
-  .cl-corpo { margin: 0; max-width: none; padding: 14px calc(env(safe-area-inset-right) + 88px) 24px 14px; --cl-gap: 12px; }
-  .cl-detalhes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .cl-tile { min-height: 116px; }
+  .cl-painel { position: relative; z-index: 3; display: grid; gap: 12px; animation: clSobe .8s var(--ease-out) both .3s; }
+  .cl-painel > div { border-radius: 22px; padding: 14px 16px; background: rgba(255, 255, 255, .13);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), inset 0 0 0 1px rgba(255, 255, 255, .14);
+    backdrop-filter: saturate(1.5) blur(18px); -webkit-backdrop-filter: saturate(1.5) blur(18px); }
+  .cl-painel-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .cl-painel-cab span { display: inline-flex; align-items: center; gap: 6px; font: 600 11px var(--font-sec); letter-spacing: .1em; text-transform: uppercase; opacity: .82; }
+  .cl-painel-cab svg { width: 14px; height: 14px; }
+  .cl-painel-cab b { font: 600 18px var(--font-num); letter-spacing: -.02em; }
+  .cl-painel-barras { display: flex; align-items: flex-end; gap: 4px; height: 54px; margin-top: 10px; }
+  .cl-painel-barras span { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+  .cl-painel-barras i { display: block; width: 100%; border-radius: 4px 4px 2px 2px; background: #fff; transform-origin: bottom; animation: clBarra .8s var(--spring) both; animation-delay: calc(var(--i) * 45ms + .4s); }
+  .cl-painel-eixo { display: flex; justify-content: space-between; margin-top: 5px; font: 500 10.5px var(--font-sec); opacity: .75; }
+  .cl-painel-horas { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 2px; text-align: center; }
+  .cl-painel-horas > div { display: grid; justify-items: center; gap: 5px; animation: clSobe .6s var(--ease-out) both; animation-delay: calc(var(--i) * 50ms + .5s); }
+  .cl-painel-horas .cl-h { font-size: 11.5px; opacity: .85; }
+  .cl-painel-horas b { font: 600 16px var(--font-num); letter-spacing: -.02em; }
+  .cl-painel-horas .cl-p { color: #fff; opacity: .85; min-height: 14px; font-size: 11px; }
 }
+@keyframes clBarra { from { transform: scaleY(0); } }
 
 @media (prefers-reduced-motion: reduce) {
   .revela, .cl-temp, .cl-cond, .cl-frase, .cl-chips, .satc { animation: none; transition: none; opacity: 1; transform: none; }
   .cl-sair::before, .sat-respira, .sat-vivo, .cl-arco-sol { animation: none; }
   .cl-curva-linha, .cl-arco-feito { transition: none; }
+  .cl-painel, .cl-painel-barras i, .cl-painel-horas > div { animation: none; }
   .cl-gomo, .cl-chuva-b i, .cl-regua i, .cl-med i { transition: none; }
 }
