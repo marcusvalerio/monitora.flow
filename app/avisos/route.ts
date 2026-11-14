@@ -2,7 +2,7 @@ import { after } from "next/server";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { sql } from "../../src/lib/db";
-import { configurado, enviar, mensagem } from "../../src/lib/avisos";
+import { configurado, enviar, garantirTabelas, mensagem } from "../../src/lib/avisos";
 import { ok, erro, tratar, ErroParametro } from "../../src/lib/api";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +31,7 @@ export function POST(req: Request) {
     if (!configurado()) return erro(503, "Avisos ainda não configurados no servidor.");
     const p = Corpo.safeParse(await req.json().catch(() => null));
     if (!p.success) throw new ErroParametro("corpo inválido");
+    await garantirTabelas();
     const b = p.data, id = randomUUID(), db = sql();
     await db`update avisos set ativo = false where ativo and assinatura->>'endpoint' = ${b.assinatura.endpoint}`;
     await db`insert into avisos (id, assinatura, linha, lat, lng, ponto_nome, sentido, etapa, ultimo_eta)
@@ -47,6 +48,7 @@ export function DELETE(req: Request) {
   return tratar(async () => {
     const id = new URL(req.url).searchParams.get("id") ?? "";
     if (!/^[0-9a-f-]{36}$/.test(id)) throw new ErroParametro("id inválido");
+    await garantirTabelas();
     await sql()`update avisos set ativo = false where id = ${id}`;
     return ok({ id, ativo: false }, null, 0);
   });

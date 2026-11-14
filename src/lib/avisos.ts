@@ -26,6 +26,26 @@ function iniciarPush() {
   webpush.setVapidDetails(process.env.VAPID_SUBJECT ?? "mailto:contato@monitora.app", process.env.VAPID_PUBLIC_KEY!, process.env.VAPID_PRIVATE_KEY!);
 }
 
+/**
+ * Garante as tabelas dos avisos (mesmo DDL de db/schema.sql). Em produção o banco não tinha recebido a migração
+ * e todo "Avisar quando estiver chegando" falhava com `relation "avisos" does not exist`. Idempotente; roda uma vez por instância.
+ */
+let tabelasProntas: Promise<void> | null = null;
+export function garantirTabelas() {
+  tabelasProntas ??= (async () => {
+    const db = sql();
+    await db`create table if not exists avisos (
+      id text primary key, assinatura jsonb not null, linha text not null, lat double precision not null, lng double precision not null,
+      ponto_nome text not null, sentido text, etapa smallint not null default 0, ultimo_eta real,
+      criado_em timestamptz not null default now(), expira_em timestamptz not null default now() + interval '90 minutes',
+      ativo boolean not null default true)`;
+    await db`create index if not exists avisos_ativos on avisos (ativo, expira_em)`;
+    await db`create table if not exists avisos_vigia (id smallint primary key default 1, ate timestamptz not null default 'epoch')`;
+    await db`insert into avisos_vigia (id) values (1) on conflict do nothing`;
+  })().catch((e) => { tabelasProntas = null; throw e; });
+  return tabelasProntas;
+}
+
 /** Qual etapa a estimativa atual alcança (nunca volta para trás). */
 export function proximaEtapa(etapa: number, etaMin: number | null): number {
   if (etaMin == null) return Math.max(etapa, 1);
@@ -72,6 +92,7 @@ async function etaDaLinha(linha: string, lat: number, lng: number, sentido: stri
 
 /** Uma rodada: confere todos os avisos ativos e manda o que mudou de etapa. Devolve quantos seguem ativos. */
 export async function rodada(): Promise<number> {
+  await garantirTabelas();
   const db = sql();
   await db`update avisos set ativo = false where ativo and expira_em < now()`;
   await db`delete from avisos where not ativo and criado_em < now() - interval '1 day'`;
@@ -89,6 +110,7 @@ export async function rodada(): Promise<number> {
 
 /** Tenta ser o vigia por `segundos`. Só um processo ganha; os outros saem na hora. */
 export async function pegarVez(segundos: number) {
+  await garantirTabelas();
   const r = await sql()`update avisos_vigia set ate = now() + make_interval(secs => ${segundos}) where id = 1 and ate < now() returning id`;
   return r.length > 0;
 }
