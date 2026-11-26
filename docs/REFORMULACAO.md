@@ -103,8 +103,12 @@ Prints (dados reais; ocorrências do COR estavam fora): `docs/reformulacao/print
   A Atenção mostra Alagamentos, Interdições e Outras, com a rua em destaque. A API do COR segue fora; prints com dados de exemplo.
 - **Push de chuva forte** (`/avisos/chuva`, `src/lib/avisosChuva.ts`, tabela `avisos_chuva`): só assinatura de push e ponto
   arredondado (~1 km); sem IP; expira em 90 min; avisa uma vez e **apaga**. Dispara com > 25 mm/h (última hora ou m15 × 4)
-  em algum dos 3 pluviômetros a até 5 km — **escolha nossa, calibrar**. O vigia (`/avisos/vigiar`) confere ônibus e chuva.
+  em algum dos 3 pluviômetros a até 5 km — limite aprovado pelo dono (26/11). O vigia (`/avisos/vigiar`) confere ônibus e chuva.
   Os avisos de ônibus agora também são apagados ao expirar/encerrar (antes ficavam 1 dia).
 - **Alerta em áudio:** interruptor "Ler alertas em voz alta" (desligado por padrão; voz do aparelho) lê alagamentos,
   interdições e estágio ≥ 3 quando aparecem.
 - Precisa no servidor: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `DATABASE_URL`, `CRON_SECRET` (as mesmas do aviso de ônibus).
+- **Correção (26/11): notificações não chegavam.** O `POST /avisos` chamava `/avisos/vigiar` pela URL do deploy, bloqueada pela
+  Deployment Protection da Vercel; o vigia nunca rodava (no banco: aviso parado em etapa 1, `avisos_vigia.ate` = epoch; nos logs, nenhum
+  `/avisos/vigiar`). Agora a primeira execução roda no próprio pedido (`src/lib/vigia.ts`, `after()`) e o encadeamento usa
+  `VERCEL_PROJECT_PRODUCTION_URL`. Falhas de push vão para o log (`[push]`) e a tela avisa se a primeira notificação não saiu.

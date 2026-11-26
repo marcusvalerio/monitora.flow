@@ -73,6 +73,7 @@ export async function enviarPush(assinatura: webpush.PushSubscription, m: { titl
     return "ok" as const;
   } catch (e) {
     const s = (e as { statusCode?: number }).statusCode;
+    console.error(`[push] falhou HTTP ${s ?? "?"}: ${(e as { body?: string }).body ?? (e as Error).message}`);
     return s === 404 || s === 410 ? "cancelada" as const : "falhou" as const;
   }
 }

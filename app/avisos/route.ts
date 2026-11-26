@@ -4,8 +4,10 @@ import { z } from "zod";
 import { sql } from "../../src/lib/db";
 import { configurado, enviar, garantirTabelas, mensagem } from "../../src/lib/avisos";
 import { ok, erro, tratar, ErroParametro } from "../../src/lib/api";
+import { origemPublica, vigiar } from "../../src/lib/vigia";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300; // a primeira execução do vigia roda junto do pedido (after)
 
 const Corpo = z.object({
   assinatura: z.object({ endpoint: z.string().url().max(1000), keys: z.object({ p256dh: z.string().max(200), auth: z.string().max(100) }) }),
@@ -14,11 +16,6 @@ const Corpo = z.object({
   ponto: z.string().trim().min(1).max(120), sentido: z.string().trim().max(120).nullish(),
   etaMin: z.number().min(0).max(300).nullish(),
 });
-
-/** Acorda o vigia (ele mesmo garante que só um roda por vez). */
-export function acordarVigia(origem: string) {
-  return fetch(`${origem}/avisos/vigiar`, { method: "POST", headers: { authorization: `Bearer ${process.env.CRON_SECRET ?? ""}` }, signal: AbortSignal.timeout(5000) }).catch(() => null);
-}
 
 /** GET /avisos — se os avisos estão ligados no servidor e a chave pública para assinar o push. */
 export function GET() {
@@ -36,10 +33,9 @@ export function POST(req: Request) {
     await db`update avisos set ativo = false where ativo and assinatura->>'endpoint' = ${b.assinatura.endpoint}`;
     await db`insert into avisos (id, assinatura, linha, lat, lng, ponto_nome, sentido, etapa, ultimo_eta)
              values (${id}, ${db.json(b.assinatura)}, ${b.linha}, ${b.lat}, ${b.lng}, ${b.ponto}, ${b.sentido ?? null}, 1, ${b.etaMin ?? null})`;
-    await enviar({ id, assinatura: b.assinatura, linha: b.linha }, mensagem(1, b.linha, b.ponto, b.etaMin ?? null));
-    const origem = new URL(req.url).origin;
-    after(() => acordarVigia(origem));
-    return ok({ id, ativo: true }, null, 0);
+    const enviado = await enviar({ id, assinatura: b.assinatura, linha: b.linha }, mensagem(1, b.linha, b.ponto, b.etaMin ?? null));
+    after(() => vigiar(origemPublica(req)));
+    return ok({ id, ativo: true, enviado }, null, 0);
   });
 }
 

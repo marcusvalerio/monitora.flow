@@ -3,9 +3,10 @@ import { z } from "zod";
 import { configurado } from "../../../src/lib/avisos";
 import { apagarAvisoChuva, criarAvisoChuva } from "../../../src/lib/avisosChuva";
 import { ok, erro, tratar, ErroParametro } from "../../../src/lib/api";
-import { acordarVigia } from "../route";
+import { origemPublica, vigiar } from "../../../src/lib/vigia";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 const Corpo = z.object({
   assinatura: z.object({ endpoint: z.string().url().max(1000), keys: z.object({ p256dh: z.string().max(200), auth: z.string().max(100) }) }),
@@ -23,8 +24,7 @@ export function POST(req: Request) {
     const p = Corpo.safeParse(await req.json().catch(() => null));
     if (!p.success) throw new ErroParametro("corpo inválido");
     const id = await criarAvisoChuva(p.data.assinatura, p.data.lat, p.data.lng, p.data.lugar);
-    const origem = new URL(req.url).origin;
-    after(() => acordarVigia(origem));
+    after(() => vigiar(origemPublica(req)));
     return ok({ id, ativo: true, expiraEmMin: 90 }, null, 0);
   });
 }
