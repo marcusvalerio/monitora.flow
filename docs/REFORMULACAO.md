@@ -83,6 +83,6 @@ Prancha "Movimento" no canvas tem as peças rodando.
 | Título de seção | **Inter 600** |
 | Texto | **Inter 400–500** |
 | Rótulos miúdos | **Inter 500**, 12–13 px |
-Cifra: monolinha geométrica (mesma geometria do símbolo), grade 60×100, traço 14, tabular. Depois de aprovada vira `.woff2`
+Cifra v2: monolinha geométrica (mesma geometria do símbolo), grade 60×100, traço 12, pontas e cantos arredondados, topo y=10 e base y=90 para todos os algarismos, espaçamento folgado, tabular. Depois de aprovada vira `.woff2`
 (0–9, ° % , : −, espaço fino). Até lá, usar Sora com `font-variant-numeric: tabular-nums` nos números.
 Familjen Grotesk (citada na fusão) sai: títulos ficam em Sora.
