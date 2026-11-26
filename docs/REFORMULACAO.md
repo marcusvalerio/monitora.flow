@@ -32,8 +32,11 @@ Nome da seção de alertas: **Atenção** (a notificação push em si é um "ale
 - Teste novo de `intensidadeChuva` em `tests/fontes.test.ts`. 122 testes passando.
 
 ## A fazer (reformulação)
-1. **Estrutura em 3 abas:** **Agora** (Início + Clima, grade de horas como peça central), **Atenção** (estágio, chuva medida por região,
-   alagamentos, alertas — cara de boletim) e **Trajeto** (chegada com número grande e confiança do dado).
+1. **Estrutura em 4 abas** (decisão do dono): **Agora** (resumo: uma linha/cartão de cada assunto — estágio, temperatura e chance de chuva,
+   próximo ônibus, alerta se houver — cada um leva à aba completa), **Tempo** (previsão completa: céu de agora, grade hora a hora como peça central,
+   chuva em 2 h, 7 dias, vento, UV, ar, sol, satélite e depois radar), **Atenção** (estágio, chuva medida por região, alagamentos, calor, botão de alertas —
+   cara de boletim) e **Trajeto** (mapa, estação, chegada com número grande e confiança do dado). Regra: o Agora só resume; o detalhe vive em uma aba só.
+   Menu (Sobre os dados, Monitor, ajustes) vira ícone no canto superior, fora da barra.
 2. **Estilo visual:** o dono vai escolher entre 4 propostas (nome, símbolo, paleta, tipografia). Aplicar o escolhido via tokens
    (`app/ui/tokens.ts` + variáveis em `app/globals.css`) — não espalhar cor solta.
 3. **Design system:** trazer raios, espaçamentos e tamanhos de fonte avulsos de volta aos tokens (`--r-*`, `--sp-*`, `.t-*`); hoje há ~38 hex soltos.
