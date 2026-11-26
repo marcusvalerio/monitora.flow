@@ -49,10 +49,13 @@ Nome da seção de alertas: **Atenção** (a notificação push em si é um "ale
 
 ## Decisões de identidade (26/11)
 Canvas com tudo: https://claude.ai/artifact/R47LCHZLU8LEnNtELYucwM
+Cópias das pranchas aprovadas (HTML de referência, com SVG e keyframes exatos) em `docs/reformulacao/`:
+`Fusao` (estilo e telas), `Simbolo2` (símbolo C · Pálpebra), `Abertura` (olho piscando), `Movimento` (microinterações).
+As pranchas usam Familjen Grotesk em títulos: ignorar, vale a seção Tipografia.
 - **Estilo:** fusão dos estilos 1 (Boletim) e 4 (Calçadão), prancha "Fusão 1 + 4". Nome **Monitora**.
   Fundo papel `#FAF9F6`, superfície `#FFFFFF`, tinta `#0E1014`, texto 2 `#545A66`, linhas `#E6E3DC`,
   toque ultramarino `#3047C7`, alerta `#B23A27` (fundo `#F8E9E5`), chuva `#C3D4F0`.
-  Títulos **Familjen Grotesk** 600/700, texto **Inter**. Dados com linhas finas de tabela.
+  Tipografia: ver seção Tipografia (Sora nos títulos principais, Inter Tight nos números, Inter no resto). Dados com linhas finas de tabela.
 - **Símbolo:** conceito **C · Pálpebra** (prancha "Símbolo, rodada 2"), em 120×120:
   pálpebra de cima `M14 62 A46 46 0 0 1 106 62 L90 62 A30 30 0 0 0 30 62 Z`,
   base `M30 66 A30 30 0 0 0 90 66 Z`, pupila `circle cx=60 cy=64 r=15` com `mix-blend-mode: multiply`.

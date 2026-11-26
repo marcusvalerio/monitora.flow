@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Movimento: microinterações</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@600;700&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#3047C7}a:hover{color:#0E1014}
+/* Cada peça repete em ciclo só para o preview; no app tocam uma vez, quando o evento acontece. */
+.agua{transform-origin:bottom;animation:agua 4s cubic-bezier(.2,.8,.2,1) infinite}
+@keyframes agua{0%,8%{transform:scaleY(0)}30%,85%{transform:scaleY(1)}100%{transform:scaleY(0)}}
+.rolo{animation:rolo 6s cubic-bezier(.65,0,.35,1) infinite}
+@keyframes rolo{0%,25%{transform:translateY(0)}33%,58%{transform:translateY(-96px)}66%,92%{transform:translateY(-192px)}100%{transform:translateY(-192px)}}
+.ol .c,.ol .b{transform-box:view-box;animation:lento 2.4s cubic-bezier(.65,0,.35,1) infinite}
+.ol .c{transform-origin:60px 62px}.ol .b{transform-origin:60px 66px}
+@keyframes lento{0%,30%{transform:scaleY(1)}50%{transform:scaleY(.06)}70%,100%{transform:scaleY(1)}}
+.at .c,.at .b{transform-box:view-box;animation:curta 3.5s cubic-bezier(.65,0,.35,1) infinite}
+.at .c{transform-origin:60px 62px}.at .b{transform-origin:60px 66px}
+@keyframes curta{0%,40%{transform:scaleY(1)}46%{transform:scaleY(.06)}52%,100%{transform:scaleY(1)}}
+.at-txt{animation:attxt 3.5s ease-out infinite}
+@keyframes attxt{0%,44%{opacity:.45}52%,100%{opacity:1}}
+.novo{animation:novo 5s ease-out infinite}
+@keyframes novo{0%{opacity:0;transform:translateY(-8px)}6%{opacity:1;transform:none}8%,20%{background:#FBE7E2}60%,100%{background:#FFFFFF}}
+.saia{animation:saia 3s cubic-bezier(.2,.8,.2,1) infinite}
+@keyframes saia{0%,10%{transform:scale(1)}18%{transform:scale(1.06)}28%,100%{transform:scale(1)}}
+.ind{animation:ind 6s cubic-bezier(.34,1.2,.64,1) infinite}
+@keyframes ind{0%,20%{transform:translateX(0)}25%,45%{transform:translateX(100%)}50%,70%{transform:translateX(200%)}75%,95%{transform:translateX(300%)}100%{transform:translateX(0)}}
+@media (prefers-reduced-motion:reduce){.agua,.rolo,.ol .c,.ol .b,.at .c,.at .b,.at-txt,.novo,.saia,.ind{animation:none}}
+</style>
+</helmet>
+<div style="width: 1400px; height: 980px; box-sizing: border-box; padding: 48px 56px; background: #FAF9F6; color: #0E1014; font-family: Inter, sans-serif; display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font: 600 13px Inter, sans-serif; color: #545A66">Movimento · microinterações</span>
+<span style="font: 700 34px/1.1 'Familjen Grotesk', sans-serif; letter-spacing: -0.02em">O movimento mostra o que aconteceu com o dado</span>
+<span style="font: 400 15px/1.5 Inter, sans-serif; color: #545A66; max-width: 980px">Cada peça repete aqui só para você ver; no app toca uma vez, quando o evento acontece. Só transform e opacidade. Com “reduzir movimento”, tudo aparece parado no estado final.</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; flex: 1">
+
+<div style="background: #FFFFFF; border: 1px solid #E6E3DC; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<span style="font: 700 19px 'Familjen Grotesk', sans-serif">Tempo · a água sobe</span>
+<div style="display: flex; gap: 8px; align-items: flex-end; height: 150px">
+<div style="position: relative; overflow: hidden; width: 52px; height: 130px; border-radius: 12px; background: #F2F0EA; border: 1px solid #E6E3DC"><div class="agua" style="position: absolute; left: 0; right: 0; bottom: 0; height: 20%; background: #C3D4F0"></div><span style="position: absolute; left: 0; right: 0; top: 10px; text-align: center; font: 700 17px 'Familjen Grotesk', sans-serif">26°</span><span style="position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; font: 600 11px Inter, sans-serif">20%</span></div>
+<div style="position: relative; overflow: hidden; width: 52px; height: 130px; border-radius: 12px; background: #F2F0EA; border: 1px solid #E6E3DC"><div class="agua" style="position: absolute; left: 0; right: 0; bottom: 0; height: 55%; background: #C3D4F0; animation-delay: .03s"></div><span style="position: absolute; left: 0; right: 0; top: 10px; text-align: center; font: 700 17px 'Familjen Grotesk', sans-serif">27°</span><span style="position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; font: 600 11px Inter, sans-serif">55%</span></div>
+<div style="position: relative; overflow: hidden; width: 52px; height: 130px; border-radius: 12px; background: #F2F0EA; border: 1px solid #E6E3DC"><div class="agua" style="position: absolute; left: 0; right: 0; bottom: 0; height: 85%; background: #C3D4F0; animation-delay: .06s"></div><span style="position: absolute; left: 0; right: 0; top: 10px; text-align: center; font: 700 17px 'Familjen Grotesk', sans-serif">25°</span><span style="position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; font: 600 11px Inter, sans-serif; color: #B23A27">85%</span></div>
+<div style="position: relative; overflow: hidden; width: 52px; height: 130px; border-radius: 12px; background: #F2F0EA; border: 1px solid #E6E3DC"><div class="agua" style="position: absolute; left: 0; right: 0; bottom: 0; height: 90%; background: #C3D4F0; animation-delay: .09s"></div><span style="position: absolute; left: 0; right: 0; top: 10px; text-align: center; font: 700 17px 'Familjen Grotesk', sans-serif">23°</span><span style="position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; font: 600 11px Inter, sans-serif; color: #B23A27">90%</span></div>
+</div>
+<span style="font: 400 13.5px/1.45 Inter, sans-serif; color: #545A66">Quando a fileira entra na tela, cada cartão enche até a chance de chuva: 600 ms, 30 ms de atraso entre cartões.</span>
+</div>
+
+<div style="background: #FFFFFF; border: 1px solid #E6E3DC; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<span style="font: 700 19px 'Familjen Grotesk', sans-serif">Trajeto · os minutos rolam</span>
+<div style="display: flex; align-items: flex-end; gap: 8px; height: 150px">
+<div style="height: 96px; overflow: hidden"><div class="rolo" style="display: flex; flex-direction: column"><span style="font: 700 96px/96px 'Familjen Grotesk', sans-serif; letter-spacing: -0.05em">9</span><span style="font: 700 96px/96px 'Familjen Grotesk', sans-serif; letter-spacing: -0.05em">8</span><span style="font: 700 96px/96px 'Familjen Grotesk', sans-serif; letter-spacing: -0.05em">7</span></div></div>
+<span style="font: 600 22px Inter, sans-serif; color: #545A66; padding-bottom: 12px">min</span>
+</div>
+<span style="font: 400 13.5px/1.45 Inter, sans-serif; color: #545A66">Conforme o ônibus se aproxima, o número sai por cima e o novo entra por baixo. Se o GPS estiver velho, não anima.</span>
+</div>
+
+<div style="background: #FFFFFF; border: 1px solid #E6E3DC; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<span style="font: 700 19px 'Familjen Grotesk', sans-serif">Carregando · o olho pisca devagar</span>
+<div style="display: flex; align-items: center; justify-content: center; height: 150px">
+<svg class="ol" width="96" height="96" viewBox="0 0 120 120" aria-hidden="true" style="isolation: isolate"><path class="c" d="M14 62 A46 46 0 0 1 106 62 L90 62 A30 30 0 0 0 30 62 Z" fill="#C7C8F5"/><path class="b" d="M30 66 A30 30 0 0 0 90 66 Z" fill="#3047C7"/><circle cx="60" cy="64" r="15" fill="#0E1014" style="mix-blend-mode: multiply"/></svg>
+</div>
+<span style="font: 400 13.5px/1.45 Inter, sans-serif; color: #545A66">Substitui o círculo girando. Uma piscada a cada 2,4 s enquanto os dados chegam.</span>
+</div>
+
+<div style="background: #FFFFFF; border: 1px solid #E6E3DC; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<span style="font: 700 19px 'Familjen Grotesk', sans-serif">Dado atualizado · piscada curta</span>
+<div style="display: flex; align-items: center; gap: 10px; height: 110px">
+<svg class="at" width="36" height="36" viewBox="0 0 120 120" aria-hidden="true" style="isolation: isolate"><path class="c" d="M8 60 A52 52 0 0 1 112 60 L92 60 A32 32 0 0 0 28 60 Z" fill="#C7C8F5"/><path class="b" d="M28 68 A32 32 0 0 0 92 68 Z" fill="#3047C7"/><circle cx="60" cy="66" r="16" fill="#0E1014" style="mix-blend-mode: multiply"/></svg>
+<span class="at-txt" style="font: 500 15px Inter, sans-serif">Atualizado agora · GPS SMTR</span>
+</div>
+<span style="font: 400 13.5px/1.45 Inter, sans-serif; color: #545A66">Quando chega dado novo, o olho no topo pisca uma vez. Substitui o ponto pulsando.</span>
+</div>
+
+<div style="background: #FFFFFF; border: 1px solid #E6E3DC; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<span style="font: 700 19px 'Familjen Grotesk', sans-serif">Atenção · item novo</span>
+<div style="display: flex; flex-direction: column; height: 110px; justify-content: center">
+<div class="novo" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; border-bottom: 1px solid #E6E3DC"><span style="font: 500 12px Inter, sans-serif; color: #545A66">Bolsão d'água · COR · 14:22</span><span style="font: 700 20px 'Familjen Grotesk', sans-serif; color: #B23A27">Praça da Bandeira</span></div>
+</div>
+<span style="font: 400 13.5px/1.45 Inter, sans-serif; color: #545A66">Entra de cima com fundo destacado que some em 2 s. Nada fica piscando.</span>
+</div>
+
+<div style="background: #FFFFFF; border: 1px solid #E6E3DC; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<span style="font: 700 19px 'Familjen Grotesk', sans-serif">Saia agora · e a barra de abas</span>
+<div style="display: flex; flex-direction: column; gap: 16px; height: 110px; justify-content: center">
+<span class="saia" style="align-self: flex-start; padding: 8px 14px; border-radius: 999px; background: #3047C7; color: #FFFFFF; font: 600 15px Inter, sans-serif">Saia agora · 4 min a pé</span>
+<div style="position: relative; display: flex; padding: 4px; border-radius: 999px; background: #F2F0EA; border: 1px solid #E6E3DC">
+<div style="position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 4)"><div class="ind" style="width: 100%; height: 100%; border-radius: 999px; background: #C7C8F5"></div></div>
+<span style="position: relative; flex: 1; text-align: center; padding: 10px 0; font: 600 13px Inter, sans-serif; color: #0E1014">Agora</span>
+<span style="position: relative; flex: 1; text-align: center; padding: 10px 0; font: 600 13px Inter, sans-serif; color: #0E1014">Tempo</span>
+<span style="position: relative; flex: 1; text-align: center; padding: 10px 0; font: 600 13px Inter, sans-serif; color: #0E1014">Atenção</span>
+<span style="position: relative; flex: 1; text-align: center; padding: 10px 0; font: 600 13px Inter, sans-serif; color: #0E1014">Trajeto</span>
+</div>
+</div>
+<span style="font: 400 13.5px/1.45 Inter, sans-serif; color: #545A66">“Saia agora” dá um pulso único. Na barra, o indicador desliza com uma mola leve entre as 4 abas.</span>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1400,"height":980}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
