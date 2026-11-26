@@ -37,9 +37,9 @@
 .cl-local:hover { background: rgba(255, 255, 255, .22); }
 .cl-local:active { transform: scale(.97); }
 .cl-agora { font: 600 11.5px var(--font-sec); letter-spacing: .1em; text-transform: uppercase; opacity: .82; }
-.cl-temp { display: flex; align-items: flex-start; margin: 26px 0 0 -6px; font: 300 clamp(112px, 34vw, 156px)/.86 var(--font-num); letter-spacing: -.075em;
+.cl-temp { display: flex; align-items: flex-start; margin: 26px 0 0 -4px; font: 600 clamp(84px, 26vw, 118px)/.9 var(--font-num); letter-spacing: -.05em;
   animation: clTemp 1s var(--ease-out) both .1s; }
-.cl-grau { font-size: .36em; font-weight: 300; margin: .08em 0 0 .06em; opacity: .85; letter-spacing: 0; }
+.cl-grau { font-size: .42em; font-weight: 600; margin: .04em 0 0 .04em; opacity: .9; letter-spacing: 0; }
 .cl-cond { display: flex; align-items: center; gap: 8px; margin-top: 10px; font: 600 21px/1.2 var(--font-ui); letter-spacing: -.015em; animation: clSobe .8s var(--ease-out) both .25s; }
 .cl-frase { margin: 2px 0 0; max-width: 34ch; font: 450 15.5px/1.42 var(--font-ui); opacity: .92; animation: clSobe .8s var(--ease-out) both .35s; }
 .cl-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; animation: clSobe .8s var(--ease-out) both .45s; }
@@ -273,7 +273,7 @@ button[aria-expanded="true"] .cl-chev { transform: rotate(180deg); }
   .cl-ceu::after { display: none; }
   .cl-ceu-c { margin: 0; max-width: none; padding: 16px 0; gap: 2px; }
   .cl-local { max-width: 100%; }
-  .cl-temp { margin-top: 10px; font-size: clamp(84px, 30vh, 128px); }
+  .cl-temp { margin-top: 10px; font-size: clamp(72px, 24vh, 104px); }
   .cl-cond { font-size: 18px; margin-top: 6px; }
   .cl-frase { font-size: 14px; }
   .cl-chips { margin-top: 12px; }

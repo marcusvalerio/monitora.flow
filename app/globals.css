@@ -1001,3 +1001,16 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .bl-voz span { display: grid; gap: 2px; }
 .bl-voz b { font: 600 15px var(--font-ui); }
 .bl-voz small { font: 450 13px var(--font-ui); color: var(--text-2); }
+/* Grade de horas mais compacta (pedido do dono, 26/11): cartões menores, número mais firme, água mais suave */
+.gh-rolo { gap: 6px; }
+.gh-h { gap: 5px; }
+.gh-hora { font-size: 12px; }
+.gh-cartao { width: 50px; min-height: 122px; gap: 6px; padding: 10px 0 8px; border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-2) 80%, var(--surface)); box-shadow: inset 0 0 0 1px var(--hairline); }
+.gh-cartao svg { width: 20px; height: 20px; }
+.gh-cartao b { font: 700 16px/1 var(--font-num); letter-spacing: -.02em; }
+.gh-vento { width: 15px !important; height: 15px !important; }
+.gh-p { font: 600 11.5px var(--font-num); }
+.gh-p svg { width: 11px !important; height: 11px !important; }
+.gh-agua { opacity: .85; border-radius: 0; }
+.rt-horas .gh-cartao { width: 50px; min-height: 100px; }
