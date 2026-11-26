@@ -75,14 +75,13 @@ Prancha "Movimento" no canvas tem as peças rodando.
 - **Barra:** indicador desliza (já existe) + pequeno salto do ícone ativo. Toque: escala .96 (já existe).
 - **Fora:** paralaxe, rolagem presa, fundos animados atrás de dados, brilhos decorativos.
 
-## Tipografia (26/11) — prancha "Cifra" no canvas
+## Tipografia (26/11)
 | Nível | Fonte |
 |---|---|
 | Título principal ("Bom dia", "Tempo", "Atenção") | **Sora 700**, 34–44 px, tracking −0,045em |
-| Números e dados (28°, 7 min, 14,6 mm, 85%) | **Cifra** — algarismos próprios, em estudo (aguarda aprovação do dono) |
+| Números e dados (28°, 7 min, 14,6 mm, 85%) | **Inter Tight 600–700**, `font-variant-numeric: tabular-nums` (decisão do dono) |
 | Título de seção | **Inter 600** |
 | Texto | **Inter 400–500** |
 | Rótulos miúdos | **Inter 500**, 12–13 px |
-Cifra v2: monolinha geométrica (mesma geometria do símbolo), grade 60×100, traço 12, pontas e cantos arredondados, topo y=10 e base y=90 para todos os algarismos, espaçamento folgado, tabular. Depois de aprovada vira `.woff2`
-(0–9, ° % , : −, espaço fino). Até lá, usar Sora com `font-variant-numeric: tabular-nums` nos números.
-Familjen Grotesk (citada na fusão) sai: títulos ficam em Sora.
+A fonte própria de números (estudo "Cifra" no canvas) foi descartada. Familjen Grotesk também sai.
+Hoje os números usam Sora (`--font-num`): trocar para Inter Tight e manter o ajuste de corte do `.rolante`.
