@@ -74,3 +74,15 @@ Prancha "Movimento" no canvas tem as peças rodando.
 - **Trajeto:** veículo desliza até a posição real (já existe, `duracaoVeiculo`); minutos rolam para baixo; "Saia agora" com um pulso único.
 - **Barra:** indicador desliza (já existe) + pequeno salto do ícone ativo. Toque: escala .96 (já existe).
 - **Fora:** paralaxe, rolagem presa, fundos animados atrás de dados, brilhos decorativos.
+
+## Tipografia (26/11) — prancha "Cifra" no canvas
+| Nível | Fonte |
+|---|---|
+| Título principal ("Bom dia", "Tempo", "Atenção") | **Sora 700**, 34–44 px, tracking −0,045em |
+| Números e dados (28°, 7 min, 14,6 mm, 85%) | **Cifra** — algarismos próprios, em estudo (aguarda aprovação do dono) |
+| Título de seção | **Inter 600** |
+| Texto | **Inter 400–500** |
+| Rótulos miúdos | **Inter 500**, 12–13 px |
+Cifra: monolinha geométrica (mesma geometria do símbolo), grade 60×100, traço 14, tabular. Depois de aprovada vira `.woff2`
+(0–9, ° % , : −, espaço fino). Até lá, usar Sora com `font-variant-numeric: tabular-nums` nos números.
+Familjen Grotesk (citada na fusão) sai: títulos ficam em Sora.
