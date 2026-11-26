@@ -866,3 +866,129 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .gh-legenda { margin-top: 12px; }
 @media (prefers-color-scheme: dark) { .gh-agua { background: linear-gradient(to top, color-mix(in srgb, #2E5A5D 90%, var(--periwinkle) 10%), color-mix(in srgb, #2E5A5D 60%, transparent)); } }
 @media (prefers-reduced-motion: reduce) { .gh-agua, .gh-cartao { transition: none; } }
+
+/* =====================================================================
+   18. Reformulação (docs/REFORMULACAO.md): 4 abas, canto com olho + menu, Agora, Atenção, abertura e microinterações.
+   Só tokens; só transform/opacidade nas animações; tudo desliga com "reduzir movimento".
+   ===================================================================== */
+/* canto superior: olho da marca (pisca a cada dado novo) + menu, fora da barra */
+.canto { position: fixed; z-index: var(--z-nav); top: calc(var(--safe-t) + 12px); right: 12px; display: flex; gap: 6px; }
+.canto-olho, .canto-menu { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent); box-shadow: inset 0 0 0 1px var(--hairline), var(--shadow-ambient); color: var(--text); }
+.canto-menu svg { width: 20px; height: 20px; }
+.canto-menu[aria-current="page"], .canto-menu[aria-expanded="true"] { color: var(--accent); }
+.nav-pop { top: calc(var(--safe-t) + 64px); bottom: auto; right: 12px; left: auto; margin: 0; animation: navDesce var(--dur-interact) var(--spring); }
+@keyframes navDesce { from { opacity: 0; translate: 0 -8px; scale: .97; } }
+.map-top { right: 112px; }
+@media (min-width: 960px) {
+  .canto { display: none; }
+  .topnav { gap: 0; }
+  .topnav .marca { font: 700 19px var(--font-titulo); letter-spacing: -.035em; }
+  .topnav-abas { display: flex; gap: 4px; }
+  .topnav .canto-menu { margin-left: auto; box-shadow: none; background: none; }
+  .nav-pop { top: 70px; right: 20px; }
+  .map-top { right: auto; }
+}
+@media (orientation: landscape) and (max-height: 540px) { .canto { right: 88px; } }
+/* barra: pequeno salto do ícone ativo */
+.nav svg.salta { animation: salta 380ms var(--spring) 1; }
+@keyframes salta { 0% { transform: translateY(0); } 40% { transform: translateY(-3px); } 100% { transform: none; } }
+
+/* cabeçalho das abas: título principal em Sora, linha de contexto em Inter */
+.page { padding-top: calc(var(--safe-t) + 68px); }
+@media (min-width: 960px) { .page { padding-top: 44px; } }
+.aba-cab { display: grid; gap: 8px; }
+.aba-cab .aba-sub { order: -1; margin: 0; font: 500 var(--fs-rotulo)/1.3 var(--font-ui); color: var(--text-2); }
+.atencao .aba-cab .aba-sub { order: 0; }
+
+/* entrada em cascata curta (≤ 6 itens, total < 0,7 s) */
+.cascata > * { animation: cascata 380ms var(--ease-out) both; }
+.cascata > :nth-child(2) { animation-delay: 50ms; } .cascata > :nth-child(3) { animation-delay: 100ms; }
+.cascata > :nth-child(4) { animation-delay: 150ms; } .cascata > :nth-child(5) { animation-delay: 200ms; } .cascata > :nth-child(n+6) { animation-delay: 250ms; }
+@keyframes cascata { from { opacity: 0; transform: translateY(8px); } }
+
+/* cartões do Agora: superfície branca, linha fina, sem atmosfera atrás de dado */
+.agora-cards { display: grid; gap: 12px; margin-top: 22px; }
+.cartao { position: relative; display: block; padding: 16px 18px; border-radius: var(--r-md); background: var(--surface); color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--hairline); transition: transform var(--dur-micro) var(--ease-out); }
+.cartao:active { transform: scale(.96); }
+.cartao .seta { width: 18px; height: 18px; color: var(--text-3); flex: none; }
+.aviso { display: flex; align-items: center; gap: 12px; }
+.aviso-corpo { flex: 1; display: grid; gap: 4px; }
+.aviso-corpo b { font: 600 var(--fs-secao)/1.25 var(--font-ui); letter-spacing: -.01em; }
+.aviso-corpo span { font: 400 14px/1.4 var(--font-ui); color: var(--text-2); }
+.aviso-alerta { background: var(--alert-bg); box-shadow: none; }
+.aviso-alerta b { color: var(--alert-text); }
+.aviso-alerta .aviso-corpo span { color: var(--text); }
+.rt-linha { display: flex; align-items: center; gap: 14px; }
+.rt-num { font: 700 56px/.95 var(--font-num); letter-spacing: -.05em; }
+.rt-txt { font: 450 14px/1.4 var(--font-ui); color: var(--text-2); }
+.rt-meta { margin: 8px 0 0; font: 500 var(--fs-rotulo) var(--font-ui); color: var(--text-2); }
+.rt-sec { display: block; margin: 16px 0 8px; font: 600 14px var(--font-ui); }
+.rt-horas { margin: 0 -18px; padding-inline: 18px; }
+.rt-horas .gh-cartao { width: 54px; min-height: 104px; padding-top: 10px; }
+.rt-rodape { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hairline);
+  font: 500 var(--fs-rotulo) var(--font-ui); color: var(--text-2); }
+.rt-rodape svg { width: 16px; height: 16px; }
+.cartao-mob .cm-topo { display: flex; align-items: center; gap: 10px; }
+.cm-rot { font: 600 15px var(--font-ui); }
+.cm-linha { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; margin: 10px 0 8px; }
+.cm-num { font: 700 56px/.95 var(--font-num); letter-spacing: -.05em; }
+.cm-min { font: 500 20px var(--font-ui); color: var(--text-2); }
+.cm-sub { flex-basis: 100%; font: 450 13px var(--font-ui); color: var(--text-2); }
+.cm-sem { font: 500 15px var(--font-ui); color: var(--text-2); }
+.cartao-convite { display: flex; align-items: center; gap: 14px; }
+.cartao-convite > svg:first-child { width: 24px; height: 24px; color: var(--accent); flex: none; }
+.cartao-convite span { flex: 1; display: grid; gap: 2px; }
+.cartao-convite b { font: 600 16px var(--font-ui); }
+.cartao-convite small { font: 450 13px var(--font-ui); color: var(--text-2); }
+@media (min-width: 760px) { .agora { max-width: 880px; } .agora-cards { grid-template-columns: 1fr 1fr; align-items: start; } .agora-cards > .aviso { grid-column: 1 / -1; } }
+
+/* grade de horas: água na cor da chuva; sobe até a chance quando a fileira entra na tela (600 ms, +30 ms por cartão) */
+.gh-agua { background: var(--rain) !important; }
+.gh-rolo.vazio:not(.cheio) .gh-agua { transform: scaleY(0) !important; }
+.gh-rolo.cheio .gh-agua { transition: transform 600ms cubic-bezier(.2, .8, .2, 1) calc(var(--k, 0) * 30ms); }
+.gh-cartao { background: var(--surface); box-shadow: inset 0 0 0 1px var(--hairline); }
+
+/* Atenção: boletim — linhas finas de tabela, número grande, fonte e horário ao lado */
+.boletim { display: grid; margin-top: 18px; }
+.bl { padding: 16px 0; border-bottom: 1px solid var(--hairline); }
+.bl-rot { margin: 0 0 6px; font: 500 13px var(--font-ui); color: var(--text-2); }
+.bl-val { margin: 0; font: 700 28px/1.1 var(--font-num); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.bl-txt { margin: 6px 0 0; font: 450 14px/1.4 var(--font-ui); }
+.bl-fonte { display: block; margin-top: 4px; font: 500 12px var(--font-ui); color: var(--text-3); }
+.bl-nota { margin: 0; font: 450 14px/1.45 var(--font-ui); color: var(--text-2); }
+.bl-nota a { color: var(--accent); text-decoration: underline; }
+.bl-alerta { color: var(--alert-text); }
+.bl-ok { color: var(--text); }
+.bl-lista { list-style: none; margin: 0; padding: 0; }
+.bl-lista li { padding: 10px 8px; margin: 0 -8px; border-radius: var(--r-xs); }
+.bl-lista li + li { border-top: 1px solid var(--hairline); }
+.bl-lista b { font: 600 17px/1.3 var(--font-ui); }
+.bl-par { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; font: 500 15px var(--font-ui); }
+.bl-par b { font: 700 19px var(--font-num); white-space: nowrap; }
+.bl-acao { margin-top: 20px; display: grid; gap: 10px; }
+.bl-acao .btn { width: 100%; }
+@media (min-width: 960px) { .atencao { max-width: 720px; } }
+/* item novo: fundo destacado que some em 2 s (só opacidade de uma camada) */
+.bl-lista li.novo { position: relative; isolation: isolate; }
+.bl-lista li.novo::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--alert-bg); animation: novoSome 2s ease-out 1 both; }
+@keyframes novoSome { 0%, 30% { opacity: 1; } 100% { opacity: 0; } }
+/* estágio ≥ 3: pisca uma vez */
+.pisca-uma { animation: piscaUma 900ms var(--ease-in-out) 1; }
+@keyframes piscaUma { 0%, 100% { opacity: 1; } 35% { opacity: .2; } }
+/* Trajeto: "Saia agora" com um pulso único */
+.pulso-uma { display: inline-block; animation: pulsoUma 700ms cubic-bezier(.2, .8, .2, 1) 1; transform-origin: left center; }
+@keyframes pulsoUma { 0% { transform: scale(1); } 35% { transform: scale(1.06); } 100% { transform: scale(1); } }
+
+/* abertura: véu azul por cima, sem bloquear toque; some com opacidade */
+.abertura { position: fixed; inset: 0; z-index: calc(var(--z-modal) + 10); display: grid; place-content: center; justify-items: center; gap: 18px;
+  background: var(--ultramarine); color: #fff; pointer-events: none; transition: opacity 350ms var(--ease-out); }
+.abertura.sai { opacity: 0; }
+.abertura-nome { font: 700 34px var(--font-titulo); letter-spacing: -.045em; animation: nomeEntra 1.6s cubic-bezier(.2, .8, .2, 1) 1 both; }
+@keyframes nomeEntra { 0%, 75% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .cascata > *, .nav svg.salta, .bl-lista li.novo::before, .pisca-uma, .pulso-uma, .abertura-nome, .cartao { animation: none !important; transition: none !important; }
+  .gh-rolo .gh-agua { transition: none !important; }
+}

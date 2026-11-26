@@ -88,3 +88,12 @@ Prancha "Movimento" no canvas tem as peças rodando.
 | Rótulos miúdos | **Inter 500**, 12–13 px |
 A fonte própria de números (estudo "Cifra" no canvas) foi descartada. Familjen Grotesk também sai.
 Hoje os números usam Sora (`--font-num`): trocar para Inter Tight e manter o ajuste de corte do `.rolante`.
+
+## Aplicado (26/11, branch `claude/confident-goodall-t8pz1l`)
+1. Tokens: paleta Fusão 1 + 4 em `globals.css`/`tokens.ts`; Sora 700 (título), Inter Tight (números, `--font-num`), Inter (resto; Geist saiu).
+2. Símbolo C · Pálpebra em `MarcaMonitora` (fresta maior ≤ 32 px), `public/icone.svg` e PNGs refeitos; `OlhoCarregando` substitui `Orbita`.
+3. 4 abas: Agora (`/`), Tempo (`/clima`, abre com o Centro sem local salvo), Atenção (`/atencao`, nova), Trajeto (`/mobilidade`).
+   Menu e olho no canto superior. O botão "Avisar quando chover forte aqui" fica desligado e diz que ainda não existe (push de chuva = item 5).
+4. Abertura (`app/ui/Abertura.tsx`, uma vez por sessão; `?sem-abertura` pula), piscada curta no dado novo, água da grade, cascata,
+   item novo/estágio ≥ 3 na Atenção, pulso do "Saia agora", salto do ícone da barra.
+Prints (dados reais; ocorrências do COR estavam fora): `docs/reformulacao/prints/`.

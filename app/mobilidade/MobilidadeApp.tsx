@@ -300,7 +300,7 @@ export default function MobilidadeApp() {
           <div className="t-head" style={{ marginTop: 4 }}>{esperaDest != null && viagem?.escolhida ? `Chega em ${viagem.escolhida.nome} às ${horaChegada(esperaDest + viagem.escolhida.min)}`
             : prox ? `Chega em ${ponto.nome}${sentidoValido ? ` → ${sentidoValido}` : ""}` : saida ? textoSaida(saida, ponto.nome) : `Nenhum veículo ${sentidoValido ? "neste sentido" : "da linha"} se aproximando de ${ponto.nome}`}</div>
           {prox && <div className="t-meta eta-fonte">Estimativa {METODO_TEXTO[prox.metodo] ?? "experimental"}{prox.idadeGpsMin != null ? ` · GPS há ${prox.idadeGpsMin < 1 ? "menos de 1 min" : `${Math.round(prox.idadeGpsMin)} min`}` : ""} · pode variar ±{Math.max(1, Math.round(prox.etaMin * 0.25))} min</div>}
-          {saiaEm != null && <div className={`saia${saiaEm <= 1 ? " ja" : ""}`}>{alcancavel?.proximo ? "Não dá tempo para este. " : ""}{saiaEm <= 1 ? "Saia agora" : `Saia em ${eta(saiaEm)} min`}{alcancavel?.proximo ? ` para pegar o de ${eta(alcancavel.espera)} min` : ""} · {eta(caminhadaMin!)} min a pé</div>}
+          {saiaEm != null && <div key={saiaEm <= 1 ? "ja" : "depois"} className={`saia${saiaEm <= 1 ? " ja pulso-uma" : ""}`}>{alcancavel?.proximo ? "Não dá tempo para este. " : ""}{saiaEm <= 1 ? "Saia agora" : `Saia em ${eta(saiaEm)} min`}{alcancavel?.proximo ? ` para pegar o de ${eta(alcancavel.espera)} min` : ""} · {eta(caminhadaMin!)} min a pé</div>}
         </div>
         <div className="cab-dir">
           <button className={`fav${ehFavorito ? " on" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={alternarFavorito} aria-pressed={ehFavorito} aria-label={ehFavorito ? "Remover dos favoritos" : "Salvar trajeto nos favoritos"}><Star aria-hidden /></button>

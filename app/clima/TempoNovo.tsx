@@ -15,6 +15,7 @@ import Satelite from "./Satelite";
 import type { Local } from "./ClimaApp";
 import { J, coord, dec, diaSemana, distKm, fmtDist, get, gravarCache, horaLocal, lerCache } from "../ui/util";
 import { reduzMovimento } from "../ui/motion";
+import { useEnche } from "../ui/useEnche";
 import { intensidadeChuva } from "../../src/lib/chuva";
 
 const hh = (iso: string) => horaLocal(iso);
@@ -203,6 +204,7 @@ function MelhorHora({ c, horas }: { c: J; horas: J[] }) {
 const HORA_INICIO = 6; // dias seguintes começam às 6h (madrugada fica de fora para caber o dia útil)
 function GradeHoras({ horas }: { horas: J[] }) {
   const [sel, setSel] = useState<string | null>(null);
+  const enche = useEnche();
   const dias = new Map<string, J[]>();
   for (const h of horas) {
     const d = new Date(h.inicio).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
@@ -212,7 +214,7 @@ function GradeHoras({ horas }: { horas: J[] }) {
   const lista = [...dias.entries()].slice(0, 4);
   const nomeDia = (d: string, i: number) => i === 0 ? "Hoje" : i === 1 ? "Amanhã" : new Date(`${d}T12:00:00-03:00`).toLocaleDateString("pt-BR", { weekday: "long", timeZone: "America/Sao_Paulo" });
   return (
-    <section className="cl-card gh revela" aria-label="Previsão hora a hora por dia">
+    <section ref={enche} className="cl-card gh revela" aria-label="Previsão hora a hora por dia">
       <h2 className="cl-tit"><CloudSun aria-hidden /> Hora a hora</h2>
       {lista.map(([d, hs], i) => {
         const vis = i === 0 ? hs : hs.filter((h) => Number(horaLocal(h.inicio).slice(0, 2)) >= HORA_INICIO);
@@ -228,7 +230,7 @@ function GradeHoras({ horas }: { horas: J[] }) {
                   <button key={h.inicio} type="button" className={`gh-h${h.inicio === sel ? " on" : ""}`} onClick={() => setSel(h.inicio === sel ? null : h.inicio)} aria-pressed={h.inicio === sel}
                     aria-label={`${nomeDia(d, i)}, ${agora ? "agora" : h2(h.inicio)}: ${h.temperaturaC == null ? "sem temperatura" : r0(h.temperaturaC) + " graus"}, ${h.descricao?.texto ?? ""}, chance de chuva ${p}%`}>
                     <span className="gh-hora">{agora ? "Agora" : h2(h.inicio)}</span>
-                    <span className={`gh-cartao${h.dia === false ? " noite" : ""}`}>
+                    <span className={`gh-cartao${h.dia === false ? " noite" : ""}`} style={{ ["--k" as string]: Math.min(j, 12) }}>
                       <i className="gh-agua" style={{ transform: `scaleY(${Math.min(100, p) / 100})` }} aria-hidden />
                       <IconeTempo icone={h.descricao?.icone} dia={h.dia} size={24} />
                       <b className="num">{h.temperaturaC == null ? "—" : `${r0(h.temperaturaC)}°`}</b>
