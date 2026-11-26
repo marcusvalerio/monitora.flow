@@ -43,3 +43,17 @@ Nome da seção de alertas: **Atenção** (a notificação push em si é um "ale
 7. **Dados:** ETA em linha reta pelo shape e só no sentido certo; GTFS-RT da SMTR com cache compartilhado em vez da memória por instância (`aoVivo.ts`);
    coleta agendada se o "habitual" continuar (hoje a amostra é enviesada pela coleta sob demanda); cobertura de Av. Brasil, Linha Amarela, Ponte e Zona Oeste (custo de banco).
 8. **Grade de horas:** rolagem sincronizada entre os dias; chuva medida na hora que já passou.
+
+## Decisões de identidade (26/11)
+Canvas com tudo: https://claude.ai/artifact/R47LCHZLU8LEnNtELYucwM
+- **Estilo:** fusão dos estilos 1 (Boletim) e 4 (Calçadão), prancha "Fusão 1 + 4". Nome **Monitora**.
+  Fundo papel `#FAF9F6`, superfície `#FFFFFF`, tinta `#0E1014`, texto 2 `#545A66`, linhas `#E6E3DC`,
+  toque ultramarino `#3047C7`, alerta `#B23A27` (fundo `#F8E9E5`), chuva `#C3D4F0`.
+  Títulos **Familjen Grotesk** 600/700, texto **Inter**. Dados com linhas finas de tabela.
+- **Símbolo:** conceito **C · Pálpebra** (prancha "Símbolo, rodada 2"), em 120×120:
+  pálpebra de cima `M14 62 A46 46 0 0 1 106 62 L90 62 A30 30 0 0 0 30 62 Z`,
+  base `M30 66 A30 30 0 0 0 90 66 Z`, pupila `circle cx=60 cy=64 r=15` com `mix-blend-mode: multiply`.
+  Cores: no azul = branco / lilás `#C7C8F5` / tinta; no papel = lilás / ultramarino / tinta.
+  Em ≤ 32 px usar a versão de fresta maior (prancha "Abertura", último quadro). Substitui `public/icone*.png`, `icone.svg` e `MarcaMonitora`.
+- **Abertura:** o olho abre, pisca uma vez e o nome entra (1,6 s, só transform/opacidade, toca uma vez,
+  não segura o carregamento; com reduzir movimento, olho já aberto). Keyframes na prancha "Abertura".
