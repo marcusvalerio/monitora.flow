@@ -584,11 +584,25 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 }
 
 /* ---------- 12. geometria ---------- */
-.orbita { display: inline-grid; place-items: center; color: var(--text); }
-.orbita svg { width: 100%; height: 100%; }
-.orbita .o1 { transform-origin: 24px 24px; animation: orbita 2.4s var(--ease-in-out) infinite; }
-.orbita .o2 { transform-origin: 24px 24px; animation: orbita 3.6s var(--ease-in-out) infinite reverse; }
-@keyframes orbita { to { transform: rotate(360deg); } }
+/* Olho (marca) — origens das pálpebras vêm do componente (--o-cima/--o-base/--o-pup). Só transform/opacidade. */
+.olho .cima { transform-box: view-box; transform-origin: var(--o-cima); }
+.olho .baixo { transform-box: view-box; transform-origin: var(--o-base); }
+.olho .pupila { transform-box: view-box; transform-origin: var(--o-pup); }
+.olho-carregando { display: inline-grid; place-items: center; }
+/* carregando: piscada lenta (2,4 s) */
+.pisca-lento .cima, .pisca-lento .baixo { animation: olhoLento 2.4s var(--ease-in-out) infinite; }
+@keyframes olhoLento { 0%, 30% { transform: scaleY(1); } 50% { transform: scaleY(.06); } 70%, 100% { transform: scaleY(1); } }
+/* dado atualizado: piscada curta, uma vez (a classe é recolocada a cada dado novo) */
+.pisca-curta .cima, .pisca-curta .baixo { animation: olhoCurta 420ms var(--ease-in-out) 1; }
+.pisca-curta .pupila { animation: pupilaCurta 420ms var(--ease-in-out) 1; }
+@keyframes olhoCurta { 0% { transform: scaleY(1); } 45% { transform: scaleY(.06); } 100% { transform: scaleY(1); } }
+@keyframes pupilaCurta { 0% { transform: scale(1); } 45% { transform: scale(.2); } 100% { transform: scale(1); } }
+/* abertura: 0–0,5 s abre; 0,9 s pisca; 1,2–1,6 s o nome entra (prancha docs/reformulacao/Abertura.dc.html, em 1,6 s) */
+.abre .cima, .abre .baixo { animation: abreOlho 1.6s cubic-bezier(.65, 0, .35, 1) 1 both; }
+.abre .pupila { animation: abrePupila 1.6s cubic-bezier(.65, 0, .35, 1) 1 both; }
+@keyframes abreOlho { 0% { transform: scaleY(.06); } 30% { transform: scaleY(1); } 55% { transform: scaleY(1); } 65% { transform: scaleY(.06); } 78%, 100% { transform: scaleY(1); } }
+@keyframes abrePupila { 0%, 25% { transform: scale(0); opacity: 0; } 40% { transform: scale(1.08); opacity: 1; } 48%, 55% { transform: scale(1); } 65% { transform: scale(.2); } 78%, 100% { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .olho .cima, .olho .baixo, .olho .pupila { animation: none !important; } }
 
 /* ---------- 13. movimento reduzido ---------- */
 @media (prefers-reduced-motion: reduce) {

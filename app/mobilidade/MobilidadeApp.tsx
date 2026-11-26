@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { Orbita } from "../ui/Geometria";
+import { OlhoCarregando } from "../ui/Geometria";
 import { Star, TriangleAlert, Search, LocateFixed, TrainFront, Warehouse, BusFront, MapPin, X, Clock, CloudRain, Gauge, ChevronRight, Info, Navigation } from "lucide-react";
 import BottomSheet from "./BottomSheet";
 import { PAINEL_LATERAL, PAISAGEM } from "../ui/telas";
@@ -16,7 +16,7 @@ import estacoesJson from "../../src/data/estacoes-brt.json";
 
 const ESTACOES = estacoesJson.estacoes;
 
-const TransitMap = dynamic(() => import("./TransitMap"), { ssr: false, loading: () => <div className="map-carregando"><Orbita rotulo="Carregando o mapa" /></div> });
+const TransitMap = dynamic(() => import("./TransitMap"), { ssr: false, loading: () => <div className="map-carregando"><OlhoCarregando rotulo="Carregando o mapa" /></div> });
 
 const K_PONTO = "monitora:mob:ponto", K_LINHA = "monitora:mob:linha", K_RECENTES = "monitora:mob:recentes", K_SENTIDO = "monitora:mob:sentido";
 
