@@ -60,3 +60,17 @@ Canvas com tudo: https://claude.ai/artifact/R47LCHZLU8LEnNtELYucwM
   Em ≤ 32 px usar a versão de fresta maior (prancha "Abertura", último quadro). Substitui `public/icone*.png`, `icone.svg` e `MarcaMonitora`.
 - **Abertura:** o olho abre, pisca uma vez e o nome entra (1,6 s, só transform/opacidade, toca uma vez,
   não segura o carregamento; com reduzir movimento, olho já aberto). Keyframes na prancha "Abertura".
+
+## Movimento (26/11)
+Regra: o movimento mostra o que aconteceu com o dado; ornamento só na marca. Só transform/opacidade, pausa fora da tela/aba oculta,
+entrada total < 0,7 s (stagger ≤ 6 itens), nada em loop na Atenção, "reduzir movimento" desliga também em JS (versão estática).
+Prancha "Movimento" no canvas tem as peças rodando.
+- **Assinatura = o olho piscando:** abertura (abre, pisca, nome entra; 1,6 s; uma vez); carregando = piscada lenta (substitui `Orbita`);
+  dado atualizado = piscada curta do ícone no topo (substitui `pulsoDado`).
+- **Agora:** cartões em cascata curta; números rolam ao mudar (`NumeroRolante`, já existe).
+- **Tempo:** na grade, a "água" sobe até a chance de chuva quando a fileira entra na tela (`.gh-agua` scaleY, 600 ms, atraso 30 ms por cartão);
+  detalhe da hora abre deslizando; céu animado pausa fora da tela (já feito).
+- **Atenção:** item novo entra com fundo destacado que some em 2 s; estágio ≥ 3 pisca uma vez. Nada em loop.
+- **Trajeto:** veículo desliza até a posição real (já existe, `duracaoVeiculo`); minutos rolam para baixo; "Saia agora" com um pulso único.
+- **Barra:** indicador desliza (já existe) + pequeno salto do ícone ativo. Toque: escala .96 (já existe).
+- **Fora:** paralaxe, rolagem presa, fundos animados atrás de dados, brilhos decorativos.
