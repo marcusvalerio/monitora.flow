@@ -16,6 +16,7 @@ import { linhaAoVivo } from "./aoVivo";
 import { lerPosicoesLinha } from "./coletor";
 import { estimarChegadas, type Chegada } from "./chegada";
 import { mesmoDestino } from "./trajeto";
+import { destinoDoTrajeto } from "./veiculo";
 import { PARAMETROS } from "./parametros";
 import type { Leitura } from "./fontes";
 
@@ -84,6 +85,24 @@ export async function enviar(a: Pick<Aviso, "id" | "assinatura" | "linha">, m: {
   return r === "ok";
 }
 
+/**
+ * Histórico do próprio vigia: as leituras ao vivo de cada rodada (a cada 20 s) ficam guardadas nesta execução.
+ * Sem isso o ETA dependia das posições do banco, que só são gravadas enquanto alguém está com o app aberto
+ * (coleta sob demanda): com o app fechado não havia leitura anterior, o ETA ficava vazio e nenhum aviso saía.
+ */
+const historico = new Map<string, Leitura[]>();
+function guardarLeituras(linha: string, novas: Leitura[], agora: Date) {
+  const corte = agora.getTime() - PARAMETROS.JANELA_LINHA_MIN * 60_000;
+  const vistos = new Set<string>();
+  const todas = (historico.get(linha) ?? []).concat(novas).filter((l) => {
+    const k = `${l.fonte}|${l.veiculo}|${l.ts.getTime()}`;
+    if (l.ts.getTime() < corte || vistos.has(k)) return false;
+    vistos.add(k); return true;
+  });
+  historico.set(linha, todas);
+  return todas;
+}
+
 async function etaDaLinha(linha: string, lat: number, lng: number, sentido: string | null, cacheLinha: Map<string, Leitura[]>): Promise<number | null> {
   const agora = new Date();
   let ls = cacheLinha.get(linha);
@@ -92,10 +111,14 @@ async function etaDaLinha(linha: string, lat: number, lng: number, sentido: stri
       linhaAoVivo(linha),
       lerPosicoesLinha(linha, new Date(agora.getTime() - PARAMETROS.JANELA_LINHA_MIN * 60_000)).catch((): Leitura[] => []),
     ]);
-    ls = banco.concat(vivo.leituras); cacheLinha.set(linha, ls);
+    ls = banco.concat(guardarLeituras(linha, vivo.leituras, agora)); cacheLinha.set(linha, ls);
   }
   const cs: Chegada[] = estimarChegadas(ls, lat, lng, agora);
-  const c = sentido ? cs.find((x) => !x.sentido || mesmoDestino(x.sentido, sentido)) : cs[0];
+  // O sentido salvo é um DESTINO ("Estação Santa Cruz"); o GPS traz "ida"/"volta" e o trajeto. Mesma regra da tela:
+  // destino do veículo = destinoDoTrajeto(trajeto, sentido). Antes comparava "volta" com o destino e descartava todos.
+  const destino = new Map<string, string | null>();
+  for (const l of ls) destino.set(`${l.fonte}|${l.veiculo}`, destinoDoTrajeto(l.trajeto, l.sentido) ?? destino.get(`${l.fonte}|${l.veiculo}`) ?? null);
+  const c = sentido ? cs.find((x) => { const d = destino.get(`${x.fonte}|${x.veiculo}`); return !d || mesmoDestino(d, sentido); }) : cs[0];
   return c?.etaMin ?? null;
 }
 
