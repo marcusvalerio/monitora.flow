@@ -12,7 +12,7 @@ export function urlCompleta(lat: number, lng: number) {
     latitude: lat.toFixed(4), longitude: lng.toFixed(4), timezone: TZ,
     current: "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation,weather_code,is_day,uv_index,pressure_msl,cloud_cover",
     minutely_15: "precipitation,precipitation_probability", forecast_minutely_15: "8",
-    hourly: "temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,uv_index,wind_speed_10m,wind_gusts_10m,is_day",
+    hourly: "temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,uv_index,wind_speed_10m,wind_direction_10m,wind_gusts_10m,is_day",
     forecast_hours: "48",
     daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,uv_index_max,wind_gusts_10m_max,sunrise,sunset",
     past_days: "1", forecast_days: "8",
@@ -93,9 +93,9 @@ export function normalizarCompleta(j: OMC, ar: { current?: Record<string, number
   const horas = (h?.time ?? []).map((t, i) => ({
     inicio: iso(t, off), temperaturaC: col(h, "temperature_2m", i), sensacaoC: col(h, "apparent_temperature", i),
     probabilidadeChuvaPct: col(h, "precipitation_probability", i), precipitacaoMm: col(h, "precipitation", i),
-    uv: col(h, "uv_index", i), ventoKmh: col(h, "wind_speed_10m", i), rajadaKmh: col(h, "wind_gusts_10m", i),
+    uv: col(h, "uv_index", i), ventoKmh: col(h, "wind_speed_10m", i), ventoDirecao: col(h, "wind_direction_10m", i), rajadaKmh: col(h, "wind_gusts_10m", i),
     descricao: descreverWmo(col(h, "weather_code", i)), dia: col(h, "is_day", i) == null ? null : col(h, "is_day", i) === 1,
-  })).filter((x) => Date.parse(x.inicio) + 3600_000 > agora).slice(0, 36);
+  })).filter((x) => Date.parse(x.inicio) + 3600_000 > agora).slice(0, 24 * 4); // 4 dias para a grade de horas
 
   const todosDias = (d?.time ?? []).map((t, i) => ({
     data: t, maxC: col(d, "temperature_2m_max", i), minC: col(d, "temperature_2m_min", i),

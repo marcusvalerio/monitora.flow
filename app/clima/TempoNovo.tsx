@@ -7,7 +7,7 @@
  */
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, ChevronDown, Clock, CloudSun, Droplets, Gauge, Leaf, Navigation, Sun, Thermometer, Umbrella, Wind } from "lucide-react";
+import { ArrowRight, ArrowUp, ChevronDown, Clock, CloudSun, Droplets, Gauge, Leaf, Navigation, Sun, Thermometer, Umbrella, Wind } from "lucide-react";
 import { ErrorState, IconeTempo, LastUpdated, Skel } from "../ui/estados";
 import { tomDoCeu } from "./TempoView";
 import WeatherAtmosphere, { atmosferaDe } from "./atmosfera/WeatherAtmosphere";
@@ -68,7 +68,7 @@ export default function TempoNovo({ local, onTrocar }: { local: Local; onTrocar:
       <Ceu local={local} onTrocar={onTrocar} a={a} hoje={hoje} c={c} tipo={tipo} horas={horas} />
       <div className="cl-corpo">
         <MelhorHora c={c} horas={horas} />
-        {horas.length > 1 && <Horas horas={horas.slice(0, 24)} />}
+        {horas.length > 1 && <GradeHoras horas={horas} />}
         <div className="cl-par">
           <ChuvaCurta ch={c.chuva2h} />
           {horas.length >= 12 && <CeuDoDia horas={horas.slice(0, 24)} />}
@@ -197,47 +197,62 @@ function MelhorHora({ c, horas }: { c: J; horas: J[] }) {
   );
 }
 
-/* ---------- 3. próximas horas: curva de temperatura + ícones + chuva ---------- */
-function Horas({ horas }: { horas: J[] }) {
-  const [foco, setFoco] = useState(0);
-  const W = 58, H = 74, top = 22;
-  const ts = horas.map((h) => h.temperaturaC).filter((v): v is number => v != null);
-  const tMin = Math.min(...ts), tMax = Math.max(...ts);
-  const y = (v: number) => top + (1 - (v - tMin) / Math.max(1, tMax - tMin)) * (H - top - 8);
-  const pts = horas.map((h, i) => ({ x: i * W + W / 2, y: h.temperaturaC == null ? null : y(h.temperaturaC) })).filter((p): p is { x: number; y: number } => p.y != null);
-  const linha = pts.map((p, i) => i === 0 ? `M${p.x} ${p.y.toFixed(1)}` : `C${(pts[i - 1].x + W / 2).toFixed(1)} ${pts[i - 1].y.toFixed(1)} ${(p.x - W / 2).toFixed(1)} ${p.y.toFixed(1)} ${p.x} ${p.y.toFixed(1)}`).join(" ");
-  const area = pts.length ? `${linha} L${pts[pts.length - 1].x} ${H} L${pts[0].x} ${H} Z` : "";
-  const f = horas[foco];
+/* ---------- 3. grade de horas: uma fileira por dia, um cartão por hora ----------
+ * Cada cartão: hora, céu, temperatura, seta do vento (para onde ele sopra) e o "nível d'água" = chance de chuva.
+ * Tocar num cartão abre o detalhe daquela hora logo abaixo da fileira. Tudo vem da previsão (modelo), não de medição. */
+const HORA_INICIO = 6; // dias seguintes começam às 6h (madrugada fica de fora para caber o dia útil)
+function GradeHoras({ horas }: { horas: J[] }) {
+  const [sel, setSel] = useState<string | null>(null);
+  const dias = new Map<string, J[]>();
+  for (const h of horas) {
+    const d = new Date(h.inicio).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+    if (!dias.has(d)) dias.set(d, []);
+    dias.get(d)!.push(h);
+  }
+  const lista = [...dias.entries()].slice(0, 4);
+  const nomeDia = (d: string, i: number) => i === 0 ? "Hoje" : i === 1 ? "Amanhã" : new Date(`${d}T12:00:00-03:00`).toLocaleDateString("pt-BR", { weekday: "long", timeZone: "America/Sao_Paulo" });
   return (
-    <section className="cl-card cl-horas revela" aria-label="Próximas horas">
-      <div className="cl-cab">
-        <h2 className="cl-tit">Próximas horas</h2>
-        <span className="cl-foco">{foco === 0 ? "Agora" : h2(f.inicio)}{f.probabilidadeChuvaPct != null && ` · chuva ${f.probabilidadeChuvaPct}%`}{(f.precipitacaoMm ?? 0) > 0 && ` (${dec(f.precipitacaoMm)} mm)`}{f.rajadaKmh != null && ` · rajada ${r0(f.rajadaKmh)} km/h`}</span>
-      </div>
-      <div className="cl-horas-rolo">
-        <div className="cl-horas-faixa" style={{ width: horas.length * W }}>
-          <svg width={horas.length * W} height={H} aria-hidden className="cl-curva">
-            <defs><linearGradient id="clArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--accent)" stopOpacity=".22" /><stop offset="1" stopColor="var(--accent)" stopOpacity="0" /></linearGradient></defs>
-            <path d={area} fill="url(#clArea)" className="cl-curva-area" />
-            <path d={linha} pathLength={1} className="cl-curva-linha" />
-            {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={i === foco ? 5 : 3} className={i === foco ? "foco" : ""} />)}
-            {horas.map((h, i) => h.temperaturaC != null && <text key={h.inicio} x={i * W + W / 2} y={y(h.temperaturaC) - 10} textAnchor="middle" className={i === foco ? "foco" : ""}>{r0(h.temperaturaC)}°</text>)}
-          </svg>
-          <div className="cl-horas-cols">
-            {horas.map((h, i) => {
-              const p = h.probabilidadeChuvaPct ?? 0;
-              return (
-                <button key={h.inicio} type="button" className={i === foco ? "foco" : ""} onClick={() => setFoco(i)} aria-pressed={i === foco}
-                  aria-label={`${i === 0 ? "Agora" : h2(h.inicio)}: ${h.temperaturaC == null ? "sem temperatura" : r0(h.temperaturaC) + " graus"}, ${h.descricao?.texto ?? ""}, chuva ${p}%`}>
-                  <IconeTempo icone={h.descricao?.icone} dia={h.dia} size={22} />
-                  <span className={`cl-p${p >= 30 ? " alto" : ""}`}>{p >= 10 ? `${p}%` : ""}</span>
-                  <span className="cl-h">{i === 0 ? "Agora" : h2(h.inicio)}</span>
-                </button>
-              );
-            })}
+    <section className="cl-card gh revela" aria-label="Previsão hora a hora por dia">
+      <h2 className="cl-tit"><CloudSun aria-hidden /> Hora a hora</h2>
+      {lista.map(([d, hs], i) => {
+        const vis = i === 0 ? hs : hs.filter((h) => Number(horaLocal(h.inicio).slice(0, 2)) >= HORA_INICIO);
+        const f = vis.find((h) => h.inicio === sel);
+        return (
+          <div key={d} className="gh-dia">
+            <h3 className="gh-nome">{nomeDia(d, i)}</h3>
+            <div className="gh-rolo">
+              {vis.map((h, j) => {
+                const p = h.probabilidadeChuvaPct ?? 0;
+                const agora = i === 0 && j === 0;
+                return (
+                  <button key={h.inicio} type="button" className={`gh-h${h.inicio === sel ? " on" : ""}`} onClick={() => setSel(h.inicio === sel ? null : h.inicio)} aria-pressed={h.inicio === sel}
+                    aria-label={`${nomeDia(d, i)}, ${agora ? "agora" : h2(h.inicio)}: ${h.temperaturaC == null ? "sem temperatura" : r0(h.temperaturaC) + " graus"}, ${h.descricao?.texto ?? ""}, chance de chuva ${p}%`}>
+                    <span className="gh-hora">{agora ? "Agora" : h2(h.inicio)}</span>
+                    <span className={`gh-cartao${h.dia === false ? " noite" : ""}`}>
+                      <i className="gh-agua" style={{ transform: `scaleY(${Math.min(100, p) / 100})` }} aria-hidden />
+                      <IconeTempo icone={h.descricao?.icone} dia={h.dia} size={24} />
+                      <b className="num">{h.temperaturaC == null ? "—" : `${r0(h.temperaturaC)}°`}</b>
+                      {h.ventoDirecao != null && <ArrowUp className="gh-vento" aria-hidden style={{ transform: `rotate(${(h.ventoDirecao + 180) % 360}deg)` }} />}
+                      <small className={`gh-p${p >= 60 ? " alto" : ""}`}>{p >= 20 ? <><Droplets aria-hidden />{p}%</> : "\u00a0"}</small>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {f && (
+              <p className="gh-detalhe appear">
+                <b>{h2(f.inicio)}</b> · {f.descricao?.texto ?? "—"}
+                {f.sensacaoC != null && ` · sensação ${r0(f.sensacaoC)}°`}
+                {f.probabilidadeChuvaPct != null && ` · chance de chuva ${f.probabilidadeChuvaPct}%`}
+                {(f.precipitacaoMm ?? 0) > 0 && ` (${dec(f.precipitacaoMm)} mm)`}
+                {f.ventoKmh != null && ` · vento ${r0(f.ventoKmh)} km/h`}{f.rajadaKmh != null && `, rajada ${r0(f.rajadaKmh)}`}
+                {f.uv != null && f.uv >= 3 && ` · UV ${r0(f.uv)}`}
+              </p>
+            )}
           </div>
-        </div>
-      </div>
+        );
+      })}
+      <p className="cl-nota gh-legenda">O nível azul de cada cartão é a chance de chuva. A seta mostra para onde o vento sopra. Previsão de modelo; toque numa hora para ver o detalhe.</p>
     </section>
   );
 }

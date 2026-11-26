@@ -146,7 +146,9 @@ function CartaoTransporte({ ponto, linha, sentido, modo }: { ponto: J; linha: st
   const ids = sentido && d.v?.observado ? new Set((d.v.observado as J[]).filter((x) => mesmoDestino(x.destino, sentido)).map((x) => `${x.fonte}:${x.veiculo}`)) : null;
   const chegadas: J[] = d.c?.calculado?.chegadas ?? [];
   const prox = ids ? chegadas.find((x) => ids.has(`${x.fonte}:${x.veiculo}`)) ?? null : d.c?.calculado?.proxima ?? null;
-  const min = prox?.etaMin != null ? Math.max(1, Math.round(prox.etaMin)) : null;
+  // Mesma regra da Mobilidade: desconta a idade do GPS e não mostra estimativa com GPS velho (> 5 min).
+  const idade = prox?.ultimaLeitura ? (Date.now() - Date.parse(prox.ultimaLeitura)) / 60000 : 0;
+  const min = prox?.etaMin != null && idade <= 5 ? Math.max(1, Math.round(prox.etaMin - Math.max(0, idade))) : null;
   return (
     <Link href="/mobilidade" className="hc hc-mob appear" style={{ animationDelay: "60ms" }}
       aria-label={`Linha ${linha}${sentido ? `, sentido ${sentido}` : ""}, em ${ponto.nome}: ${min != null ? `chegada estimada em ${min} minutos` : "sem estimativa agora"}`}>

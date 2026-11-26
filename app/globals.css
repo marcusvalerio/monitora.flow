@@ -812,6 +812,35 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 
 /* ---------- 16. Reformulação (banca): fonte da estimativa e intensidade da chuva ---------- */
 .eta-fonte { margin-top: 4px; }
-.cl-intens { font-size: .5em; font-weight: 600; letter-spacing: 0; color: var(--text-2); }
+.cl-intens { font-size: 15px; font-weight: 600; letter-spacing: 0; color: var(--text-2); }
 .cl-intens.i-moderada { color: var(--stale-text); }
 .cl-intens.i-forte, .cl-intens.i-muito-forte { color: var(--alert-text); }
+
+/* ---------- 17. Clima: grade de horas por dia ---------- */
+.gh { padding: 16px 0 14px; }
+.gh > .cl-tit, .gh-nome, .gh-detalhe, .gh-legenda { padding-inline: 18px; }
+.gh-dia + .gh-dia { margin-top: 10px; }
+.gh-nome { margin: 14px 0 6px; font: 600 22px/1.1 var(--font-num); letter-spacing: -.03em; text-transform: capitalize; }
+.gh-rolo { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 18px 4px; scroll-snap-type: x proximity; scroll-padding-inline: 18px; }
+.gh-rolo::-webkit-scrollbar { display: none; }
+.gh-h { flex: none; display: grid; justify-items: center; gap: 6px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; scroll-snap-align: start; }
+.gh-hora { font: 500 13px var(--font-sec); color: var(--text-2); }
+.gh-cartao { position: relative; overflow: hidden; isolation: isolate; width: 58px; min-height: 140px; display: grid; justify-items: center; align-content: start; gap: 8px; padding: 12px 0 10px;
+  border-radius: var(--r-md); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--hairline); transition: transform var(--dur-interact) var(--spring), box-shadow var(--dur-micro); }
+.gh-cartao.noite { background: color-mix(in srgb, var(--surface-2) 70%, var(--ink) 8%); }
+.gh-cartao svg { color: var(--text-2); }
+.gh-cartao b { font: 600 19px/1 var(--font-num); letter-spacing: -.03em; }
+.gh-agua { position: absolute; z-index: -1; inset: 0; transform-origin: bottom; background: linear-gradient(to top, color-mix(in srgb, var(--sea-mist) 95%, var(--ultramarine) 10%), color-mix(in srgb, var(--sea-mist) 70%, transparent));
+  transition: transform var(--dur-space) var(--ease-out); }
+.gh-vento { width: 18px; height: 18px; color: var(--text-2) !important; }
+.gh-p { display: inline-flex; align-items: center; gap: 2px; margin-top: auto; font: 600 12.5px var(--font-sec); color: var(--text); }
+.gh-p svg { width: 12px; height: 12px; color: var(--accent) !important; }
+.gh-p.alto svg { color: var(--alert-text) !important; }
+.gh-h:active .gh-cartao { transform: scale(.96); }
+.gh-h.on .gh-cartao { box-shadow: inset 0 0 0 2px var(--accent); }
+.gh-h:focus-visible { outline: none; } .gh-h:focus-visible .gh-cartao { box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+.gh-detalhe { margin: 8px 0 0; font: 450 14px/1.45 var(--font-ui); color: var(--text-2); }
+.gh-detalhe b { color: var(--text); }
+.gh-legenda { margin-top: 12px; }
+@media (prefers-color-scheme: dark) { .gh-agua { background: linear-gradient(to top, color-mix(in srgb, #2E5A5D 90%, var(--periwinkle) 10%), color-mix(in srgb, #2E5A5D 60%, transparent)); } }
+@media (prefers-reduced-motion: reduce) { .gh-agua, .gh-cartao { transition: none; } }
