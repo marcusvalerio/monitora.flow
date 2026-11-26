@@ -1,12 +1,12 @@
 import "./globals.css";
-import { Geist, Inter, Sora } from "next/font/google";
+import { Inter, Inter_Tight, Sora } from "next/font/google";
 import AppShell from "./ui/AppShell";
 
 // Fontes variáveis servidas pelo próprio app (next/font): sem CSS bloqueante do Google nem conexões extras ao abrir.
-// Inter: fonte principal (texto, títulos, controles). Geist: secundária (legendas, rótulos, metadados). Sora: números.
+// Inter: seções, texto e rótulos. Inter Tight: números e dados (tabulares). Sora: só o título principal de cada aba.
 const inter = Inter({ subsets: ["latin"], variable: "--fonte-inter", display: "swap" });
-const geist = Geist({ subsets: ["latin"], variable: "--fonte-geist", display: "swap" });
-const sora = Sora({ subsets: ["latin"], variable: "--fonte-sora", display: "swap" });
+const interTight = Inter_Tight({ subsets: ["latin"], variable: "--fonte-inter-tight", display: "swap" });
+const sora = Sora({ subsets: ["latin"], weight: ["700"], variable: "--fonte-sora", display: "swap" });
 
 export const metadata = {
   title: "Monitora — mobilidade e clima no Rio",
@@ -16,13 +16,13 @@ export const metadata = {
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Monitora" },
 };
 export const viewport = {
-  themeColor: [{ media: "(prefers-color-scheme: light)", color: "#F5F5F2" }, { media: "(prefers-color-scheme: dark)", color: "#080A10" }],
+  themeColor: [{ media: "(prefers-color-scheme: light)", color: "#FAF9F6" }, { media: "(prefers-color-scheme: dark)", color: "#080A10" }],
   width: "device-width", initialScale: 1, viewportFit: "cover", interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${inter.variable} ${geist.variable} ${sora.variable}`}>
+    <html lang="pt-BR" className={`${inter.variable} ${interTight.variable} ${sora.variable}`}>
       <body><AppShell>{children}</AppShell></body>
     </html>
   );

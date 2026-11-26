@@ -5,7 +5,7 @@
  * Sem condição → atmosfera neutra (não inventamos tempo). Movimento só em transform/opacity; desligado com prefers-reduced-motion.
  * Regra de composição: nada animado passa sobre o texto — partículas ficam mascaradas fora da zona da temperatura (canto superior esquerdo).
  */
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export type Atmosfera = "clear" | "cloudy" | "rain" | "drizzle" | "storm" | "night" | "neutral";
 type Icone = "sol" | "parcial" | "nublado" | "neblina" | "garoa" | "chuva" | "tempestade" | "neve";
@@ -57,9 +57,26 @@ function NightAtmosphere() {
   );
 }
 
+/** Pausa as animações quando o céu sai da tela ou a aba fica oculta (economia de bateria). */
+function usePausa() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visivel, setVisivel] = useState(true);
+  const [aba, setAba] = useState(true);
+  useEffect(() => {
+    const el = ref.current;
+    const io = el && "IntersectionObserver" in window ? new IntersectionObserver(([e]) => setVisivel(e.isIntersecting)) : null;
+    if (el && io) io.observe(el);
+    const vis = () => setAba(!document.hidden);
+    document.addEventListener("visibilitychange", vis);
+    return () => { io?.disconnect(); document.removeEventListener("visibilitychange", vis); };
+  }, []);
+  return [ref, !(visivel && aba)] as const;
+}
+
 export default function WeatherAtmosphere({ tipo }: { tipo: Atmosfera }) {
+  const [ref, pausa] = usePausa();
   return (
-    <div className={`atm atm-${tipo}`} aria-hidden key={tipo}>
+    <div ref={ref} className={`atm atm-${tipo}${pausa ? " pausa" : ""}`} aria-hidden key={tipo}>
       {tipo === "clear" && <ClearAtmosphere />}
       {tipo === "cloudy" && <CloudyAtmosphere />}
       {tipo === "rain" && <RainAtmosphere />}

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Abertura: o olho piscando</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@600;700&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#3047C7}a:hover{color:#0E1014}
+/* Abertura: 0–0,5 s o olho abre; 0,9 s pisca (fecha e abre); 1,3 s o nome entra. Só transform e opacidade.
+   No preview repete a cada 4 s; no app toca uma vez. Com "reduzir movimento": olho aberto, sem piscar. */
+.olho .cima{transform-origin:60px 62px;transform-box:view-box;animation:cima 4s cubic-bezier(.65,0,.35,1) infinite}
+.olho .baixo{transform-origin:60px 66px;transform-box:view-box;animation:baixo 4s cubic-bezier(.65,0,.35,1) infinite}
+.olho .pupila{transform-origin:60px 64px;transform-box:view-box;animation:pupila 4s cubic-bezier(.65,0,.35,1) infinite}
+.nome{animation:nome 4s cubic-bezier(.2,.8,.2,1) infinite}
+@keyframes cima{0%{transform:scaleY(.06)}12%{transform:scaleY(1)}22%{transform:scaleY(1)}26%{transform:scaleY(.06)}31%{transform:scaleY(1)}100%{transform:scaleY(1)}}
+@keyframes baixo{0%{transform:scaleY(.06)}12%{transform:scaleY(1)}22%{transform:scaleY(1)}26%{transform:scaleY(.06)}31%{transform:scaleY(1)}100%{transform:scaleY(1)}}
+@keyframes pupila{0%{transform:scale(0);opacity:0}10%{transform:scale(0);opacity:0}16%{transform:scale(1.08);opacity:1}19%{transform:scale(1)}22%{transform:scale(1)}26%{transform:scale(.2)}31%{transform:scale(1)}100%{transform:scale(1);opacity:1}}
+@keyframes nome{0%,30%{opacity:0;transform:translateY(10px)}40%,100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.olho .cima,.olho .baixo,.olho .pupila,.nome{animation:none}}
+</style>
+</helmet>
+<div style="width: 1400px; height: 980px; box-sizing: border-box; padding: 48px 56px; background: #FAF8F4; color: #0E1014; font-family: Inter, sans-serif; display: flex; gap: 56px">
+<div style="width: 360px; flex: none; display: flex; flex-direction: column; gap: 16px">
+<span style="font: 600 13px Inter, sans-serif; color: #565B66">Abertura do app · símbolo C, Pálpebra</span>
+<span style="font: 700 34px/1.1 'Familjen Grotesk', sans-serif; letter-spacing: -0.02em">O olho abre, pisca uma vez e o nome entra</span>
+<p style="margin: 0; font: 400 15px/1.5 Inter, sans-serif; color: #3E434D">As pálpebras se fecham em direção ao centro (o arco desce, o meio-disco sobe) e a pupila encolhe junto. Total de 1,6 s, só com transform e opacidade.</p>
+<div style="display: flex; flex-direction: column; gap: 8px; font: 400 14px/1.45 Inter, sans-serif; color: #3E434D">
+<span><b style="color: #0E1014">0 a 0,5 s</b> · o olho abre e a pupila surge</span>
+<span><b style="color: #0E1014">0,9 a 1,25 s</b> · uma piscada</span>
+<span><b style="color: #0E1014">1,2 a 1,6 s</b> · “Monitora” sobe e aparece</span>
+<span><b style="color: #0E1014">Reduzir movimento</b> · olho já aberto, sem piscar</span>
+</div>
+<p style="margin: 0; font: 400 13px/1.45 Inter, sans-serif; color: #565B66">Aqui a animação repete a cada 4 s para você ver. No app ela toca uma vez, só na abertura, e nunca segura o carregamento: se os dados chegarem antes, a tela segue.</p>
+</div>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 28px">
+<div style="display: flex; gap: 28px; align-items: flex-start">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span style="font: 600 13px Inter, sans-serif; color: #565B66">No celular, tela de abertura</span>
+<div style="width: 300px; height: 620px; border-radius: 40px; border: 8px solid #1A1B1F; box-sizing: border-box; background: #3047C7; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px">
+<svg class="olho" width="150" height="150" viewBox="0 0 120 120" aria-hidden="true" style="isolation: isolate">
+<path class="cima" d="M14 62 A46 46 0 0 1 106 62 L90 62 A30 30 0 0 0 30 62 Z" fill="#FFFFFF"/>
+<path class="baixo" d="M30 66 A30 30 0 0 0 90 66 Z" fill="#C7C8F5"/>
+<circle class="pupila" cx="60" cy="64" r="15" fill="#0E1014" style="mix-blend-mode: multiply"/>
+</svg>
+<span class="nome" style="font: 700 34px 'Familjen Grotesk', sans-serif; letter-spacing: -0.03em; color: #FFFFFF">Monitora</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span style="font: 600 13px Inter, sans-serif; color: #565B66">No papel</span>
+<div style="width: 420px; height: 300px; border-radius: 24px; background: #FFFFFF; border: 1px solid #E7E2D9; display: flex; align-items: center; justify-content: center; gap: 14px">
+<svg class="olho" width="96" height="96" viewBox="0 0 120 120" aria-hidden="true" style="isolation: isolate">
+<path class="cima" d="M14 62 A46 46 0 0 1 106 62 L90 62 A30 30 0 0 0 30 62 Z" fill="#C7C8F5"/>
+<path class="baixo" d="M30 66 A30 30 0 0 0 90 66 Z" fill="#3047C7"/>
+<circle class="pupila" cx="60" cy="64" r="15" fill="#0E1014" style="mix-blend-mode: multiply"/>
+</svg>
+<span class="nome" style="font: 700 44px 'Familjen Grotesk', sans-serif; letter-spacing: -0.03em">Monitora</span>
+</div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span style="font: 600 13px Inter, sans-serif; color: #565B66">Quadros-chave</span>
+<div style="display: flex; gap: 18px">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><svg width="96" height="96" viewBox="0 0 120 120" aria-hidden="true"><rect width="120" height="120" rx="27" fill="#3047C7"/><g transform="translate(0 58.3) scale(1 .06)"><path d="M14 62 A46 46 0 0 1 106 62 L90 62 A30 30 0 0 0 30 62 Z" fill="#FFFFFF"/></g><g transform="translate(0 62) scale(1 .06)"><path d="M30 66 A30 30 0 0 0 90 66 Z" fill="#C7C8F5"/></g></svg><span style="font: 500 12.5px Inter, sans-serif; color: #565B66">Fechado</span></div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><svg width="96" height="96" viewBox="0 0 120 120" aria-hidden="true"><rect width="120" height="120" rx="27" fill="#3047C7"/><g transform="translate(0 31) scale(1 .5)"><path d="M14 62 A46 46 0 0 1 106 62 L90 62 A30 30 0 0 0 30 62 Z" fill="#FFFFFF"/></g><g transform="translate(0 33) scale(1 .5)"><path d="M30 66 A30 30 0 0 0 90 66 Z" fill="#C7C8F5"/></g><circle cx="60" cy="64" r="8" fill="#0E1014"/></svg><span style="font: 500 12.5px Inter, sans-serif; color: #565B66">Meio</span></div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><svg width="96" height="96" viewBox="0 0 120 120" aria-hidden="true" style="isolation: isolate"><rect width="120" height="120" rx="27" fill="#3047C7"/><path d="M14 62 A46 46 0 0 1 106 62 L90 62 A30 30 0 0 0 30 62 Z" fill="#FFFFFF"/><path d="M30 66 A30 30 0 0 0 90 66 Z" fill="#C7C8F5"/><circle cx="60" cy="64" r="15" fill="#0E1014" style="mix-blend-mode: multiply"/></svg><span style="font: 500 12.5px Inter, sans-serif; color: #565B66">Aberto</span></div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><svg width="96" height="96" viewBox="0 0 120 120" aria-hidden="true" style="isolation: isolate"><rect width="120" height="120" rx="27" fill="#3047C7"/><path d="M8 60 A52 52 0 0 1 112 60 L92 60 A32 32 0 0 0 28 60 Z" fill="#FFFFFF"/><path d="M28 68 A32 32 0 0 0 92 68 Z" fill="#C7C8F5"/><circle cx="60" cy="66" r="16" fill="#0E1014" style="mix-blend-mode: multiply"/></svg><span style="font: 500 12.5px Inter, sans-serif; color: #565B66">Ícone pequeno: fresta maior</span></div>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1400,"height":980}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

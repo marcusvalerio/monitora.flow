@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { Orbita } from "../ui/Geometria";
+import { OlhoCarregando } from "../ui/Geometria";
 import { Star, TriangleAlert, Search, LocateFixed, TrainFront, Warehouse, BusFront, MapPin, X, Clock, CloudRain, Gauge, ChevronRight, Info, Navigation } from "lucide-react";
 import BottomSheet from "./BottomSheet";
 import { PAINEL_LATERAL, PAISAGEM } from "../ui/telas";
@@ -16,7 +16,7 @@ import estacoesJson from "../../src/data/estacoes-brt.json";
 
 const ESTACOES = estacoesJson.estacoes;
 
-const TransitMap = dynamic(() => import("./TransitMap"), { ssr: false, loading: () => <div className="map-carregando"><Orbita rotulo="Carregando o mapa" /></div> });
+const TransitMap = dynamic(() => import("./TransitMap"), { ssr: false, loading: () => <div className="map-carregando"><OlhoCarregando rotulo="Carregando o mapa" /></div> });
 
 const K_PONTO = "monitora:mob:ponto", K_LINHA = "monitora:mob:linha", K_RECENTES = "monitora:mob:recentes", K_SENTIDO = "monitora:mob:sentido";
 
@@ -299,7 +299,8 @@ export default function MobilidadeApp() {
           ) : <div className="t-title" aria-live="polite">Sem estimativa agora</div>}
           <div className="t-head" style={{ marginTop: 4 }}>{esperaDest != null && viagem?.escolhida ? `Chega em ${viagem.escolhida.nome} às ${horaChegada(esperaDest + viagem.escolhida.min)}`
             : prox ? `Chega em ${ponto.nome}${sentidoValido ? ` → ${sentidoValido}` : ""}` : saida ? textoSaida(saida, ponto.nome) : `Nenhum veículo ${sentidoValido ? "neste sentido" : "da linha"} se aproximando de ${ponto.nome}`}</div>
-          {saiaEm != null && <div className={`saia${saiaEm <= 1 ? " ja" : ""}`}>{alcancavel?.proximo ? "Não dá tempo para este. " : ""}{saiaEm <= 1 ? "Saia agora" : `Saia em ${eta(saiaEm)} min`}{alcancavel?.proximo ? ` para pegar o de ${eta(alcancavel.espera)} min` : ""} · {eta(caminhadaMin!)} min a pé</div>}
+          {prox && <div className="t-meta eta-fonte">Estimativa {METODO_TEXTO[prox.metodo] ?? "experimental"}{prox.idadeGpsMin != null ? ` · GPS há ${prox.idadeGpsMin < 1 ? "menos de 1 min" : `${Math.round(prox.idadeGpsMin)} min`}` : ""} · pode variar ±{Math.max(1, Math.round(prox.etaMin * 0.25))} min</div>}
+          {saiaEm != null && <div key={saiaEm <= 1 ? "ja" : "depois"} className={`saia${saiaEm <= 1 ? " ja pulso-uma" : ""}`}>{alcancavel?.proximo ? "Não dá tempo para este. " : ""}{saiaEm <= 1 ? "Saia agora" : `Saia em ${eta(saiaEm)} min`}{alcancavel?.proximo ? ` para pegar o de ${eta(alcancavel.espera)} min` : ""} · {eta(caminhadaMin!)} min a pé</div>}
         </div>
         <div className="cab-dir">
           <button className={`fav${ehFavorito ? " on" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={alternarFavorito} aria-pressed={ehFavorito} aria-label={ehFavorito ? "Remover dos favoritos" : "Salvar trajeto nos favoritos"}><Star aria-hidden /></button>
@@ -589,7 +590,7 @@ function VeiculoCard({ v, ponto, chegada, falta, seguindo, onSeguir, onFechar }:
       </div>
       {falta && (
         <div className="viagem" aria-label={`Faltam ${dec1(falta.km)} km até ${falta.destino}`}>
-          <div className="viagem-barra" aria-hidden><i style={{ width: `${Math.round(falta.pct * 100)}%` }} /><b style={{ left: `${Math.round(falta.pct * 100)}%` }} /></div>
+          <div className="viagem-barra" aria-hidden><i style={{ transform: `scaleX(${falta.pct.toFixed(3)})` }} /><span style={{ transform: `translateX(${Math.round(falta.pct * 100)}%)` }}><b /></span></div>
           <div className="t-cap">Faltam <b className="num">{dec1(falta.km)} km</b> até {falta.destino} · {Math.round(falta.pct * 100)}% do trajeto</div>
           {(falta.etaGpsMin != null || falta.etaProgMin != null) && (
             <div className="t-cap">Chegada ao terminal: {[
@@ -866,8 +867,23 @@ function Destino({ v, valor, onChange, espera }: { v: Viagem; valor: string | nu
 }
 
 /** Chegadas na estação: pelo trajeto oficial (preferido) + linha reta (/chegada) para quem ficar de fora; ordenadas. */
+/** GPS mais velho que isso não vira estimativa (mostrar como "agora" seria mentir). */
+const ETA_GPS_MAX_MIN = 5;
+/** Acima disso a estimativa é ruído; mostramos "sem estimativa". */
+const ETA_MAX_MIN = 60;
+const idadeMin = (em: string | number | null | undefined) => { const t = em == null ? NaN : typeof em === "number" ? em : Date.parse(em); return Number.isFinite(t) ? Math.max(0, (Date.now() - t) / 60000) : null; };
+/** Desconta o tempo desde a leitura do GPS e descarta o que estiver velho ou longe demais. */
+function corrigirIdade(c: J, jaDescontado = false): J | null {
+  const idade = idadeMin(c.ultimaLeitura);
+  if (idade != null && idade > ETA_GPS_MAX_MIN) return null;
+  const etaMin = jaDescontado || idade == null ? c.etaMin : Math.max(0, c.etaMin - idade);
+  if (etaMin == null || etaMin > ETA_MAX_MIN) return null;
+  return { ...c, etaMin, idadeGpsMin: idade };
+}
+export const METODO_TEXTO: Record<string, string> = { paradas: "pela viagem oficial", trajeto: "pelo ritmo programado", "linha-reta": "em linha reta (aproximado)" };
+
 function mesclarChegadas(ponto: Ponto | null, frota: J[], trajetos: Trajeto[] | null | undefined, linhaReta: J[]): J[] {
-  if (!ponto) return linhaReta;
+  if (!ponto) return linhaReta.map((c) => corrigirIdade({ ...c, metodo: "linha-reta" }, true)).filter(Boolean) as J[];
   const porId = new Map<string, J>(), avaliados = new Set<string>();
   for (const v of frota) {
     if (v.routeState !== "ON_ROUTE" && v.routeState !== "UNCERTAIN") continue;
@@ -885,5 +901,5 @@ function mesclarChegadas(ponto: Ponto | null, frota: J[], trajetos: Trajeto[] | 
     porId.set(v.id, { fonte: v.fonte, veiculo: v.veiculo, etaMin: ((est.s - eu.s) / total) * t.duracaoProgramadaS / 60, ultimaLeitura: v.em, distanciaM: Math.round(est.s - eu.s), metodo: "trajeto" });
   }
   for (const c of linhaReta) { const id = `${c.fonte}:${c.veiculo}`; if (!porId.has(id) && !avaliados.has(id)) porId.set(id, { ...c, metodo: "linha-reta" }); }
-  return [...porId.values()].filter((c) => c.etaMin != null).sort((a, b) => a.etaMin - b.etaMin);
+  return [...porId.values()].map((c) => corrigirIdade(c, c.metodo === "linha-reta")).filter((c): c is J => c != null).sort((a, b) => a.etaMin - b.etaMin);
 }

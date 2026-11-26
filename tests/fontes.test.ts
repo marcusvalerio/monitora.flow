@@ -60,3 +60,15 @@ it("urlSppo usa UTC no formato esperado pelo servidor", () => {
     "https://dados.mobilidade.rio/gps/sppo?dataInicial=2026-10-02+03:00:00&dataFinal=2026-10-02+03:03:00",
   );
 });
+
+import { intensidadeChuva } from "../src/lib/chuva";
+describe("intensidadeChuva (escala Alerta Rio, 1 h)", () => {
+  it("classifica pelos limiares", () => {
+    expect(intensidadeChuva(null)).toBeNull();
+    expect(intensidadeChuva(0)).toBe("sem chuva");
+    expect(intensidadeChuva(3)).toBe("fraca");
+    expect(intensidadeChuva(10)).toBe("moderada");
+    expect(intensidadeChuva(30)).toBe("forte");
+    expect(intensidadeChuva(60)).toBe("muito forte");
+  });
+});

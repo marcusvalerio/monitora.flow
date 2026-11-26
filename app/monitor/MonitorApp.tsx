@@ -1,14 +1,14 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { Orbita } from "../ui/Geometria";
+import { OlhoCarregando } from "../ui/Geometria";
 import { CloudRain } from "lucide-react";
 import { ErrorState, LastUpdated, Skel } from "../ui/estados";
 import { J, dec, get } from "../ui/util";
 import type { PontoFrota } from "./MonitorMap";
 import { COR_ESTADO } from "./MonitorMap";
 
-const MonitorMap = dynamic(() => import("./MonitorMap"), { ssr: false, loading: () => <div className="map-carregando"><Orbita rotulo="Carregando o mapa" /></div> });
+const MonitorMap = dynamic(() => import("./MonitorMap"), { ssr: false, loading: () => <div className="map-carregando"><OlhoCarregando rotulo="Carregando o mapa" /></div> });
 
 const n = (v: number | null | undefined) => (v == null ? "—" : v.toLocaleString("pt-BR"));
 const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : null);

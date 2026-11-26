@@ -1,4 +1,5 @@
 "use client";
+import { useEffect } from "react";
 import { CloudOff, SearchX, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudLightning, Snowflake, Moon, CloudMoon } from "lucide-react";
 import { Arcos } from "./Geometria";
 import { ha } from "./util";
@@ -26,10 +27,12 @@ export function Skel({ h = 16, w = "100%", r }: { h?: number; w?: number | strin
 
 export function LastUpdated({ em, fonte, velhoS = 90 }: { em?: string | number | Date | null; fonte?: string; velhoS?: number }) {
   const idade = em ? (Date.now() - new Date(em).getTime()) / 1000 : Infinity;
+  const chave = em ? String(new Date(em).getTime()) : "";
+  // dado novo de verdade → o olho do canto pisca uma vez (AppShell). Nunca sem dado novo.
+  useEffect(() => { if (chave) window.dispatchEvent(new Event("monitora:dado")); }, [chave]);
   return (
     <span className="t-meta row" style={{ gap: 6, display: "inline-flex" }} aria-live="polite">
-      {/* key = instante do dado: a cada atualização real o ponto "pulsa" uma vez (nunca sem dado novo) */}
-      <span key={em ? String(em) : "x"} className={`live-dot${idade > velhoS ? " stale" : " pulso"}`} aria-hidden />
+      <span className={`live-dot${idade > velhoS ? " stale" : ""}`} aria-hidden />
       {em ? `Atualizado ${ha(em)}` : "Atualizando…"}{fonte ? ` · ${fonte}` : ""}
     </span>
   );

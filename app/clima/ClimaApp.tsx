@@ -17,7 +17,8 @@ export default function ClimaApp() {
   const [local, setLocal] = useState<Local | null | undefined>(undefined); // undefined = lendo armazenamento
   const [escolhendo, setEscolhendo] = useState(false);
 
-  useEffect(() => { setLocal(ler<Local | null>(CHAVE_LOCAL, null)); }, []);
+  // Sem local salvo, abre já com o Centro do Rio (mesma regra do Agora); "Trocar" escolhe outro.
+  useEffect(() => { setLocal(ler<Local | null>(CHAVE_LOCAL, null) ?? { id: "centro", nome: "Centro do Rio", lat: -22.9068, lng: -43.1729 }); }, []);
 
   const escolher = (l: Local) => {
     setLocal(l); gravar(CHAVE_LOCAL, l);
