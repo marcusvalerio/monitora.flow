@@ -1,12 +1,12 @@
 "use client";
 /**
  * Atenção: cara de boletim (docs/REFORMULACAO.md). Estágio da cidade, chuva medida por região, ocorrências abertas
- * (alagamentos primeiro) e calor — cada linha com número grande, fonte e horário ao lado. Só fontes oficiais; nada inventado.
+ * (alagamentos por rua, interdições, outras) e calor — cada linha com número grande, fonte e horário ao lado. Só fontes oficiais; nada inventado.
  * Movimento: item novo entra com fundo destacado que some em 2 s; estágio ≥ 3 pisca uma vez. Nada em loop.
  */
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { BellOff } from "lucide-react";
+import { Volume2, VolumeX } from "lucide-react";
+import AvisarChuva from "./AvisarChuva";
 import { ErrorState, Skel } from "../ui/estados";
 import { J, get, horaLocal, ler } from "../ui/util";
 import { intensidadeChuva } from "../../src/lib/chuva";
@@ -15,7 +15,22 @@ const LOCAL_PADRAO = { nome: "Centro", lat: -22.9068, lng: -43.1729 };
 const K_VISTOS = "monitora:atencao:vistos";
 const hora = (s?: string | null) => (s ? horaLocal(s).slice(0, 5) : null);
 const mm = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-const ALAGA = /alag|bols[aã]o|enchente|inunda/i;
+const K_VOZ = "monitora:atencao:voz";
+const GRUPOS = [
+  { cat: "alagamento", rot: "Alagamentos", vazio: "Nenhum alagamento aberto" },
+  { cat: "interdicao", rot: "Interdições", vazio: "Nenhuma interdição aberta" },
+  { cat: "outra", rot: "Outras ocorrências", vazio: null },
+] as const;
+const km = (m: number) => `${(m / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km`;
+
+/** Alerta em áudio (opcional, desligado por padrão): lê em voz alta o que é novo. Usa a voz do próprio aparelho. */
+function falar(texto: string) {
+  try {
+    if (!("speechSynthesis" in window) || !texto) return;
+    const u = new SpeechSynthesisUtterance(texto); u.lang = "pt-BR"; u.rate = 1.02;
+    window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
+  } catch {}
+}
 
 /** Ids já vistos nesta sessão: o que não estava lá antes ganha o destaque de "novo" uma vez. */
 function useNovos(ids: string[] | null) {
@@ -50,8 +65,26 @@ export default function AtencaoApp() {
     return () => clearInterval(t);
   }, [carregar]);
 
-  const ocorrs: J[] = Array.isArray(d?.ocorr?.observado) ? [...d!.ocorr.observado].sort((a: J, b: J) => Number(ALAGA.test(b.titulo + b.tipo)) - Number(ALAGA.test(a.titulo + a.tipo))) : [];
+  const ocorrs: J[] = Array.isArray(d?.ocorr?.observado) ? d!.ocorr.observado : [];
   const novos = useNovos(d ? ocorrs.map((o) => String(o.id)) : null);
+  const [voz, setVoz] = useState(false);
+  const temVoz = typeof window !== "undefined" && "speechSynthesis" in window;
+  useEffect(() => { setVoz(ler<boolean>(K_VOZ, false)); }, []);
+  const resumoFalado = useCallback((so?: Set<string>) => {
+    if (!d) return "";
+    const partes: string[] = [];
+    const e = d.cidade?.observado?.estagio;
+    if (e && (!so || e.nivel >= 3)) partes.push(`Cidade em estágio ${e.nivel} de 5.`);
+    for (const o of ocorrs) if (o.categoria !== "outra" && (!so || so.has(String(o.id)))) partes.push(`${o.categoria === "alagamento" ? "Alagamento" : "Interdição"}${o.rua ? ` na ${o.rua}` : ""}${o.bairro ? `, ${o.bairro}` : ""}.`);
+    return partes.slice(0, 6).join(" ");
+  }, [d]); // eslint-disable-line react-hooks/exhaustive-deps
+  // lê só o que chegou de novo (nunca repete o que já foi lido)
+  useEffect(() => { if (voz && novos.size) falar(resumoFalado(novos)); }, [novos]); // eslint-disable-line react-hooks/exhaustive-deps
+  const alternarVoz = () => {
+    const v = !voz; setVoz(v);
+    try { localStorage.setItem(K_VOZ, JSON.stringify(v)); } catch {}
+    if (v) falar(resumoFalado() || "Leitura de alertas ligada. Nada de alagamento ou interdição agora."); else window.speechSynthesis?.cancel();
+  };
 
   return (
     <main className="page atencao">
@@ -63,25 +96,36 @@ export default function AtencaoApp() {
         <div className="boletim cascata">
           <Estagio c={d.cidade} />
           <Chuva ch={d.chuva} />
-          <section className="bl" aria-labelledby="bl-oc">
-            <h2 className="bl-rot" id="bl-oc">Ocorrências abertas · até 30 km de {local?.nome ?? "você"}</h2>
-            {d.ocorr?.erro || d.ocorr?.disponivel === false ? <p className="bl-nota">A API de ocorrências do COR não respondeu agora. Nada é mostrado no lugar.</p>
-              : ocorrs.length === 0 ? <p className="bl-val bl-ok">Nenhuma ocorrência aberta</p> : (
-                <ul className="bl-lista">
-                  {ocorrs.slice(0, 8).map((o) => (
-                    <li key={o.id} className={novos.has(String(o.id)) ? "novo" : undefined}>
-                      <b className={ALAGA.test(o.titulo + o.tipo) ? "bl-alerta" : undefined}>{o.titulo}</b>
-                      <span className="bl-fonte">{[o.bairro, o.distanciaM != null ? `${(o.distanciaM / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km` : null, "COR", hora(o.inicio)].filter(Boolean).join(" · ")}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-          </section>
+          {d.ocorr?.erro || d.ocorr?.disponivel === false ? (
+            <section className="bl"><h2 className="bl-rot">Alagamentos e interdições</h2><p className="bl-nota">A API de ocorrências do COR não respondeu agora. Nada é mostrado no lugar.</p></section>
+          ) : GRUPOS.map((g) => {
+            const lista = ocorrs.filter((o) => (o.categoria ?? "outra") === g.cat);
+            if (!lista.length && !g.vazio) return null;
+            return (
+              <section key={g.cat} className="bl" aria-labelledby={`bl-${g.cat}`}>
+                <h2 className="bl-rot" id={`bl-${g.cat}`}>{g.rot} · até 30 km de {local?.nome ?? "você"}</h2>
+                {!lista.length ? <p className="bl-val bl-ok">{g.vazio}</p> : (
+                  <ul className="bl-lista">
+                    {lista.slice(0, 8).map((o) => (
+                      <li key={o.id} className={novos.has(String(o.id)) ? "novo" : undefined}>
+                        <b className={g.cat !== "outra" ? "bl-alerta" : undefined}>{o.rua ?? o.titulo}</b>
+                        {o.rua && <span className="bl-txt-c">{o.titulo}</span>}
+                        <span className="bl-fonte">{[o.bairro, o.distanciaM != null ? km(o.distanciaM) : null, "COR", hora(o.inicio)].filter(Boolean).join(" · ")}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            );
+          })}
           <Calor c={d.cidade} />
-          <div className="bl-acao">
-            <button type="button" className="btn btn-primary" disabled aria-describedby="bl-push"><BellOff aria-hidden /> Avisar quando chover forte aqui</button>
-            <p className="bl-nota" id="bl-push">Ainda não disponível. Hoje o app avisa só a chegada do ônibus, na aba <Link href="/mobilidade">Trajeto</Link>.</p>
-          </div>
+          {local && <AvisarChuva local={local as { nome: string; lat: number; lng: number }} />}
+          {temVoz && (
+            <button type="button" className="bl-voz" aria-pressed={voz} onClick={alternarVoz}>
+              {voz ? <Volume2 aria-hidden /> : <VolumeX aria-hidden />}
+              <span><b>Ler alertas em voz alta</b><small>{voz ? "Ligado: lê alagamentos, interdições e estágio 3 ou mais quando aparecem." : "Desligado. Usa a voz do próprio aparelho."}</small></span>
+            </button>
+          )}
         </div>
       )}
     </main>

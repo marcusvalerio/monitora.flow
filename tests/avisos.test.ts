@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mensagem, proximaEtapa } from "../src/lib/avisos";
+import { arredondar, chuvaForteAqui, mensagemChuva } from "../src/lib/avisosChuva";
 
 describe("avisos de chegada", () => {
   it("avança por etapas e nunca volta", () => {
@@ -12,5 +13,24 @@ describe("avisos de chegada", () => {
   it("mensagens sem til", () => {
     expect(mensagem(1, "371", "Tijuca", 12.4).body).toBe("Chega em 12 min em Tijuca (estimativa). Avisamos quando estiver perto.");
     expect(mensagem(3, "371", "Tijuca", 1).title).toBe("371 chegando em Tijuca");
+  });
+});
+
+describe("aviso de chuva forte", () => {
+  const est = (id: string, lat: number, lng: number, h01: number, m15 = 0) => ({ id, nome: id, bacia: null, lat, lng, medidoEm: null, mm: { m05: null, m10: null, m15, h01, h04: null, h24: null, h96: null, mes: null } });
+  it("dispara com > 25 mm/h a até 5 km e escolhe o mais forte", () => {
+    const es = [est("Tijuca", -22.925, -43.232, 30), est("Grajaú", -22.92, -43.26, 40), est("Longe", -23.0, -43.5, 90)];
+    expect(chuvaForteAqui(es, -22.924, -43.235)?.estacao).toBe("Grajaú");
+  });
+  it("usa o ritmo dos últimos 15 min (m15 × 4)", () => {
+    expect(chuvaForteAqui([est("Tijuca", -22.925, -43.232, 3, 8)], -22.924, -43.235)?.mmH).toBe(32);
+  });
+  it("não dispara com chuva moderada nem com pluviômetro longe", () => {
+    expect(chuvaForteAqui([est("Tijuca", -22.925, -43.232, 25)], -22.924, -43.235)).toBeNull();
+    expect(chuvaForteAqui([est("Longe", -23.0, -43.5, 90)], -22.924, -43.235)).toBeNull();
+  });
+  it("guarda o ponto arredondado e escreve a mensagem", () => {
+    expect(arredondar(-22.92437)).toBe(-22.92);
+    expect(mensagemChuva("Tijuca", { estacao: "Grajaú", mmH: 32.4 }).title).toBe("Chuva forte perto de Tijuca");
   });
 });

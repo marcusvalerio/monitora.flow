@@ -3,6 +3,8 @@
  * O site não consegue usar a Ilha Dinâmica nem Live Activities (exclusivos de app nativo); o mais perto é
  * uma notificação na tela bloqueada que é SUBSTITUÍDA a cada etapa (mesma `tag`), em vez de empilhar.
  *
+ * Expira em 90 min; ao expirar ou encerrar, a linha é apagada. Sem IP nem conta: só a assinatura de push.
+ *
  * Etapas (ESCOLHA DO SISTEMA, poucas para não incomodar):
  *   1 "acompanhando" — logo ao ativar, com a estimativa atual
  *   2 "faltam ≤ 5 min" — com som
@@ -63,16 +65,22 @@ export function mensagem(etapa: number, linha: string, ponto: string, etaMin: nu
 
 type Aviso = { id: string; assinatura: webpush.PushSubscription; linha: string; lat: number; lng: number; ponto_nome: string; sentido: string | null; etapa: number; ultimo_eta: number | null };
 
-export async function enviar(a: Pick<Aviso, "id" | "assinatura" | "linha">, m: { title: string; body: string; urgente: boolean }) {
+/** Envia um push. Devolve "ok", "cancelada" (404/410: a assinatura não existe mais) ou "falhou". */
+export async function enviarPush(assinatura: webpush.PushSubscription, m: { title: string; body: string; urgente: boolean; tag: string; url: string }) {
   iniciarPush();
   try {
-    await webpush.sendNotification(a.assinatura, JSON.stringify({ ...m, tag: `onibus-${a.id}`, url: "/mobilidade" }), { TTL: 120, urgency: m.urgente ? "high" : "normal" });
-    return true;
+    await webpush.sendNotification(assinatura, JSON.stringify(m), { TTL: 120, urgency: m.urgente ? "high" : "normal" });
+    return "ok" as const;
   } catch (e) {
     const s = (e as { statusCode?: number }).statusCode;
-    if (s === 404 || s === 410) await sql()`update avisos set ativo = false where id = ${a.id}`; // assinatura cancelada
-    return false;
+    return s === 404 || s === 410 ? "cancelada" as const : "falhou" as const;
   }
+}
+
+export async function enviar(a: Pick<Aviso, "id" | "assinatura" | "linha">, m: { title: string; body: string; urgente: boolean }) {
+  const r = await enviarPush(a.assinatura, { ...m, tag: `onibus-${a.id}`, url: "/mobilidade" });
+  if (r === "cancelada") await sql()`update avisos set ativo = false where id = ${a.id}`;
+  return r === "ok";
 }
 
 async function etaDaLinha(linha: string, lat: number, lng: number, sentido: string | null, cacheLinha: Map<string, Leitura[]>): Promise<number | null> {
@@ -94,8 +102,8 @@ async function etaDaLinha(linha: string, lat: number, lng: number, sentido: stri
 export async function rodada(): Promise<number> {
   await garantirTabelas();
   const db = sql();
-  await db`update avisos set ativo = false where ativo and expira_em < now()`;
-  await db`delete from avisos where not ativo and criado_em < now() - interval '1 day'`;
+  // dado mínimo: aviso expirado ou encerrado é APAGADO (não fica guardado)
+  await db`delete from avisos where not ativo or expira_em < now()`;
   const ativos = await db<Aviso[]>`select id, assinatura, linha, lat, lng, ponto_nome, sentido, etapa, ultimo_eta from avisos where ativo`;
   const cache = new Map<string, Leitura[]>();
   for (const a of ativos) {

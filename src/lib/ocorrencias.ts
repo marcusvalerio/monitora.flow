@@ -7,7 +7,16 @@ import { distanciaM } from "./geo";
 
 export const URL_COR = "https://api.dados.rio/v2/adm_cor_comando/ocorrencias_abertas/";
 
-export interface Ocorrencia { id: string; titulo: string; tipo: string | null; gravidade: string | null; bairro: string | null; lat: number; lng: number; inicio: string | null; distanciaM?: number }
+export type Categoria = "alagamento" | "interdicao" | "outra";
+export interface Ocorrencia { id: string; titulo: string; tipo: string | null; gravidade: string | null; bairro: string | null; rua: string | null; categoria: Categoria; lat: number; lng: number; inicio: string | null; distanciaM?: number }
+
+const RE_ALAGA = /alaga|bols[aã]o|enchente|inunda|transbord/i;
+const RE_INTERDITA = /interdi|bloquei|fechad|obstru|queda de [aá]rvore|deslizamento|desabamento/i;
+/** Categoria pelo título/tipo/descrição (os nomes do COR variam). Alagamento vence interdição quando os dois aparecem. */
+export function categoria(...textos: (string | null | undefined)[]): Categoria {
+  const t = textos.filter(Boolean).join(" ");
+  return RE_ALAGA.test(t) ? "alagamento" : RE_INTERDITA.test(t) ? "interdicao" : "outra";
+}
 
 const num = (v: unknown) => { const x = typeof v === "string" ? Number(v.replace(",", ".")) : v; return typeof x === "number" && Number.isFinite(x) ? x : null; };
 const txt = (...v: unknown[]) => { for (const x of v) if (typeof x === "string" && x.trim()) return x.trim(); return null; };
@@ -18,10 +27,13 @@ export function parseOcorrencias(j: unknown): Ocorrencia[] {
   for (const o of lista as Record<string, unknown>[]) {
     const lat = num(o.latitude ?? o.lat), lng = num(o.longitude ?? o.lng ?? o.lon);
     if (lat == null || lng == null) continue; // sem local não dá para filtrar por distância
+    const titulo = txt(o.titulo, o.pop_titulo, o.descricao, o.tipo) ?? "Ocorrência";
+    const tipo = txt(o.tipo, o.pop_titulo);
     out.push({
       id: String(o.id_evento ?? o.id ?? `${lat},${lng},${o.data_inicio ?? ""}`),
-      titulo: txt(o.titulo, o.pop_titulo, o.descricao, o.tipo) ?? "Ocorrência",
-      tipo: txt(o.tipo, o.pop_titulo), gravidade: txt(o.gravidade, o.prioridade), bairro: txt(o.bairro),
+      titulo, tipo, gravidade: txt(o.gravidade, o.prioridade), bairro: txt(o.bairro),
+      rua: txt(o.logradouro, o.endereco, o.rua, o.local, o.via),
+      categoria: categoria(titulo, tipo, txt(o.descricao)),
       lat, lng, inicio: txt(o.data_inicio, o.inicio, o.data),
     });
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ocorrenciasPerto, parseOcorrencias } from "../src/lib/ocorrencias";
+import { categoria, ocorrenciasPerto, parseOcorrencias } from "../src/lib/ocorrencias";
 
 describe("ocorrências do COR", () => {
   const os = parseOcorrencias({ eventos: [
@@ -9,4 +9,14 @@ describe("ocorrências do COR", () => {
   ] });
   it("lê campos variados e ignora sem coordenada", () => { expect(os.map((o) => o.titulo)).toEqual(["Acidente", "Bolsão d'água"]); });
   it("filtra por 10 km", () => { expect(ocorrenciasPerto(os, -22.925, -43.235, 10_000).map((o) => o.id)).toEqual(["1"]); });
+  it("categoriza alagamento e interdição e lê a rua", () => {
+    const [a, b] = parseOcorrencias([
+      { id: 9, titulo: "Bolsão d'água", logradouro: "Rua Mariz e Barros", latitude: -22.91, longitude: -43.21 },
+      { id: 8, pop_titulo: "Via interditada", endereco: "Av. Brasil", latitude: -22.88, longitude: -43.25 },
+    ]);
+    expect([a.categoria, a.rua]).toEqual(["alagamento", "Rua Mariz e Barros"]);
+    expect([b.categoria, b.rua]).toEqual(["interdicao", "Av. Brasil"]);
+    expect(categoria("Acidente de trânsito")).toBe("outra");
+    expect(categoria("Alagamento com interdição")).toBe("alagamento");
+  });
 });

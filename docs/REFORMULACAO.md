@@ -97,3 +97,14 @@ Hoje os números usam Sora (`--font-num`): trocar para Inter Tight e manter o aj
 4. Abertura (`app/ui/Abertura.tsx`, uma vez por sessão; `?sem-abertura` pula), piscada curta no dado novo, água da grade, cascata,
    item novo/estágio ≥ 3 na Atenção, pulso do "Saia agora", salto do ícone da barra.
 Prints (dados reais; ocorrências do COR estavam fora): `docs/reformulacao/prints/`.
+
+## Item 5 aplicado (Atenção completa)
+- **Ocorrências do COR por rua:** `parseOcorrencias` lê `rua` (logradouro/endereço) e `categoria` (alagamento, interdição, outra).
+  A Atenção mostra Alagamentos, Interdições e Outras, com a rua em destaque. A API do COR segue fora; prints com dados de exemplo.
+- **Push de chuva forte** (`/avisos/chuva`, `src/lib/avisosChuva.ts`, tabela `avisos_chuva`): só assinatura de push e ponto
+  arredondado (~1 km); sem IP; expira em 90 min; avisa uma vez e **apaga**. Dispara com > 25 mm/h (última hora ou m15 × 4)
+  em algum dos 3 pluviômetros a até 5 km — **escolha nossa, calibrar**. O vigia (`/avisos/vigiar`) confere ônibus e chuva.
+  Os avisos de ônibus agora também são apagados ao expirar/encerrar (antes ficavam 1 dia).
+- **Alerta em áudio:** interruptor "Ler alertas em voz alta" (desligado por padrão; voz do aparelho) lê alagamentos,
+  interdições e estágio ≥ 3 quando aparecem.
+- Precisa no servidor: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `DATABASE_URL`, `CRON_SECRET` (as mesmas do aviso de ônibus).

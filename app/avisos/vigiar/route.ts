@@ -1,5 +1,6 @@
 import { after } from "next/server";
 import { configurado, pegarVez, rodada, soltarVez } from "../../../src/lib/avisos";
+import { rodadaChuva } from "../../../src/lib/avisosChuva";
 import { erro, ok, tratar } from "../../../src/lib/api";
 import { acordarVigia } from "../route";
 
@@ -10,7 +11,7 @@ const PASSO_MS = 20_000, DURACAO_MS = 270_000;
 const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * POST /avisos/vigiar — confere os avisos ativos a cada 20 s por ~4,5 min. Se ainda houver avisos ativos
+ * POST /avisos/vigiar — confere os avisos ativos (ônibus chegando e chuva forte) a cada 20 s por ~4,5 min. Se ainda houver avisos ativos
  * no fim, chama a si mesmo de novo (encadeado). A coleta do GitHub Actions também chama esta rota a cada
  * 10 min, como rede de segurança caso a corrente se quebre. Responde na hora e trabalha em `after()`,
  * para quem chamou não precisar esperar (nem derrubar o trabalho ao desconectar).
@@ -26,7 +27,11 @@ export function POST(req: Request) {
       let ativos = 0;
       try {
         do {
-          ativos = await rodada().catch((e) => { console.error(e); return 1; });
+          const [onibus, chuva] = await Promise.all([
+            rodada().catch((e) => { console.error(e); return 1; }),
+            rodadaChuva().catch((e) => { console.error(e); return 1; }),
+          ]);
+          ativos = onibus + chuva;
           if (!ativos) break;
           await dormir(PASSO_MS);
         } while (Date.now() < fim);

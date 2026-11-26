@@ -49,7 +49,7 @@ export function DELETE(req: Request) {
     const id = new URL(req.url).searchParams.get("id") ?? "";
     if (!/^[0-9a-f-]{36}$/.test(id)) throw new ErroParametro("id inválido");
     await garantirTabelas();
-    await sql()`update avisos set ativo = false where id = ${id}`;
+    await sql()`delete from avisos where id = ${id}`; // dado mínimo: parou, apaga
     return ok({ id, ativo: false }, null, 0);
   });
 }

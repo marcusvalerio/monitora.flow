@@ -1,7 +1,7 @@
 // Service worker mínimo: guarda a "casca" de cada tela para abrir rápido; dados da API sempre pela rede.
 // Cada página fica na sua própria entrada (antes tudo ia para "/" e, sem rede, /clima abria a Home).
-const CACHE = "monitora-v6";
-const TELAS = ["/", "/clima", "/mobilidade", "/monitor", "/mais"];
+const CACHE = "monitora-v7";
+const TELAS = ["/", "/clima", "/atencao", "/mobilidade", "/monitor", "/mais"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["/icone.svg", "/manifest.webmanifest"]))); self.skipWaiting(); });
 self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k))))); self.clients.claim(); });
 self.addEventListener("fetch", (e) => {
@@ -18,7 +18,7 @@ self.addEventListener("fetch", (e) => {
   }
 });
 
-// Avisos de "ônibus chegando". Mesma `tag` = a notificação anterior é substituída (não empilha).
+// Avisos ("ônibus chegando" e "chuva forte aqui"). Mesma `tag` = a notificação anterior é substituída (não empilha).
 self.addEventListener("push", (e) => {
   let d = {}; try { d = e.data ? e.data.json() : {}; } catch { d = { title: "Monitora", body: e.data ? e.data.text() : "" }; }
   e.waitUntil(self.registration.showNotification(d.title || "Monitora", {
@@ -30,7 +30,8 @@ self.addEventListener("notificationclick", (e) => {
   e.notification.close();
   const url = (e.notification.data && e.notification.data.url) || "/mobilidade";
   e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((cs) => {
-    const c = cs.find((x) => new URL(x.url).pathname.startsWith("/mobilidade"));
+    const alvo = new URL(url, self.location.origin).pathname;
+    const c = cs.find((x) => new URL(x.url).pathname.startsWith(alvo));
     return c ? c.focus() : self.clients.openWindow(url);
   }));
 });
