@@ -10,9 +10,12 @@ export const COR = {
   ultramarine: "#3047C7", periwinkle: "#8997F5", lilac: "#C7C8F5", coral: "#FF7058", seaMist: "#B9D7D6",
 } as const;
 
+/** Variantes para TEXTO com contraste AA (≥4,5:1 sobre Porcelain). As cores de COR_ESTADO são para preenchimento/ícone. */
+export const COR_TEXTO = { alerta: "#B23A27", atencao: "#8A5A12", brando: "#4C5BC9", velho: "#62666F" } as const;
+
 /** Estados do veículo em relação ao trajeto: semântica fixa em todo o produto. */
 export const COR_ESTADO: Record<string, string> = {
-  ON_ROUTE: COR.ultramarine, UNCERTAIN: COR.periwinkle, OFF_ROUTE: COR.coral, STALE: "#A4A8AE", SEM_TRAJETO: "#6B7079",
+  ON_ROUTE: COR.ultramarine, UNCERTAIN: COR.periwinkle, OFF_ROUTE: COR.coral, STALE: "#7E838B", SEM_TRAJETO: "#6B7079",
 };
 
 export type Tema = "claro" | "escuro";

@@ -25,14 +25,15 @@
   --calm: var(--periwinkle);           /* estados brandos, atmosfera */
   --alert: var(--coral);               /* incidente/alerta — raro */
   --live: #2E9E6B;                     /* "ao vivo" (dado recente) */
-  --stale: #B5791F;                    /* dado envelhecendo */
+  --stale: #B5791F;                    /* dado envelhecendo (preenchimento) */
+  --alert-text: #B23A27; --stale-text: #8A5A12; --calm-text: #4C5BC9; /* variantes AA (≥4,5:1) para texto */
 
   /* modos (semântica fixa) — BRT: Ink sólido; ônibus: contorno */
   --brt-bg: var(--ink); --brt-fg: var(--porcelain);
   --bus-bg: var(--warm-white); --bus-fg: var(--ink); --bus-line: var(--ink);
 
   /* estados do veículo (iguais a COR_ESTADO em tokens.ts) */
-  --st-on: var(--ultramarine); --st-unc: var(--periwinkle); --st-off: var(--coral); --st-stale: #A4A8AE;
+  --st-on: var(--ultramarine); --st-unc: var(--periwinkle); --st-off: var(--coral); --st-stale: #7E838B;
 
   /* tipografia */
   --font-ui: var(--fonte-inter), "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
@@ -80,7 +81,7 @@
     --accent-soft: rgba(137, 151, 245, .16);
     --on-accent: var(--deep-ink);
     --live: #4CC38A;
-    --stale: #E0A642;
+    --stale: #E0A642; --alert-text: var(--coral); --stale-text: #E0A642; --calm-text: var(--lilac);
     --brt-bg: var(--porcelain); --brt-fg: var(--ink);
     --bus-bg: #11141B; --bus-fg: var(--porcelain); --bus-line: var(--porcelain);
     --st-on: var(--periwinkle); --st-unc: var(--lilac);
@@ -97,6 +98,7 @@
 
 /* ---------- 2. base ---------- */
 * { box-sizing: border-box; }
+html { overflow-x: clip; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); }
 body { font: 450 16px/1.5 var(--font-ui); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; overflow-x: hidden; text-rendering: optimizeLegibility; font-feature-settings: "cv11"; }
 a { color: inherit; text-decoration: none; }
@@ -151,7 +153,7 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 }
 .nav a, .nav .nav-menu {
   position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  font-size: 10px; font-weight: 550; letter-spacing: .005em; color: var(--text-2); border-radius: 999px;
+  font-size: 11.5px; font-weight: 550; letter-spacing: .005em; color: var(--text-2); border-radius: 999px;
   transition: color var(--dur-interact) var(--ease-out);
 }
 .nav .nav-menu { background: none; border: 0; padding: 0; font-family: inherit; cursor: pointer; }
@@ -159,12 +161,12 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .nav a[aria-current="page"], .nav .nav-menu[aria-current="page"] { color: #fff; }
 @media (prefers-color-scheme: dark) { .nav a[aria-current="page"], .nav .nav-menu[aria-current="page"] { color: var(--deep-ink); } }
 /* menu ☰: cartão de vidro que sobe da barra */
-.nav-veu { position: fixed; inset: 0; z-index: calc(var(--z-nav) - 1); background: rgba(8, 10, 16, .45); animation: aparece var(--dur-interact) var(--ease-out); }
+.nav-veu { position: fixed; inset: 0; z-index: calc(var(--z-nav) - 1); background: rgba(8, 10, 16, .45); animation: navVeu var(--dur-interact) var(--ease-out); }
 /* centralizado sem transform (no Safari a animação com transform deslocava o cartão para fora da tela) */
 .nav-pop { position: fixed; z-index: var(--z-nav); left: 0; right: 0; margin: 0 auto; bottom: calc(var(--safe-b) + var(--nav-h) + 22px);
   width: min(calc(100% - 40px), 340px); box-sizing: border-box; display: grid; gap: 2px; padding: 6px; border-radius: var(--r-lg);
   background: color-mix(in srgb, var(--surface) 96%, transparent); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-hair); box-shadow: var(--shadow-float); animation: sobe var(--dur-interact) var(--spring); }
+  border: 1px solid var(--glass-hair); box-shadow: var(--shadow-float); animation: navSobe var(--dur-interact) var(--spring); }
 .nav-pop a { display: flex; gap: 12px; align-items: center; padding: 11px 12px; border-radius: 18px; min-width: 0; }
 .nav-pop span { min-width: 0; }
 .nav-pop small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -173,8 +175,8 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .nav-pop span { display: grid; gap: 1px; }
 .nav-pop b { font: 600 15px var(--font-ui); }
 .nav-pop small { font: 400 12px var(--font-ui); color: var(--text-3); }
-@keyframes aparece { from { opacity: 0; } }
-@keyframes sobe { from { opacity: 0; translate: 0 10px; scale: .97; } }
+@keyframes navVeu { from { opacity: 0; } }
+@keyframes navSobe { from { opacity: 0; translate: 0 10px; scale: .97; } }
 /* indicador único que desliza (continuidade entre abas) */
 .nav-ind {
   position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / var(--n));
@@ -237,7 +239,7 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 
 .notice { display: flex; gap: 10px; align-items: flex-start; padding: 12px 0; }
 .notice svg { width: 18px; height: 18px; flex: none; margin-top: 2px; }
-.sev-info { color: var(--accent); } .sev-atencao { color: var(--stale); } .sev-impacto, .sev-critico { color: var(--alert); }
+.sev-info { color: var(--accent); } .sev-atencao { color: var(--stale-text); } .sev-impacto, .sev-critico { color: var(--alert-text); }
 
 .skeleton { background: linear-gradient(90deg, var(--surface-2), var(--hairline-strong), var(--surface-2)); background-size: 200% 100%; animation: brilho 1.6s linear infinite; border-radius: 10px; }
 @keyframes brilho { from { background-position: 200% 0; } to { background-position: -200% 0; } }
@@ -413,6 +415,7 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .on-night   { --atm-a: #3A447E; --atm-b: #161A2E; --atm-c: #080A10; }
 .on-neutral { --atm-a: #CFD2DA; --atm-b: #8E94A3; --atm-c: #5B6170; }
 .atm { position: absolute; inset: 0; z-index: 1; pointer-events: none; animation: rotaEntra 1.1s var(--ease-out) both; }
+.atm.pausa, .atm.pausa * { animation-play-state: paused !important; }
 .atm-glow { position: absolute; display: block; border-radius: 50%; will-change: transform, opacity; }
 .g-sun { width: 360px; height: 360px; right: -120px; top: -160px; background: radial-gradient(circle, rgba(255, 244, 222, .7) 0%, rgba(255, 228, 190, .2) 38%, transparent 68%); animation: respira 14s ease-in-out infinite; }
 .g-haze { width: 520px; height: 260px; left: -160px; bottom: -150px; background: radial-gradient(closest-side, rgba(199, 200, 245, .22), transparent); filter: blur(12px); animation: deriva1 38s ease-in-out infinite alternate; }
@@ -465,7 +468,7 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
   animation: chuvaCresce .8s var(--ease-out) both; animation-delay: calc(var(--i) * 28ms + 700ms); }
 @keyframes gomo { to { transform: scale(1); opacity: 1; } }
 @keyframes chuvaCresce { to { opacity: .7; transform: scale(1); } }
-.rc-marca { font: 600 10px var(--font-ui); fill: var(--text-3); letter-spacing: .04em; text-transform: uppercase; }
+.rc-marca { font: 600 11.5px var(--font-ui); fill: var(--text-3); letter-spacing: .04em; text-transform: uppercase; }
 .rc-ponteiro { transform-origin: 170px 170px; transition: transform .45s var(--spring); }
 .rc-ponteiro line { stroke: var(--ink); stroke-width: 2.5; stroke-linecap: round; }
 .rc-ponteiro circle { fill: var(--ink); }
@@ -608,8 +611,9 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 
 .viagem { margin-top: 14px; display: grid; gap: 6px; }
 .viagem-barra { position: relative; height: 6px; border-radius: 3px; background: var(--surface-2); }
-.viagem-barra i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; background: var(--ultramarine); transition: width 1s var(--ease-out); }
-.viagem-barra b { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--surface); box-shadow: 0 0 0 3px var(--ultramarine); transition: left 1s var(--ease-out); }
+.viagem-barra i { position: absolute; left: 0; right: 0; top: 0; bottom: 0; border-radius: inherit; background: var(--ultramarine); transform-origin: left; transition: transform 1s var(--ease-out); }
+.viagem-barra > span { position: absolute; inset: 0; transition: transform 1s var(--ease-out); }
+.viagem-barra b { position: absolute; left: 0; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--surface); box-shadow: 0 0 0 3px var(--ultramarine); }
 
 .operacao { margin: 4px 0 18px; }
 .op-sentido { margin-top: 10px; }
@@ -721,7 +725,7 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .hc-convite b { font: 600 16.5px var(--font-ui); letter-spacing: -.01em; }
 .hc-convite small { font: 450 13.5px var(--font-ui); color: var(--text-2); }
 .hc-convite .seta { color: var(--text-3); width: 20px; height: 20px; }
-.home-op { display: inline-flex; align-items: center; gap: 4px; margin-top: 18px; padding: 8px 2px; font: 600 14px var(--font-ui); color: var(--text-2); }
+.home-op { display: inline-flex; align-items: center; gap: 4px; margin-top: 18px; min-height: 44px; padding: 0 2px; font: 600 14px var(--font-ui); color: var(--text-2); }
 .home-op svg { width: 16px; height: 16px; }
 .home-op:focus-visible { outline: 2px solid var(--ultramarine); outline-offset: 2px; border-radius: 6px; }
 @media (min-width: 960px) { .home-marca { display: none; } .home-cards { margin-top: 0; } }
@@ -767,7 +771,7 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .veh.apagado { opacity: .38 !important; filter: saturate(.3); transition: opacity var(--dur-interact) var(--ease-out); }
 /* "Saia em N min" logo abaixo da chegada */
 .saia { margin-top: 6px; font: 500 14px var(--font-ui); color: var(--accent); }
-.saia.ja { color: var(--coral); font-weight: 600; }
+.saia.ja { color: var(--alert-text); font-weight: 600; }
 /* favoritos: estrela no cabeçalho e "Seus trajetos" no início */
 .cab-dir { display: flex; align-items: center; gap: 8px; }
 .fav { width: 40px; height: 40px; border-radius: 999px; border: 0; background: var(--surface-2); color: var(--text-3); display: grid; place-items: center; cursor: pointer; }
@@ -781,7 +785,7 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .fav-item small { font: 400 12px var(--font-ui); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------- 15. Início: saudação, luz ambiente e entrada em cascata ---------- */
-.home { position: relative; }
+.home { position: relative; overflow-x: clip; }
 .home::before { content: ""; position: absolute; z-index: -1; left: -30%; right: -30%; top: -120px; height: 420px; pointer-events: none;
   background: radial-gradient(50% 50% at 30% 40%, color-mix(in srgb, var(--lilac) 55%, transparent), transparent 70%),
               radial-gradient(40% 45% at 80% 30%, color-mix(in srgb, var(--periwinkle) 30%, transparent), transparent 70%);
@@ -805,3 +809,9 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
   .home-cards { grid-template-columns: 1fr 1fr; align-items: start; margin-top: 16px; }
 }
 @media (prefers-reduced-motion: reduce) { .home::before, .home-ola, .home-data, .home-cards > * { animation: none; } }
+
+/* ---------- 16. Reformulação (banca): fonte da estimativa e intensidade da chuva ---------- */
+.eta-fonte { margin-top: 4px; }
+.cl-intens { font-size: .5em; font-weight: 600; letter-spacing: 0; color: var(--text-2); }
+.cl-intens.i-moderada { color: var(--stale-text); }
+.cl-intens.i-forte, .cl-intens.i-muito-forte { color: var(--alert-text); }

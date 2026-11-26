@@ -67,3 +67,18 @@ export async function buscarChuvas() {
     throw e;
   }
 }
+
+/**
+ * Intensidade da chuva medida em 1 h, pela escala usada nos boletins do Alerta Rio
+ * (fraca < 5 mm/h · moderada 5–25 · forte 25,1–50 · muito forte > 50).
+ * ESCOLHA DO SISTEMA: limiares conferidos com meteorologista; confirmar no boletim oficial antes de mudar.
+ */
+export type Intensidade = "sem chuva" | "fraca" | "moderada" | "forte" | "muito forte";
+export function intensidadeChuva(mmHora: number | null | undefined): Intensidade | null {
+  if (mmHora == null || !Number.isFinite(mmHora)) return null;
+  if (mmHora < 0.2) return "sem chuva";
+  if (mmHora <= 5) return "fraca";
+  if (mmHora <= 25) return "moderada";
+  if (mmHora <= 50) return "forte";
+  return "muito forte";
+}

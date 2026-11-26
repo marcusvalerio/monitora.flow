@@ -7,13 +7,15 @@
  */
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { BusFront, ChevronRight, CloudSun, CloudLightning, Droplets, Info, ShieldAlert, Smile, Sun, Thermometer, Umbrella } from "lucide-react";
+import { BusFront, ChevronRight, CloudLightning, Droplets, Info, ShieldAlert, Smile, Sun, Thermometer, Umbrella } from "lucide-react";
 import { MarcaMonitora } from "./Geometria";
 import { ErrorState, LastUpdated, Skel } from "./estados";
 import { J, coord, distKm, get, gravarCache, horaLocal, ler, lerCache, minhaPosicao } from "./util";
 import { resumoDoDia } from "../../src/lib/resumoDia";
 import WeatherAtmosphere, { atmosferaDe } from "../clima/atmosfera/WeatherAtmosphere";
 import { mesmoDestino } from "../../src/lib/trajeto";
+
+const LOCAL_PADRAO = { nome: "Rio de Janeiro · Centro", lat: -22.9068, lng: -43.1729 };
 
 export default function Home() {
   const [pronto, setPronto] = useState(false);
@@ -55,20 +57,18 @@ export default function Home() {
       <div className="home-cards">
         {!pronto ? <><Skel h={188} r={24} /><Skel h={150} r={24} /></> : (
           <>
-            {local ? <SeuDia local={local} /> : (
-              <Link href="/clima" className="hc hc-convite appear" aria-label="Ver o clima perto de você">
-                <CloudSun aria-hidden /><span><b>Como vai ser seu dia?</b><small>Escolha um local para ver avisos, clima e chuva</small></span><ChevronRight aria-hidden className="seta" />
-              </Link>
-            )}
+            {/* Sem local salvo, abre já com o Rio (Centro): a primeira tela mostra dado, não um convite vazio. */}
+            <SeuDia local={local ?? LOCAL_PADRAO} />
+            {!local && <Link href="/clima" className="home-op">Usar meu bairro <ChevronRight aria-hidden /></Link>}
             {mob.ponto && mob.linha ? <CartaoTransporte {...mob} ponto={mob.ponto} linha={mob.linha} /> : (
               <Link href="/mobilidade" className="hc hc-convite appear" style={{ animationDelay: "60ms" }} aria-label="Acompanhar um ônibus ou BRT">
-                <BusFront aria-hidden /><span><b>Acompanhar um ônibus ou BRT</b><small>Chegada estimada na sua estação</small></span><ChevronRight aria-hidden className="seta" />
+                <BusFront aria-hidden /><span><b>Acompanhar ônibus ou BRT</b><small>Chegada estimada na sua estação</small></span><ChevronRight aria-hidden className="seta" />
               </Link>
             )}
           </>
         )}
       </div>
-      <Link href="/monitor" className="home-op">Operação da cidade <ChevronRight aria-hidden /></Link>
+      <Link href="/monitor" className="home-op">Atenção: operação da cidade <ChevronRight aria-hidden /></Link>
     </main>
   );
 }

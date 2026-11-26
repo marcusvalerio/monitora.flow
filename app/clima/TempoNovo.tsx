@@ -15,6 +15,7 @@ import Satelite from "./Satelite";
 import type { Local } from "./ClimaApp";
 import { J, coord, dec, diaSemana, distKm, fmtDist, get, gravarCache, horaLocal, lerCache } from "../ui/util";
 import { reduzMovimento } from "../ui/motion";
+import { intensidadeChuva } from "../../src/lib/chuva";
 
 const hh = (iso: string) => horaLocal(iso);
 const h2 = (iso: string) => horaLocal(iso).slice(0, 2) + "h";
@@ -28,7 +29,7 @@ export default function TempoNovo({ local, onTrocar }: { local: Local; onTrocar:
 
   // Atualização em segundo plano: mantém o que já está na tela; se a rede falhar, segue com a previsão anterior.
   const carregar = useCallback(async () => {
-    const [r, ch] = await Promise.all([get(`/tempo/completo?lat=${coord(local.lat)}&lng=${coord(local.lng)}`), get(`/chuva?lat=${local.lat}&lng=${local.lng}&k=1`)]);
+    const [r, ch] = await Promise.all([get(`/tempo/completo?lat=${coord(local.lat)}&lng=${coord(local.lng)}`), get(`/chuva?lat=${local.lat}&lng=${local.lng}&k=3`)]);
     if (!r.erro) { gravarCache(chave, r); setEm(Date.now()); }
     setD((ant) => (r.erro && ant && !ant.erro ? ant : r));
     setChuva((ant) => (ch.erro && ant ? ant : ch));
@@ -57,8 +58,10 @@ export default function TempoNovo({ local, onTrocar }: { local: Local; onTrocar:
   const hoje = c.dias?.[0];
   const horas: J[] = c.horas ?? [];
   const tipo = atmosferaDe(a.descricao?.icone, a.dia);
-  const est = chuva?.observado?.[0];
-  const estPerto = est && distKm(local, est) <= 15 ? est : null;
+  // Até 3 pluviômetros a ≤ 15 km: mostra o que mediu MAIS chuva (um pluviômetro seco ao lado não esconde chuva forte no bairro).
+  const proximas: J[] = (chuva?.observado ?? []).filter((e: J) => distKm(local, e as { lat: number; lng: number }) <= 15);
+  const estPerto: J | null = proximas.reduce((m: J | null, e: J) => (!m || (e.mm?.h01 ?? -1) > (m.mm?.h01 ?? -1) ? e : m), null);
+  const intens = intensidadeChuva(estPerto?.mm?.h01);
 
   return (
     <div className="cl" ref={raiz}>
@@ -78,8 +81,14 @@ export default function TempoNovo({ local, onTrocar }: { local: Local; onTrocar:
         {estPerto && (
           <section className="cl-card revela" aria-label="Chuva medida agora">
             <h2 className="cl-tit">Chuva medida agora</h2>
-            <p className="cl-medida"><b className="num">{estPerto.mm.h01 == null ? "—" : dec(estPerto.mm.h01)}</b> mm na última hora</p>
-            <p className="cl-nota">{estPerto.mm.m15 != null && `${dec(estPerto.mm.m15)} mm em 15 min · `}Pluviômetro {estPerto.nome}, a {fmtDist(estPerto.distanciaM / 1000)} · Alerta Rio</p>
+            <p className="cl-medida"><b className="num">{estPerto.mm.h01 == null ? "—" : dec(estPerto.mm.h01)}</b> mm na última hora{intens && <span className={`cl-intens i-${intens.replace(" ", "-")}`}> · {intens === "sem chuva" ? "sem chuva" : `chuva ${intens}`}</span>}</p>
+            <p className="cl-nota">
+              {estPerto.mm.m15 != null && `${dec(estPerto.mm.m15)} mm em 15 min · `}
+              {estPerto.mm.h24 != null && `${dec(estPerto.mm.h24)} mm em 24 h · `}
+              {estPerto.mm.h96 != null && `${dec(estPerto.mm.h96)} mm em 96 h · `}
+              Pluviômetro {estPerto.nome}, a {fmtDist(estPerto.distanciaM / 1000)}{proximas.length > 1 ? ` (o que mais choveu entre ${proximas.length} próximos)` : ""}
+              {estPerto.medidoEm && ` · medido às ${horaLocal(estPerto.medidoEm)}`} · Alerta Rio
+            </p>
           </section>
         )}
         <p className="cl-fonte">
@@ -125,12 +134,13 @@ function Conta({ valor }: { valor: number }) {
 /* ---------- 1. céu da hora ---------- */
 function frase(c: J, horas: J[]): string {
   const r = c.chuva2h?.resumo;
-  if (r?.chovendo) return r.mudaEm ? `Chovendo agora; deve parar por volta das ${hh(r.mudaEm)}.` : "Chuva deve continuar nas próximas 2 horas.";
-  if (r?.mudaEm) return `Chuva deve começar por volta das ${hh(r.mudaEm)}.`;
+  // Previsão de modelo (Open-Meteo), não radar: em chuva de verão o horário exato seria falsa precisão.
+  if (r?.chovendo) return r.mudaEm ? "Chovendo; o modelo indica melhora nas próximas 2 horas." : "Chovendo; o modelo indica chuva nas próximas 2 horas.";
+  if (r?.mudaEm) return "O modelo indica chance de chuva nas próximas 2 horas.";
   const prox = horas.slice(0, 12), desc = prox[0]?.descricao?.texto;
   const muda = prox.findIndex((x) => x.descricao?.texto && x.descricao.texto !== desc);
   const pMax = Math.max(0, ...prox.map((x) => x.probabilidadeChuvaPct ?? 0));
-  if (desc && muda > 0) return `${desc} até as ${h2(prox[muda].inicio)}, depois ${String(prox[muda].descricao.texto).toLowerCase()}.${pMax >= 30 ? ` Chuva chega a ${pMax}%.` : ""}`;
+  if (desc && muda > 0) return `${desc} até as ${h2(prox[muda].inicio)}, depois ${String(prox[muda].descricao.texto).toLowerCase()}.${pMax >= 30 ? ` Chance de chuva chega a ${pMax}%.` : ""}`;
   return pMax >= 30 ? `Chance de chuva chega a ${pMax}% nas próximas horas.` : "Sem chuva prevista nas próximas horas.";
 }
 
@@ -292,7 +302,7 @@ function Avisos({ c }: { c: J }) {
   if ((hoje.uvMax ?? 0) >= 8) avisos.push({ ico: <Sun aria-hidden />, t: `UV ${r0(hoje.uvMax)} hoje (${hoje.uvMax >= 11 ? "extremo" : "muito alto"}): protetor e sombra entre 10h e 16h.` });
   if ((hoje.rajadaMaxKmh ?? 0) >= 50) avisos.push({ ico: <Wind aria-hidden />, t: `Rajadas de até ${r0(hoje.rajadaMaxKmh)} km/h previstas hoje.` });
   if (sensMax >= 35) avisos.push({ ico: <Thermometer aria-hidden />, t: `Sensação de até ${r0(sensMax)}° nas próximas 12 h. Hidrate-se.` });
-  if ((hoje.chuvaMm ?? 0) >= 10) avisos.push({ ico: <Droplets aria-hidden />, t: `Até ${r0(hoje.chuvaMm)} mm de chuva previstos hoje.` });
+  if ((hoje.chuvaMm ?? 0) >= 10) avisos.push({ ico: <Droplets aria-hidden />, t: `Modelo indica cerca de ${r0(hoje.chuvaMm)} mm hoje; em pancadas pode passar disso localmente.` });
   if (!avisos.length) return null;
   return <ul className="cl-avisos revela" aria-label="Avisos">{avisos.map((x) => <li key={x.t}>{x.ico}<span>{x.t}</span></li>)}</ul>;
 }
