@@ -18,6 +18,7 @@ function chave(b64: string) {
 export default function AvisarChegada({ linha, ponto, sentido, etaMin }: { linha: string; ponto: { nome: string; lat: number; lng: number }; sentido: string | null; etaMin: number | null }) {
   const [estado, setEstado] = useState<Estado>("carregando");
   const [pub, setPub] = useState<string | null>(null);
+  const [falhouEnvio, setFalhouEnvio] = useState(false);
   const atual = `${linha}|${ponto.lat}|${ponto.lng}`;
 
   useEffect(() => {
@@ -43,8 +44,9 @@ export default function AvisarChegada({ linha, ponto, sentido, etaMin }: { linha
       const r = await fetch("/avisos", { method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ assinatura: ass.toJSON(), linha, lat: ponto.lat, lng: ponto.lng, ponto: ponto.nome, sentido, etaMin }) });
       if (!r.ok) throw new Error(String(r.status));
-      const { id } = await r.json();
+      const { id, enviado } = await r.json();
       gravar(K, { id, alvo: atual, em: Date.now() });
+      setFalhouEnvio(enviado === false);
       setEstado("ativo");
     } catch { setEstado("erro"); }
   };
@@ -58,7 +60,12 @@ export default function AvisarChegada({ linha, ponto, sentido, etaMin }: { linha
   if (estado === "instalar") return <p className="t-cap aviso-chegada-nota">Para receber o aviso de chegada no iPhone, toque em Compartilhar → <b>Adicionar à Tela de Início</b> e abra o Monitora por lá.</p>;
   if (estado === "negado") return <p className="t-cap aviso-chegada-nota">Notificações bloqueadas. Libere em Ajustes → Notificações → Monitora.</p>;
   return estado === "ativo" ? (
-    <button className="btn btn-ghost aviso-chegada" onClick={parar}><BellOff aria-hidden /> Parar aviso de chegada</button>
+    <>
+      <button className="btn btn-ghost aviso-chegada" onClick={parar}><BellOff aria-hidden /> Parar aviso de chegada</button>
+      <p className="t-cap aviso-chegada-nota" role="status">{falhouEnvio
+        ? "Aviso ligado, mas a primeira notificação não chegou ao celular. Pare e ative de novo; se continuar, confira se as notificações do Monitora estão permitidas."
+        : "Você recebe uma notificação agora, outra quando faltar 5 min e outra quando estiver chegando."}</p>
+    </>
   ) : (
     <button className="btn btn-primary aviso-chegada" onClick={ativar} disabled={estado === "ativando"}>
       <Bell aria-hidden /> {estado === "ativando" ? "Ativando…" : estado === "erro" ? "Tentar ativar de novo" : "Avisar quando estiver chegando"}
