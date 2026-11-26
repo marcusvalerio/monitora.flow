@@ -7,23 +7,27 @@
 /* ---------- 1. tokens ---------- */
 :root {
   /* paleta */
-  --porcelain: #F5F5F2; --warm-white: #FBFBF9; --mist: #E7E9E8; --ink: #111318; --deep-ink: #080A10;
+  /* Fusão 1 + 4 (Boletim no papel) — docs/REFORMULACAO.md, "Decisões de identidade" */
+  --papel: #FAF9F6; --branco: #FFFFFF; --tinta: #0E1014; --tinta-2: #545A66; --linha: #E6E3DC;
+  --alerta-fundo: #F8E9E5; --chuva: #C3D4F0;
+  --porcelain: var(--papel); --warm-white: var(--branco); --mist: #EFEDE7; --ink: var(--tinta); --deep-ink: #080A10;
   --ultramarine: #3047C7; --periwinkle: #8997F5; --lilac: #C7C8F5; --coral: #FF7058; --sea-mist: #B9D7D6;
 
   /* papéis */
   --bg: var(--porcelain);
   --surface: var(--warm-white);
   --surface-2: var(--mist);
-  --hairline: rgba(17, 19, 24, .08);
-  --hairline-strong: rgba(17, 19, 24, .14);
+  --hairline: var(--linha);
+  --hairline-strong: #D6D2C8;
   --text: var(--ink);
-  --text-2: #464A53;
+  --text-2: var(--tinta-2);
   --text-3: #62666F;
   --accent: var(--ultramarine);        /* interação e seleção */
   --accent-soft: rgba(48, 71, 199, .10);
   --on-accent: #FFFFFF;
   --calm: var(--periwinkle);           /* estados brandos, atmosfera */
-  --alert: var(--coral);               /* incidente/alerta — raro */
+  --alert: #B23A27;                    /* incidente/alerta — raro */
+  --alert-bg: var(--alerta-fundo); --rain: var(--chuva);
   --live: #2E9E6B;                     /* "ao vivo" (dado recente) */
   --stale: #B5791F;                    /* dado envelhecendo (preenchimento) */
   --alert-text: #B23A27; --stale-text: #8A5A12; --calm-text: #4C5BC9; /* variantes AA (≥4,5:1) para texto */
@@ -36,9 +40,12 @@
   --st-on: var(--ultramarine); --st-unc: var(--periwinkle); --st-off: var(--coral); --st-stale: #7E838B;
 
   /* tipografia */
+  /* Sora: título principal · Inter Tight: números e dados (tabular) · Inter: seções, texto e rótulos */
   --font-ui: var(--fonte-inter), "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
-  --font-sec: var(--fonte-geist), "Geist", var(--fonte-inter), -apple-system, system-ui, sans-serif;
-  --font-num: var(--fonte-sora), "Sora", var(--fonte-inter), -apple-system, system-ui, sans-serif;
+  --font-sec: var(--font-ui);
+  --font-titulo: var(--fonte-sora), "Sora", var(--fonte-inter), -apple-system, system-ui, sans-serif;
+  --font-num: var(--fonte-inter-tight), "Inter Tight", var(--fonte-inter), -apple-system, system-ui, sans-serif;
+  --fs-titulo: clamp(34px, 9vw, 44px); --fs-secao: 17px; --fs-texto: 15px; --fs-rotulo: 12.5px;
 
   /* forma e espaço */
   --r-xs: 8px; --r-sm: 12px; --r-md: 18px; --r-lg: 26px; --r-xl: 32px;
@@ -81,7 +88,7 @@
     --accent-soft: rgba(137, 151, 245, .16);
     --on-accent: var(--deep-ink);
     --live: #4CC38A;
-    --stale: #E0A642; --alert-text: var(--coral); --stale-text: #E0A642; --calm-text: var(--lilac);
+    --stale: #E0A642; --alert: var(--coral); --alert-bg: rgba(255, 112, 88, .14); --rain: #2C3E66; --alert-text: var(--coral); --stale-text: #E0A642; --calm-text: var(--lilac);
     --brt-bg: var(--porcelain); --brt-fg: var(--ink);
     --bus-bg: #11141B; --bus-fg: var(--porcelain); --bus-line: var(--porcelain);
     --st-on: var(--periwinkle); --st-unc: var(--lilac);
@@ -106,17 +113,18 @@ button, input { font: inherit; color: inherit; }
 button { cursor: pointer; background: none; border: 0; padding: 0; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.num { font-variant-numeric: tabular-nums; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.t-titulo { font-family: var(--font-titulo); font-weight: 700; font-size: var(--fs-titulo); line-height: 1.04; letter-spacing: -.045em; margin: 0; }
 
-/* ---------- 3. tipografia: Inter conduz, Geist nas legendas, Sora dá peso aos números ---------- */
-.t-display { font-family: var(--font-num); font-weight: 600; font-size: clamp(64px, 20vw, 104px); line-height: .9; letter-spacing: -.055em; }
-.t-hero { font-family: var(--font-num); font-weight: 600; font-size: clamp(34px, 10vw, 46px); line-height: 1.02; letter-spacing: -.045em; }
+/* ---------- 3. tipografia: Sora no título principal, Inter Tight nos números, Inter no resto ---------- */
+.t-display { font-family: var(--font-num); font-weight: 700; font-variant-numeric: tabular-nums; font-size: clamp(64px, 20vw, 104px); line-height: .9; letter-spacing: -.055em; }
+.t-hero { font-family: var(--font-titulo); font-weight: 700; font-size: var(--fs-titulo); line-height: 1.02; letter-spacing: -.045em; }
 .t-title { font-weight: 600; font-size: 22px; line-height: 1.18; letter-spacing: -.022em; }
 .t-head { font-weight: 600; font-size: 16px; line-height: 1.3; letter-spacing: -.012em; }
 .t-body { font-size: 15px; line-height: 1.45; }
-.t-cap { font-family: var(--font-sec); font-size: 13px; line-height: 1.38; color: var(--text-2); }
+.t-cap { font-family: var(--font-sec); font-size: var(--fs-rotulo); line-height: 1.38; color: var(--text-2); }
 .t-meta { font-family: var(--font-sec); font-size: 12px; line-height: 1.3; color: var(--text-3); }
-.t-label { font-family: var(--font-sec); font-size: 11.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
+.t-label { font-family: var(--font-sec); font-size: 12px; font-weight: 500; letter-spacing: .01em; color: var(--text-3); }
 .muted { color: var(--text-2); }
 
 /* ---------- 4. material (vidro: só onde há interação/navegação) ---------- */
