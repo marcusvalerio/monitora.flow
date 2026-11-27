@@ -5,7 +5,7 @@
  * Movimento: item novo entra com fundo destacado que some em 2 s; estágio ≥ 3 pisca uma vez. Nada em loop.
  */
 import { useCallback, useEffect, useState } from "react";
-import { Volume2, VolumeX } from "lucide-react";
+import { Ban, CircleCheck, CloudRain, ShieldAlert, Thermometer, TriangleAlert, Volume2, VolumeX, Waves } from "lucide-react";
 import AvisarChuva from "./AvisarChuva";
 import { ErrorState, Skel } from "../ui/estados";
 import { J, get, horaLocal, ler } from "../ui/util";
@@ -94,6 +94,7 @@ export default function AtencaoApp() {
       </header>
       {!d ? <div className="boletim">{[0, 1, 2, 3].map((i) => <Skel key={i} h={78} />)}</div> : (
         <div className="boletim cascata">
+          <Resumo d={d} ocorrs={ocorrs} />
           <Estagio c={d.cidade} />
           <Chuva ch={d.chuva} />
           {d.ocorr?.erro || d.ocorr?.disponivel === false ? (
@@ -103,7 +104,7 @@ export default function AtencaoApp() {
             if (!lista.length && !g.vazio) return null;
             return (
               <section key={g.cat} className="bl" aria-labelledby={`bl-${g.cat}`}>
-                <h2 className="bl-rot" id={`bl-${g.cat}`}>{g.rot} · até 30 km de {local?.nome ?? "você"}</h2>
+                <h2 className="bl-rot" id={`bl-${g.cat}`}>{g.cat === "alagamento" ? <Waves aria-hidden /> : g.cat === "interdicao" ? <Ban aria-hidden /> : <TriangleAlert aria-hidden />} {g.rot} · até 30 km de {local?.nome ?? "você"}</h2>
                 {!lista.length ? <p className="bl-val bl-ok">{g.vazio}</p> : (
                   <ul className="bl-lista">
                     {lista.slice(0, 8).map((o) => (
@@ -136,7 +137,7 @@ function Estagio({ c }: { c: J }) {
   const e = c?.observado?.estagio;
   return (
     <section className="bl" aria-labelledby="bl-es">
-      <h2 className="bl-rot" id="bl-es">Estágio da cidade</h2>
+      <h2 className="bl-rot" id="bl-es"><ShieldAlert aria-hidden /> Estágio da cidade</h2>
       {c?.erro || !e ? <p className="bl-nota">O COR não informou o estágio agora.</p> : (
         <>
           <p className={`bl-val num${e.nivel >= 2 ? " bl-alerta" : ""}${e.nivel >= 3 ? " pisca-uma" : ""}`}>{e.nivel} de 5</p>
@@ -156,16 +157,18 @@ function Chuva({ ch }: { ch: J }) {
   const chovendo = es.filter((e) => (e.mm?.h01 ?? 0) > 0).sort((a, b) => b.mm.h01 - a.mm.h01);
   return (
     <section className="bl" aria-labelledby="bl-ch">
-      <h2 className="bl-rot" id="bl-ch">Chuva medida na última hora · por região</h2>
+      <h2 className="bl-rot" id="bl-ch"><CloudRain aria-hidden /> Chuva medida na última hora · por região</h2>
       {chovendo.length === 0 ? (
         <><p className="bl-val bl-ok">Sem chuva</p><p className="bl-fonte">{es.length} pluviômetros · Alerta Rio · {hora(ch.atualizadoEm) ?? "—"}</p></>
       ) : (
         <ul className="bl-lista">
           {chovendo.slice(0, 5).map((e) => {
             const int = intensidadeChuva(e.mm.h01);
+            const escala = Math.max(25, chovendo[0].mm.h01); // barra cheia = chuva forte (25 mm/h) ou o maior valor
             return (
               <li key={e.id}>
                 <span className="bl-par"><span>{e.nome}</span><b className={`num${int === "forte" || int === "muito forte" ? " bl-alerta" : ""}`}>{mm(e.mm.h01)} mm/h</b></span>
+                <span className="bl-barra" aria-hidden><i className={int === "forte" || int === "muito forte" ? "forte" : undefined} style={{ transform: `scaleX(${Math.min(1, e.mm.h01 / escala)})` }} /></span>
                 <span className="bl-fonte">{int} · Alerta Rio · {hora(e.medidoEm) ?? "—"}</span>
               </li>
             );
@@ -180,10 +183,39 @@ function Calor({ c }: { c: J }) {
   const k = c?.observado?.calor;
   return (
     <section className="bl" aria-labelledby="bl-ca">
-      <h2 className="bl-rot" id="bl-ca">Calor</h2>
+      <h2 className="bl-rot" id="bl-ca"><Thermometer aria-hidden /> Calor</h2>
       {c?.erro || !k ? <p className="bl-nota">O COR não informou o nível de calor agora.</p> : (
         <><p className={`bl-val num${k.nivel >= 3 ? " bl-alerta" : ""}`}>NC {k.nivel}</p><p className="bl-fonte">COR{k.atualizadoEm ? ` · ${hora(k.atualizadoEm)}` : ""}</p></>
       )}
+    </section>
+  );
+}
+
+/** Resumo do agora: uma frase e o placar (estágio, chuva, alagamentos, interdições, calor). Cor só quando importa. */
+function Resumo({ d, ocorrs }: { d: J; ocorrs: J[] }) {
+  const e = d.cidade?.observado?.estagio, k = d.cidade?.observado?.calor;
+  const es: J[] = Array.isArray(d.chuva?.observado) ? d.chuva.observado : [];
+  const chovendo = es.filter((x) => (x.mm?.h01 ?? 0) > 0).sort((a, b) => b.mm.h01 - a.mm.h01);
+  const maior = chovendo[0], intMaior = maior ? intensidadeChuva(maior.mm.h01) : null;
+  const ocOk = !(d.ocorr?.erro || d.ocorr?.disponivel === false);
+  const alag = ocorrs.filter((o) => o.categoria === "alagamento").length, inter = ocorrs.filter((o) => o.categoria === "interdicao").length;
+  const nivel = (e?.nivel ?? 1) >= 3 || intMaior === "muito forte" ? "alerta"
+    : (e?.nivel ?? 1) >= 2 || intMaior === "forte" || intMaior === "moderada" || alag > 0 || (k?.nivel ?? 1) >= 3 ? "atencao" : "calmo";
+  const titulo = (e?.nivel ?? 1) >= 2 ? `Cidade em estágio ${e.nivel}`
+    : maior && intMaior !== "fraca" ? `Chuva ${intMaior} em ${maior.nome}`
+    : alag > 0 ? `${alag} ${alag === 1 ? "alagamento aberto" : "alagamentos abertos"}`
+    : chovendo.length ? "Chuva fraca em alguns pontos" : "Cidade sem alertas agora";
+  const Ic = nivel === "calmo" ? CircleCheck : nivel === "alerta" ? ShieldAlert : TriangleAlert;
+  return (
+    <section className={`bl-resumo nv-${nivel}`} aria-label="Resumo agora">
+      <div className="bl-resumo-cab"><Ic aria-hidden /><b>{titulo}</b></div>
+      <ul className="bl-placar">
+        <li><span>Estágio</span><b className="num">{e ? `${e.nivel}/5` : "—"}</b></li>
+        <li><span>Chovendo</span><b className="num">{es.length ? `${chovendo.length}/${es.length}` : "—"}</b></li>
+        <li><span>Alagam.</span><b className="num">{ocOk ? alag : "—"}</b></li>
+        <li><span>Interd.</span><b className="num">{ocOk ? inter : "—"}</b></li>
+        <li><span>Calor</span><b className="num">{k ? `NC ${k.nivel}` : "—"}</b></li>
+      </ul>
     </section>
   );
 }
