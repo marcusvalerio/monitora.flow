@@ -72,14 +72,18 @@ create index if not exists avisos_ativos on avisos (ativo, expira_em);
 create table if not exists avisos_vigia (id smallint primary key default 1, ate timestamptz not null default 'epoch');
 insert into avisos_vigia (id) values (1) on conflict do nothing;
 
--- Avisos de "chuva forte aqui" (aba Atenção). Só a assinatura de push e o ponto arredondado (~1 km).
--- Avisa uma vez e apaga; expirado (90 min), também apaga. Sem IP.
-create table if not exists avisos_chuva (
-  id          text        primary key,
-  assinatura  jsonb       not null,
-  lat         double precision not null,   -- arredondado a 2 casas
-  lng         double precision not null,
-  lugar       text        not null,
-  criado_em   timestamptz not null default now(),
-  expira_em   timestamptz not null default now() + interval '90 minutes'
+-- Notificações permanentes de Ajustes (chuva forte perto de mim, alertas da cidade). Só a assinatura de push,
+-- o ponto arredondado (~1 km) e as escolhas. Desligar tudo apaga. Sem IP.
+create table if not exists inscricoes (
+  id            text        primary key,
+  endpoint      text        unique not null,
+  assinatura    jsonb       not null,
+  lat           double precision not null,   -- arredondado a 2 casas
+  lng           double precision not null,
+  lugar         text        not null,
+  chuva         boolean     not null default false,
+  cidade        boolean     not null default false,
+  atualizado_em timestamptz not null default now()
 );
+-- Cada alerta vai uma vez por inscrição; apagado após 2 dias.
+create table if not exists alertas_enviados (chave text not null, inscricao text not null, em timestamptz not null default now(), primary key (chave, inscricao));

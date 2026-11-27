@@ -5,14 +5,15 @@
  * Movimento: item novo entra com fundo destacado que some em 2 s; estágio ≥ 3 pisca uma vez. Nada em loop.
  */
 import { useCallback, useEffect, useState } from "react";
-import { Ban, CircleCheck, CloudRain, ShieldAlert, Thermometer, TriangleAlert, Volume2, VolumeX, Waves } from "lucide-react";
-import AvisarChuva from "./AvisarChuva";
+import { Ban, Bell, ChevronRight, CircleCheck, Landmark, CloudRain, ShieldAlert, Thermometer, TriangleAlert, Volume2, VolumeX, Waves } from "lucide-react";
+import Link from "next/link";
 import { ErrorState, Skel } from "../ui/estados";
 import { J, get, horaLocal, ler } from "../ui/util";
 import { intensidadeChuva } from "../../src/lib/chuva";
 
 const LOCAL_PADRAO = { nome: "Centro", lat: -22.9068, lng: -43.1729 };
 const K_VISTOS = "monitora:atencao:vistos";
+const quando = (s: string) => new Date(s).toLocaleString("pt-BR", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 const hora = (s?: string | null) => (s ? horaLocal(s).slice(0, 5) : null);
 const mm = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const K_VOZ = "monitora:atencao:voz";
@@ -47,15 +48,16 @@ function useNovos(ids: string[] | null) {
 
 export default function AtencaoApp() {
   const [local, setLocal] = useState<J | null>(null);
-  const [d, setD] = useState<{ cidade: J; chuva: J; ocorr: J; em: number } | null>(null);
+  const [d, setD] = useState<{ cidade: J; chuva: J; ocorr: J; oficial: J; em: number } | null>(null);
 
   const carregar = useCallback(async (l: J) => {
-    const [cidade, chuva, ocorr] = await Promise.all([
+    const [cidade, chuva, ocorr, oficial] = await Promise.all([
       get("/cidade", AbortSignal.timeout(12_000)),
       get("/chuva", AbortSignal.timeout(12_000)),
       get(`/ocorrencias?lat=${l.lat}&lng=${l.lng}&raio=30000`, AbortSignal.timeout(12_000)),
+      get("/oficial", AbortSignal.timeout(15_000)),
     ]);
-    setD({ cidade, chuva, ocorr, em: Date.now() });
+    setD({ cidade, chuva, ocorr, oficial, em: Date.now() });
   }, []);
 
   useEffect(() => {
@@ -96,7 +98,8 @@ export default function AtencaoApp() {
         <div className="boletim cascata">
           <Resumo d={d} ocorrs={ocorrs} />
           <Estagio c={d.cidade} />
-          <Chuva ch={d.chuva} />
+          <AvisosInmet o={d.oficial} />
+          <Chuva ch={d.chuva} cemaden={d.oficial?.observado?.cemaden} />
           {d.ocorr?.erro || d.ocorr?.disponivel === false ? (
             <section className="bl"><h2 className="bl-rot">Alagamentos e interdições</h2><p className="bl-nota">A API de ocorrências do COR não respondeu agora. Nada é mostrado no lugar.</p></section>
           ) : GRUPOS.map((g) => {
@@ -120,7 +123,9 @@ export default function AtencaoApp() {
             );
           })}
           <Calor c={d.cidade} />
-          {local && <AvisarChuva local={local as { nome: string; lat: number; lng: number }} />}
+          <Link href="/ajustes" className="bl-link">
+            <Bell aria-hidden /><span><b>Notificações de chuva e alertas</b><small>Ligue em Ajustes: chuva forte perto de você e alertas da cidade.</small></span><ChevronRight aria-hidden className="seta" />
+          </Link>
           {temVoz && (
             <button type="button" className="bl-voz" aria-pressed={voz} onClick={alternarVoz}>
               {voz ? <Volume2 aria-hidden /> : <VolumeX aria-hidden />}
@@ -149,10 +154,25 @@ function Estagio({ c }: { c: J }) {
   );
 }
 
-function Chuva({ ch }: { ch: J }) {
-  if (ch?.erro || !Array.isArray(ch?.observado)) return (
-    <section className="bl"><h2 className="bl-rot">Chuva medida</h2><p className="bl-nota">Os pluviômetros do Alerta Rio não responderam agora.</p></section>
-  );
+function Chuva({ ch, cemaden }: { ch: J; cemaden?: J }) {
+  if (ch?.erro || !Array.isArray(ch?.observado)) {
+    // segunda fonte, fora da Prefeitura: pluviômetros do Cemaden (sem coordenadas; só por nome)
+    const ps: J[] = cemaden?.disponivel ? (cemaden.pluviometros as J[]).filter((p) => (p.mm1h ?? p.mmUltimo ?? 0) > 0).sort((a, b) => (b.mm1h ?? b.mmUltimo) - (a.mm1h ?? a.mmUltimo)) : [];
+    return (
+      <section className="bl" aria-labelledby="bl-ch">
+        <h2 className="bl-rot" id="bl-ch"><CloudRain aria-hidden /> Chuva medida · Cemaden</h2>
+        <p className="bl-nota">O Alerta Rio não respondeu agora; mostrando os pluviômetros do Cemaden.</p>
+        {!cemaden?.disponivel ? <p className="bl-nota">O Cemaden também não respondeu.</p> : !ps.length ? (
+          <><p className="bl-val bl-ok">Sem chuva</p><p className="bl-fonte">{cemaden.pluviometros.length} pluviômetros · Cemaden</p></>
+        ) : (
+          <ul className="bl-lista">{ps.slice(0, 5).map((p) => { const v = p.mm1h ?? p.mmUltimo; return (
+            <li key={p.id}><span className="bl-par"><span>{p.nome}</span><b className="num">{mm(v)} mm{p.mm1h != null ? "/h" : ""}</b></span>
+              <span className="bl-fonte">{p.mm1h != null ? intensidadeChuva(v) : "última leitura"} · Cemaden · {hora(p.medidoEm) ?? "—"}</span></li>
+          ); })}</ul>
+        )}
+      </section>
+    );
+  }
   const es: J[] = ch.observado;
   const chovendo = es.filter((e) => (e.mm?.h01 ?? 0) > 0).sort((a, b) => b.mm.h01 - a.mm.h01);
   return (
@@ -216,6 +236,25 @@ function Resumo({ d, ocorrs }: { d: J; ocorrs: J[] }) {
         <li><span>Interd.</span><b className="num">{ocOk ? inter : "—"}</b></li>
         <li><span>Calor</span><b className="num">{k ? `NC ${k.nivel}` : "—"}</b></li>
       </ul>
+    </section>
+  );
+}
+
+/** Avisos do INMET para o Rio (fonte federal). Se não responder, diz isso — nunca inventa aviso. */
+function AvisosInmet({ o }: { o: J }) {
+  const i = o?.observado?.inmet;
+  return (
+    <section className="bl" aria-labelledby="bl-in">
+      <h2 className="bl-rot" id="bl-in"><Landmark aria-hidden /> Avisos do INMET para o Rio</h2>
+      {!i?.disponivel ? <p className="bl-nota">O INMET não respondeu agora.</p> : !i.avisos.length ? <p className="bl-val bl-ok">Nenhum aviso</p> : (
+        <ul className="bl-lista">{(i.avisos as J[]).map((a) => (
+          <li key={a.id} className={a.severidade !== "potencial" ? "bl-inmet" : undefined}>
+            <b className={a.severidade !== "potencial" ? "bl-alerta" : undefined}>{a.titulo}</b>
+            <span className="bl-txt-c">{a.severidade === "grande perigo" ? "Grande perigo" : a.severidade === "perigo" ? "Perigo" : "Perigo potencial"}</span>
+            <span className="bl-fonte">INMET{a.inicio ? ` · de ${quando(a.inicio)}` : ""}{a.fim ? ` até ${quando(a.fim)}` : ""}</span>
+          </li>
+        ))}</ul>
+      )}
     </section>
   );
 }

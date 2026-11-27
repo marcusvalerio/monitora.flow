@@ -112,3 +112,12 @@ Prints (dados reais; ocorrências do COR estavam fora): `docs/reformulacao/print
   Deployment Protection da Vercel; o vigia nunca rodava (no banco: aviso parado em etapa 1, `avisos_vigia.ate` = epoch; nos logs, nenhum
   `/avisos/vigiar`). Agora a primeira execução roda no próprio pedido (`src/lib/vigia.ts`, `after()`) e o encadeamento usa
   `VERCEL_PROJECT_PRODUCTION_URL`. Falhas de push vão para o log (`[push]`) e a tela avisa se a primeira notificação não saiu.
+
+## Fontes fora da Prefeitura e notificações em Ajustes (27/11)
+- **INMET** (`src/lib/inmet.ts`, `/oficial`): avisos ativos para o Rio (geocódigo 3304557); vencidos são filtrados. Na Atenção, seção própria.
+- **Cemaden** (`src/lib/cemaden.ts`, `/oficial`): 30 pluviômetros no Rio, sem coordenadas; entra na Atenção quando o Alerta Rio não responde.
+- **REDEMET** (radar da Aeronáutica): pendente — exige chave grátis (cadastro em redemet.decea.mil.br) salva na Vercel como `REDEMET_API_KEY`.
+- **Notificações em Ajustes** (decisão do dono): "chuva forte perto de mim" e "alertas da cidade" (estágio ≥ 3, aviso INMET de perigo, calor NC ≥ 4)
+  são permanentes até desligar (`inscricoes`; só assinatura, ponto ~1 km e escolhas). Substitui o aviso de chuva de 90 min.
+  Verificação a cada 10 min por `.github/workflows/alertas.yml` → `POST /alertas/verificar`; só acorda o banco quando há alerta.
+  Chegada do ônibus continua por viagem (Trajeto, 90 min).

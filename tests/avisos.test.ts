@@ -34,3 +34,14 @@ describe("aviso de chuva forte", () => {
     expect(mensagemChuva("Tijuca", { estacao: "Grajaú", mmH: 32.4 }).title).toBe("Chuva forte perto de Tijuca");
   });
 });
+
+import { eventosCidade } from "../src/lib/inscricoes";
+describe("alertas da cidade", () => {
+  it("só estágio ≥ 3, INMET de perigo e calor ≥ 4 viram notificação", () => {
+    const ev = eventosCidade({ hoje: "2026-11-27", estagio: { nivel: 3, desde: "x" }, calor: { nivel: 2 },
+      avisos: [{ id: "1", titulo: "Chuvas Intensas", severidade: "perigo", inicio: null, fim: null, riscos: null, instrucoes: null },
+               { id: "2", titulo: "Vendaval", severidade: "potencial", inicio: null, fim: null, riscos: null, instrucoes: null }] });
+    expect(ev.map((e) => e.chave)).toEqual(["estagio-3-x", "inmet-1"]);
+    expect(eventosCidade({ hoje: "h", estagio: { nivel: 2 }, calor: { nivel: 4 } }).map((e) => e.chave)).toEqual(["calor-4-h"]);
+  });
+});

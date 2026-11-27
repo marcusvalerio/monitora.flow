@@ -1,0 +1,21 @@
+# Alertas por notificação (Ajustes → chuva forte perto de mim / alertas da cidade): verifica a cada 10 min.
+# Usa os mesmos secrets do workflow "coletar" (COLETOR_URL e CRON_SECRET). A rota só acorda o banco quando há alerta.
+# O GitHub pode atrasar execuções agendadas em alguns minutos.
+name: alertas
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verifica alertas
+        env:
+          COLETOR_URL: ${{ secrets.COLETOR_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          base="${COLETOR_URL%/}"
+          case "$base" in http://*|https://*) ;; *) base="https://$base" ;; esac
+          curl -fsS --max-time 70 -X POST -H "Authorization: Bearer $CRON_SECRET" "$base/alertas/verificar" | head -c 600; echo

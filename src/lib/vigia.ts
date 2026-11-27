@@ -1,5 +1,5 @@
 /**
- * Vigia dos avisos (ônibus chegando e chuva forte): confere a cada 20 s por ~4,5 min e, se ainda houver aviso ativo,
+ * Vigia dos avisos de ônibus chegando: confere a cada 20 s por ~4,5 min e, se ainda houver aviso ativo,
  * acorda uma nova execução de si mesmo (POST /avisos/vigiar).
  *
  * Por que roda dentro do próprio pedido: antes o POST /avisos só chamava /avisos/vigiar por HTTP usando a origem do
@@ -8,7 +8,6 @@
  * roda aqui mesmo (em `after()`), e o encadeamento usa o domínio de PRODUÇÃO (VERCEL_PROJECT_PRODUCTION_URL).
  */
 import { pegarVez, rodada, soltarVez } from "./avisos";
-import { rodadaChuva } from "./avisosChuva";
 
 export const PASSO_MS = 20_000, DURACAO_MS = 270_000;
 const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -32,11 +31,7 @@ export async function vigiar(origem: string) {
   let ativos = 0;
   try {
     do {
-      const [onibus, chuva] = await Promise.all([
-        rodada().catch((e) => { console.error("[vigia] ônibus", e); return 1; }),
-        rodadaChuva().catch((e) => { console.error("[vigia] chuva", e); return 1; }),
-      ]);
-      ativos = onibus + chuva;
+      ativos = await rodada().catch((e) => { console.error("[vigia] ônibus", e); return 1; });
       if (!ativos) break;
       await dormir(PASSO_MS);
     } while (Date.now() < fim);

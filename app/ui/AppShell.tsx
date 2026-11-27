@@ -7,7 +7,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { House, CloudSun, TriangleAlert, BusFront, Menu, Activity, Info, X } from "lucide-react";
+import { House, CloudSun, TriangleAlert, BusFront, Menu, Activity, Info, Settings, X } from "lucide-react";
 import { MarcaMonitora } from "./Geometria";
 import Abertura from "./Abertura";
 
@@ -18,6 +18,7 @@ const ITENS = [
   { href: "/mobilidade", rotulo: "Trajeto", Icone: BusFront },
 ];
 const MENU = [
+  { href: "/ajustes", rotulo: "Ajustes", nota: "Notificações de chuva, alertas e ônibus", Icone: Settings },
   { href: "/monitor", rotulo: "Monitor da cidade", nota: "Frota, chuva e qualidade dos dados agora", Icone: Activity },
   { href: "/mais", rotulo: "Sobre os dados", nota: "Fontes, metodologia e privacidade", Icone: Info },
 ];
@@ -53,7 +54,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const botaoMenu = (
     <button type="button" className="canto-menu" aria-expanded={menu} aria-haspopup="menu" aria-current={noMenu ? "page" : undefined}
-      aria-label={menu ? "Fechar menu" : "Menu: Monitor da cidade e Sobre os dados"} onClick={() => setMenu((m) => !m)}>
+      aria-label={menu ? "Fechar menu" : "Menu: Ajustes, Monitor da cidade e Sobre os dados"} onClick={() => setMenu((m) => !m)}>
       {menu ? <X aria-hidden /> : <Menu aria-hidden />}
     </button>
   );
