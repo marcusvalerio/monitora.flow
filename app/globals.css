@@ -1001,3 +1001,39 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .bl-voz span { display: grid; gap: 2px; }
 .bl-voz b { font: 600 15px var(--font-ui); }
 .bl-voz small { font: 450 13px var(--font-ui); color: var(--text-2); }
+/* Grade de horas mais compacta (pedido do dono, 26/11): cartões menores, número mais firme, água mais suave */
+.gh-rolo { gap: 6px; }
+.gh-h { gap: 5px; }
+.gh-hora { font-size: 12px; }
+.gh-cartao { width: 50px; min-height: 122px; gap: 6px; padding: 10px 0 8px; border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-2) 80%, var(--surface)); box-shadow: inset 0 0 0 1px var(--hairline); }
+.gh-cartao svg { width: 20px; height: 20px; }
+.gh-cartao b { font: 700 16px/1 var(--font-num); letter-spacing: -.02em; }
+.gh-vento { width: 15px !important; height: 15px !important; }
+.gh-p { font: 600 11.5px var(--font-num); }
+.gh-p svg { width: 11px !important; height: 11px !important; }
+.gh-agua { opacity: .85; border-radius: 0; }
+.rt-horas .gh-cartao { width: 50px; min-height: 100px; }
+/* Trajeto: escolha visível entre BRT e ônibus municipais (abaixo da busca) */
+.m-tipo { position: absolute; z-index: var(--z-overlay); top: calc(var(--safe-t) + 70px); left: 12px; display: flex; gap: 4px; padding: 4px; border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent); box-shadow: inset 0 0 0 1px var(--hairline), var(--shadow-ambient); }
+.m-tipo button { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px; font: 600 14px var(--font-ui); color: var(--text-2); }
+.m-tipo button svg { width: 16px; height: 16px; }
+.m-tipo button.on { background: var(--accent); color: var(--on-accent); }
+@media (min-width: 960px) { .m-tipo { top: 74px; left: 16px; } }
+/* Atenção mais viva: resumo do agora, ícones nas seções e barras de chuva (dado, não ornamento; nada em loop) */
+.bl-rot { display: flex; align-items: center; gap: 6px; }
+.bl-rot svg { width: 15px; height: 15px; color: var(--text-3); flex: none; }
+.bl-resumo { margin-bottom: 6px; padding: 16px 18px; border-radius: var(--r-md); background: var(--surface); box-shadow: inset 0 0 0 1px var(--hairline); }
+.bl-resumo-cab { display: flex; align-items: center; gap: 10px; }
+.bl-resumo-cab svg { width: 24px; height: 24px; flex: none; color: var(--live); }
+.bl-resumo-cab b { font: 600 19px/1.25 var(--font-ui); letter-spacing: -.01em; }
+.bl-resumo.nv-atencao, .bl-resumo.nv-alerta { background: var(--alert-bg); box-shadow: none; }
+.bl-resumo.nv-atencao svg, .bl-resumo.nv-alerta svg, .bl-resumo.nv-alerta b { color: var(--alert-text); }
+.bl-placar { list-style: none; margin: 14px 0 0; padding: 12px 0 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; border-top: 1px solid var(--hairline); }
+.bl-placar li { display: grid; gap: 2px; min-width: 0; }
+.bl-placar span { font: 500 11.5px var(--font-ui); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bl-placar b { font: 700 18px/1.1 var(--font-num); }
+.bl-barra { display: block; height: 6px; margin: 6px 0 2px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.bl-barra i { display: block; height: 100%; border-radius: 3px; background: var(--rain); transform-origin: left; filter: saturate(1.6) brightness(.9); }
+.bl-barra i.forte { background: var(--alert); filter: none; }

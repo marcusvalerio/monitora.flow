@@ -28,6 +28,7 @@ const eta = (min: number) => Math.max(1, Math.round(min));
 const M: Partial<{ ponto: Ponto | null; linha: string | null; nivel: 0 | 1 | 2; info: J | null; chegada: J | null; veiculos: J | null; veiculoSel: string | null;
   seguindo: boolean; trajeto: Trajeto[] | null; sentido: string | null; modoLinha: "BRT" | "BUS" | null; linhaSemPonto: boolean; salvo: boolean; trajetoDe: string; desce: string | null; paradasLinha: J | null }> = {};
 const K_MODO = "monitora:mob:modo";
+const K_TIPO = "monitora:mob:tipo"; // escolha visível BRT × Ônibus (abre a busca já no tipo certo)
 const K_FAVORITOS = "monitora:mob:favoritos";
 /** Trajeto do dia a dia salvo no aparelho: abre com um toque já com sentido e descida escolhidos. */
 type Favorito = { id: string; ponto: Ponto; linha: string; sentido: string | null; desce: string | null; modo: "BRT" | "BUS" | null };
@@ -58,6 +59,9 @@ export default function MobilidadeApp() {
   const [sentido, setSentidoS] = useState<string | null>(() => M.sentido ?? null);
   // modo da linha acompanhada (vem do catálogo, via busca/estação): BRT ou BUS; null = o servidor decide pelo catálogo
   const [modoLinha, setModoLinha] = useState<"BRT" | "BUS" | null>(() => M.modoLinha ?? null);
+  const [tipo, setTipoS] = useState<"brt" | "sppo">("brt");
+  useEffect(() => { setTipoS(ler<"brt" | "sppo">(K_TIPO, "brt")); }, []);
+  const setTipo = (t: "brt" | "sppo") => { setTipoS(t); gravar(K_TIPO, t); };
   const setSentido = (s: string | null) => { setSentidoS(s); gravar(K_SENTIDO, s); setVeiculoSel(null); };
   useEffect(() => { gravar(K_MODO, modoLinha); }, [modoLinha]);
   const [, tique] = useState(0);
@@ -344,6 +348,12 @@ export default function MobilidadeApp() {
         {(ponto || linha) && <button className="map-limpar" onClick={() => { setSeguindo(false); setVeiculoSelS(null); setDesce(null); limpar(); }} aria-label="Limpar pesquisa"><X /></button>}
         <button className={`map-fab${perto?.carregando ? " buscando" : ""}`} onClick={pertoDeMim} aria-label="Usar minha localização" aria-busy={!!perto?.carregando}><LocateFixed /></button>
       </div>
+      {!ponto && !linha && (
+        <div className="m-tipo" role="radiogroup" aria-label="Tipo de transporte">
+          <button role="radio" aria-checked={tipo === "brt"} className={tipo === "brt" ? "on" : undefined} onClick={() => setTipo("brt")}><TrainFront aria-hidden /> BRT</button>
+          <button role="radio" aria-checked={tipo === "sppo"} className={tipo === "sppo" ? "on" : undefined} onClick={() => setTipo("sppo")}><BusFront aria-hidden /> Ônibus municipais</button>
+        </div>
+      )}
 
       <BottomSheet resumo={ponto && linha ? 190 : 150} nivel={nivel} setNivel={setNivel} onAltura={setPadB} cabecalho={cabecalho}>
         {sel && <VeiculoCard v={sel} ponto={ponto} chegada={chegada} falta={falta} seguindo={seguindo} onSeguir={() => { setSeguindo((x) => !x); setNivel(0); }} onFechar={() => setVeiculoSel(null)} />}
@@ -377,8 +387,8 @@ export default function MobilidadeApp() {
         )}
         {!ponto && !linha && (
           <>
-            <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => setBuscando(true)}><Search aria-hidden /> Pesquisar estação ou terminal</button>
-            {!perto && <button className="btn btn-ghost" style={{ width: "100%", marginTop: 10 }} onClick={pertoDeMim}><LocateFixed aria-hidden /> Estações perto de mim</button>}
+            <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => setBuscando(true)}><Search aria-hidden /> {tipo === "brt" ? "Pesquisar estação ou terminal" : "Pesquisar parada ou linha de ônibus"}</button>
+            {!perto && <button className="btn btn-ghost" style={{ width: "100%", marginTop: 10 }} onClick={pertoDeMim}><LocateFixed aria-hidden /> {tipo === "brt" ? "Estações perto de mim" : "Paradas perto de mim"}</button>}
             {perto?.carregando && <div style={{ marginTop: 16, display: "grid", gap: 12 }}><Skel h={52} /><Skel h={52} /></div>}
             {perto?.erro && <p className="t-cap" role="alert">{perto.erro}</p>}
             {perto?.estacoes && (
@@ -469,7 +479,7 @@ export default function MobilidadeApp() {
         )}
       </BottomSheet>
 
-      {buscando && <TransitSearch onEscolher={escolherPonto} onLinha={escolherLinha} comLinhas={!(linha && !ponto)} onFechar={() => setBuscando(false)} />}
+      {buscando && <TransitSearch modoInicial={tipo} onModo={setTipo} onEscolher={escolherPonto} onLinha={escolherLinha} comLinhas={!(linha && !ponto)} onFechar={() => setBuscando(false)} />}
     </div>
   );
 }
@@ -655,9 +665,10 @@ function Recentes({ onEscolher }: { onEscolher: (p: Ponto) => void }) {
 }
 
 /** Busca especializada: BRT consulta SÓ o catálogo de estações/terminais; Ônibus consulta SÓ a camada de paradas. */
-function TransitSearch({ onEscolher, onLinha, comLinhas, onFechar }: { onEscolher: (p: Ponto) => void; onLinha: (l: string, modo: "BRT" | "BUS") => void; comLinhas: boolean; onFechar: () => void }) {
+function TransitSearch({ modoInicial = "brt", onModo, onEscolher, onLinha, comLinhas, onFechar }: { modoInicial?: "brt" | "sppo"; onModo?: (m: "brt" | "sppo") => void; onEscolher: (p: Ponto) => void; onLinha: (l: string, modo: "BRT" | "BUS") => void; comLinhas: boolean; onFechar: () => void }) {
   const [q, setQ] = useState("");
-  const [modo, setModo] = useState<"brt" | "sppo">("brt");
+  const [modo, setModoS] = useState<"brt" | "sppo">(modoInicial);
+  const setModo = (m: "brt" | "sppo") => { setModoS(m); onModo?.(m); };
   const [res, setRes] = useState<J | null>(null);
   const ctrl = useRef<AbortController | null>(null);
   useEffect(() => {
